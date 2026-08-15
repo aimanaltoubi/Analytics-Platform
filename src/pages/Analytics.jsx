@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
+import FusionInsights from '@/components/FusionInsights';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -159,6 +160,8 @@ export default function Analytics() {
           );
         })}
       </div>
+
+      <FusionInsights />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* توزيع الكيانات حسب النوع */}
