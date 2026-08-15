@@ -28,6 +28,7 @@ import Workspaces from '@/pages/Workspaces';
 import WorkspaceDetail from '@/pages/WorkspaceDetail';
 import NationalityDetail from '@/pages/NationalityDetail';
 import CrossLingualSearch from '@/pages/CrossLingualSearch';
+import Report from '@/pages/Report';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<EntityDetail />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/report" element={<Report />} />
           <Route path="/geo" element={<GeoTemporal />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/transit" element={<TransitSecurity />} />
