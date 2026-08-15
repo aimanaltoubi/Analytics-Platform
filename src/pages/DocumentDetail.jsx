@@ -150,9 +150,9 @@ export default function DocumentDetail() {
             <div className="space-y-2">
               {connections.map((c) => (
                 <div key={c.id} className="p-2.5 rounded-lg bg-accent/30">
-                  <div className="text-sm">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
                     <span className="font-medium">{c.source_entity_name}</span>
-                    <span className="text-muted-foreground mx-1">—{c.relationship_type}→</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.relationship_type}</span>
                     <span className="font-medium">{c.target_entity_name}</span>
                   </div>
                   {c.evidence && (
