@@ -49,16 +49,18 @@ const KIND_META = {
   other: { label: 'رابط', icon: ArrowLeft, color: 'bg-slate-100 text-slate-700' }
 };
 
-export default function WorkspaceTimelineExplorer({ entities = [], connections = [], documents = [] }) {
+export default function WorkspaceTimelineExplorer({ entities = [], allEntities = [], connections = [], documents = [] }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [focusDate, setFocusDate] = useState('');
 
+  const entList = useMemo(() => (allEntities.length ? allEntities : entities), [entities, allEntities]);
+
   const entById = useMemo(() => {
     const m = {};
-    entities.forEach((e) => (m[e.id] = e));
+    entList.forEach((e) => (m[e.id] = e));
     return m;
-  }, [entities]);
+  }, [entList]);
 
   const docById = useMemo(() => {
     const m = {};
@@ -71,10 +73,10 @@ export default function WorkspaceTimelineExplorer({ entities = [], connections =
     connections.forEach((c) => {
       const doc = c.document_id ? docById[c.document_id] : null;
       const dateEnt = c.document_id
-        ? entities.find((e) => e.type === 'date' && (e.document_ids || []).includes(c.document_id))
+        ? entList.find((e) => e.type === 'date' && (e.document_ids || []).includes(c.document_id))
         : null;
       const locEnt = c.document_id
-        ? entities.find((e) => e.type === 'location' && (e.document_ids || []).includes(c.document_id))
+        ? entList.find((e) => e.type === 'location' && (e.document_ids || []).includes(c.document_id))
         : null;
       const date = parseDate(dateEnt?.name) || (doc ? parseDate(doc.created_date) : null);
       if (!date) return;
@@ -96,7 +98,7 @@ export default function WorkspaceTimelineExplorer({ entities = [], connections =
       });
     });
     return list.sort((a, b) => a.date - b.date);
-  }, [entities, connections, docById, entById]);
+  }, [entList, connections, docById, entById]);
 
   const filtered = useMemo(() => {
     return events.filter((e) => {

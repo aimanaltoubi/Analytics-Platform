@@ -88,7 +88,7 @@ export default function WorkspaceDetail() {
 
       <ManualNetworkCanvas entities={entities} />
 
-      <WorkspaceTimelineExplorer entities={entities} connections={connections} documents={documents} />
+      <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
 
       <div className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الزمنية الجغرافية</h3>
