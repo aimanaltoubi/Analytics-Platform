@@ -65,6 +65,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [fieldInputs, setFieldInputs] = useState({});
   const dims = useRef({ w: 800, h: height });
 
   // درجة كل كيان (عدد الروابط)
@@ -200,21 +201,24 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     ? edges.filter((e) => e.source === selected || e.target === selected)
     : [];
 
-  const addAttr = async () => {
-    if (!newKey.trim() || !newValue.trim() || !selectedEntity) return;
+  const saveAttr = async (key, val) => {
+    const k = (key || '').trim(), v = (val || '').trim();
+    if (!k || !v || !selectedEntity) return;
     setSaving(true);
     const attrs = { ...(selectedEntity.attributes || {}) };
-    attrs[newKey.trim()] = newValue.trim();
+    attrs[k] = v;
     try {
       await base44.entities.Entity.update(selectedEntity.id, { attributes: attrs });
       const merged = { ...selectedEntity, attributes: attrs };
       if (onEntityUpdated) onEntityUpdated(selectedEntity.id, merged);
       toast({ title: 'تم حفظ المعلومة' });
-      setNewKey(''); setNewValue('');
     } catch (e) {
       toast({ title: 'تعذّر الحفظ', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
   };
+
+  const suggestedFields = selectedEntity ? (SUGGESTED_ATTRS[selectedEntity.type] || SUGGESTED_ATTRS.other) : [];
+  const extraAttrs = selectedEntity?.attributes ? Object.entries(selectedEntity.attributes).filter(([k]) => !suggestedFields.includes(k)) : [];
 
   const deleteAttr = async (k) => {
     if (!selectedEntity) return;
@@ -404,27 +408,59 @@ export default function NetworkGraph({ entities = [], connections = [], height =
 
           <div className="mb-3 rounded-lg bg-accent/40 p-2.5">
             <div className="text-[11px] font-medium text-muted-foreground mb-1.5">المعلومات</div>
-            <div className="space-y-1 mb-2">
-              {selectedEntity.attributes && Object.keys(selectedEntity.attributes).length > 0 ? (
-                Object.entries(selectedEntity.attributes).map(([k, v]) => (
-                  <div key={k} className="flex items-start justify-between gap-2 text-xs">
-                    <div className="min-w-0">
-                      <span className="text-muted-foreground">{k}: </span>
-                      <span className="font-medium break-all">{String(v)}</span>
+            <div className="space-y-1.5 mb-2 max-h-48 overflow-auto">
+              {suggestedFields.map((field) => {
+                const val = selectedEntity.attributes?.[field];
+                if (val !== undefined && val !== '') {
+                  return (
+                    <div key={field} className="flex items-start justify-between gap-2 text-xs">
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground">{field}: </span>
+                        <span className="font-medium break-all">{String(val)}</span>
+                      </div>
+                      <button onClick={() => deleteAttr(field)} className="text-muted-foreground hover:text-destructive shrink-0 leading-none">×</button>
                     </div>
-                    <button onClick={() => deleteAttr(k)} className="text-muted-foreground hover:text-destructive shrink-0 leading-none">×</button>
+                  );
+                }
+                return (
+                  <div key={field} className="text-xs">
+                    <div className="text-muted-foreground mb-1 flex items-center gap-1.5">
+                      {field} <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded">غير متوفر</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <input
+                        value={fieldInputs[field] || ''}
+                        onChange={(e) => setFieldInputs((p) => ({ ...p, [field]: e.target.value }))}
+                        placeholder={`أضف ${field}`}
+                        className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <button
+                        onClick={() => { saveAttr(field, fieldInputs[field] || ''); setFieldInputs((p) => ({ ...p, [field]: '' })); }}
+                        disabled={saving || !(fieldInputs[field] || '').trim()}
+                        className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50"
+                      >
+                        {saving ? '...' : 'إضافة'}
+                      </button>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-xs text-muted-foreground">لا توجد معلومات إضافية. أضف معلومة أدناه.</div>
-              )}
+                );
+              })}
+              {extraAttrs.map(([k, v]) => (
+                <div key={k} className="flex items-start justify-between gap-2 text-xs">
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">{k}: </span>
+                    <span className="font-medium break-all">{String(v)}</span>
+                  </div>
+                  <button onClick={() => deleteAttr(k)} className="text-muted-foreground hover:text-destructive shrink-0 leading-none">×</button>
+                </div>
+              ))}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 pt-2 border-t border-border/50">
               <input
                 list="attr-suggestions"
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
-                placeholder="الحقل (مثال: الجنسية)"
+                placeholder="حقل مخصص"
                 className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <input
@@ -434,7 +470,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
                 className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <button
-                onClick={addAttr}
+                onClick={() => { saveAttr(newKey, newValue); setNewKey(''); setNewValue(''); }}
                 disabled={saving || !newKey.trim() || !newValue.trim()}
                 className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50"
               >
@@ -442,7 +478,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
               </button>
             </div>
             <datalist id="attr-suggestions">
-              {(SUGGESTED_ATTRS[selectedEntity.type] || SUGGESTED_ATTRS.other).map((k) => (
+              {suggestedFields.map((k) => (
                 <option key={k} value={k} />
               ))}
             </datalist>
