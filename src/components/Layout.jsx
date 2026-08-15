@@ -53,7 +53,7 @@ export default function Layout() {
   const initial = (user?.email || user?.full_name || 'م').charAt(0).toUpperCase();
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background flex">
+    <div dir="rtl" className="dark min-h-screen bg-background flex">
       {/* الشريط الجانبي */}
       <aside className="w-60 shrink-0 border-l border-sidebar-border bg-sidebar flex flex-col">
         <div className="h-14 flex items-center gap-2.5 px-4 border-b border-sidebar-border">
