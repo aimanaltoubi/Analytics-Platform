@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, Plus, X, Users, FileText } from 'lucide-react';
+import { ArrowRight, Plus, X, Users, FileText, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
@@ -9,6 +9,7 @@ import WorkspaceNetwork from '@/components/WorkspaceNetwork';
 import ManualNetworkCanvas from '@/components/ManualNetworkCanvas';
 import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
+import GeoTemporalMap from '@/components/GeoTemporalMap';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 
 export default function WorkspaceDetail() {
@@ -88,6 +89,12 @@ export default function WorkspaceDetail() {
       <ManualNetworkCanvas entities={entities} />
 
       <WorkspaceTimelineExplorer entities={entities} connections={connections} documents={documents} />
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الزمنية الجغرافية</h3>
+        <p className="text-xs text-muted-foreground">اعرض مواقع الكيانات ومسارات الحركة عبر الزمن داخل مساحة العمل. فعّل «رسم المواقع» لإنشاء مواقع جديدة أو تحديد إحداثياتها بالنقر على الخريطة.</p>
+        <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
