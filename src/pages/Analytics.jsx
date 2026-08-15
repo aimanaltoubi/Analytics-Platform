@@ -10,6 +10,7 @@ import { base44 } from '@/api/base44Client';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
 import BarList from '@/components/BarList';
+import NationalityOverview from '@/components/NationalityOverview';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -250,6 +251,8 @@ export default function Analytics() {
           )}
         </div>
       </div>
+
+      <NationalityOverview entities={entities} />
 
       <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
 

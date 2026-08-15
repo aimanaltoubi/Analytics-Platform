@@ -22,6 +22,7 @@ import Search from '@/pages/Search';
 import Import from '@/pages/Import';
 import Workspaces from '@/pages/Workspaces';
 import WorkspaceDetail from '@/pages/WorkspaceDetail';
+import NationalityDetail from '@/pages/NationalityDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
           <Route path="/import" element={<Import />} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
+          <Route path="/nationalities/:nationality" element={<NationalityDetail />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
