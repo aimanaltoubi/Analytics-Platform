@@ -61,8 +61,8 @@ export default function Layout() {
             <NetworkIcon className="w-4.5 h-4.5" style={{ width: 17, height: 17 }} />
           </div>
           <div className="leading-tight">
-            <div className="font-heading font-bold text-sm">Strategic Data Fusion</div>
-            <div className="text-[10px] text-muted-foreground tracking-wide">تحليل روابط · v2</div>
+            <div className="font-heading font-bold text-sm leading-tight">Strategic Data Fusion</div>
+            <div className="text-[10px] text-muted-foreground tracking-wide">محرك دمج البيانات</div>
           </div>
         </div>
 
