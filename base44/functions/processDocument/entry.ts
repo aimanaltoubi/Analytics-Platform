@@ -75,6 +75,10 @@ export default async function(req) {
 
     await base44.entities.Document.update(document_id, { status: 'processing', error_message: '' });
 
+    // 0) تنظيف الذكر والروابط القديمة لهذا المستند (لإعادة المعالجة بدون تكرار)
+    await base44.asServiceRole.entities.Mention.deleteMany({ document_id });
+    await base44.asServiceRole.entities.Connection.deleteMany({ document_id });
+
     // 1) استخراج النص من ملف PDF
     const extraction = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
       file_url: doc.file_url,

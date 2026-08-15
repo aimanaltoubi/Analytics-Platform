@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, FileText, Users, Share2, AlertCircle } from 'lucide-react';
+import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -17,22 +18,41 @@ export default function DocumentDetail() {
   const [entities, setEntities] = useState([]);
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reprocessing, setReprocessing] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const d = await base44.entities.Document.get(id);
-        setDoc(d);
-        const [ents, conns] = await Promise.all([
-          base44.entities.Entity.filter({ document_ids: id }, '-mention_count', 50),
-          base44.entities.Connection.filter({ document_id: id }, '-created_date', 100)
-        ]);
-        setEntities(ents);
-        setConnections(conns);
-      } catch (e) {} finally { setLoading(false); }
-    })();
-  }, [id]);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const d = await base44.entities.Document.get(id);
+      setDoc(d);
+      const [ents, conns] = await Promise.all([
+        base44.entities.Entity.filter({ document_ids: id }, '-mention_count', 50),
+        base44.entities.Connection.filter({ document_id: id }, '-created_date', 100)
+      ]);
+      setEntities(ents);
+      setConnections(conns);
+    } catch (e) {} finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  const handleReprocess = async () => {
+    setReprocessing(true);
+    try {
+      const res = await base44.functions.invoke('processDocument', { document_id: id });
+      const result = res.data || {};
+      toast({
+        title: 'تمت إعادة التحليل',
+        description: `الكيانات: ${result.entity_count || 0} • الروابط: ${result.connection_count || 0}`
+      });
+      await load();
+    } catch (err) {
+      toast({ title: 'فشلت إعادة التحليل', description: err.message, variant: 'destructive' });
+    } finally {
+      setReprocessing(false);
+    }
+  };
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!doc) return <div className="p-6 text-sm text-muted-foreground">المستند غير موجود.</div>;
@@ -52,13 +72,23 @@ export default function DocumentDetail() {
             <h1 className="font-heading text-xl font-bold">{doc.title}</h1>
             <div className="text-sm text-muted-foreground mt-1">{TYPE_LABELS[doc.document_type] || 'أخرى'}</div>
           </div>
-          <span className={`text-xs px-3 py-1 rounded-full ${
-            doc.status === 'processed' ? 'bg-emerald-100 text-emerald-700' :
-            doc.status === 'failed' ? 'bg-red-100 text-red-700' :
-            'bg-amber-100 text-amber-700'
-          }`}>
-            {doc.status === 'processed' ? 'تمت المعالجة' : doc.status === 'failed' ? 'فشل' : doc.status === 'processing' ? 'قيد المعالجة' : 'بانتظار'}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs px-3 py-1 rounded-full ${
+              doc.status === 'processed' ? 'bg-emerald-100 text-emerald-700' :
+              doc.status === 'failed' ? 'bg-red-100 text-red-700' :
+              'bg-amber-100 text-amber-700'
+            }`}>
+              {doc.status === 'processed' ? 'تمت المعالجة' : doc.status === 'failed' ? 'فشل' : doc.status === 'processing' ? 'قيد المعالجة' : 'بانتظار'}
+            </span>
+            <button
+              onClick={handleReprocess}
+              disabled={reprocessing}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${reprocessing ? 'animate-spin' : ''}`} />
+              {reprocessing ? 'جارٍ إعادة التحليل...' : 'إعادة التحليل'}
+            </button>
+          </div>
         </div>
 
         {doc.status === 'failed' && doc.error_message && (
