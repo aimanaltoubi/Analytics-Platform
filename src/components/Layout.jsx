@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Share2, Users, LogOut, Network as NetworkIcon, BarChart3, Search, Upload, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, BarChart3, Search, Upload, FolderOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -7,7 +7,6 @@ const navItems = [
   { to: '/', label: 'لوحة التحكم', icon: LayoutDashboard, end: true },
   { to: '/documents', label: 'المستندات', icon: FileText, end: false },
   { to: '/import', label: 'استيراد CSV', icon: Upload, end: false },
-  { to: '/network', label: 'شبكة العلاقات', icon: Share2, end: false },
   { to: '/entities', label: 'الكيانات', icon: Users, end: false },
   { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen, end: false },
   { to: '/analytics', label: 'التحليلات', icon: BarChart3, end: false },

@@ -15,7 +15,6 @@ import Layout from '@/components/Layout';
 import Home from '@/pages/Home';
 import Documents from '@/pages/Documents';
 import DocumentDetail from '@/pages/DocumentDetail';
-import Network from '@/pages/Network';
 import Entities from '@/pages/Entities';
 import EntityDetail from '@/pages/EntityDetail';
 import Analytics from '@/pages/Analytics';
@@ -55,7 +54,6 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Home />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/documents/:id" element={<DocumentDetail />} />
-          <Route path="/network" element={<Network />} />
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<EntityDetail />} />
           <Route path="/analytics" element={<Analytics />} />

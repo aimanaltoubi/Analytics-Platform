@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
+import TimelineAnalysis from '@/components/TimelineAnalysis';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 
@@ -15,6 +16,7 @@ export default function WorkspaceDetail() {
   const [entities, setEntities] = useState([]);
   const [allEntities, setAllEntities] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [connections, setConnections] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -24,13 +26,19 @@ export default function WorkspaceDetail() {
     try {
       const ws = await base44.entities.Workspace.get(id);
       setWorkspace(ws);
-      const [allEnts, allDocs] = await Promise.all([
+      const [allEnts, allDocs, allConns] = await Promise.all([
         base44.entities.Entity.list('-mention_count', 300),
-        base44.entities.Document.list('-created_date', 100)
+        base44.entities.Document.list('-created_date', 100),
+        base44.entities.Connection.list('-created_date', 500)
       ]);
       setAllEntities(allEnts);
       setEntities(allEnts.filter((e) => (ws.entity_ids || []).includes(e.id)));
       setDocuments(allDocs.filter((d) => (ws.document_ids || []).includes(d.id)));
+      const entIds = new Set(ws.entity_ids || []);
+      const docIds = new Set(ws.document_ids || []);
+      setConnections(allConns.filter((c) =>
+        entIds.has(c.source_entity_id) || entIds.has(c.target_entity_id) || docIds.has(c.document_id)
+      ));
     } catch (e) {
       toast({ title: 'تعذّر تحميل مساحة العمل', description: e.message, variant: 'destructive' });
     } finally {
@@ -75,6 +83,8 @@ export default function WorkspaceDetail() {
       </div>
 
       <WorkspaceNetwork workspace={workspace} />
+
+      <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
