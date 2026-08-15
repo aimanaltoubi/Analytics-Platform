@@ -18,6 +18,7 @@ import DocumentDetail from '@/pages/DocumentDetail';
 import Network from '@/pages/Network';
 import Entities from '@/pages/Entities';
 import EntityDetail from '@/pages/EntityDetail';
+import Analytics from '@/pages/Analytics';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
           <Route path="/network" element={<Network />} />
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<EntityDetail />} />
+          <Route path="/analytics" element={<Analytics />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
