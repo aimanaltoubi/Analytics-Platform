@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { matchesEntityQuery } from '@/lib/entitySearch';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -46,8 +47,7 @@ export default function Entities() {
 
   const types = ['all', ...new Set(entities.map((e) => e.type))];
   const filtered = entities.filter((e) => {
-    const matchQuery = !query || e.name?.toLowerCase().includes(query.toLowerCase()) ||
-      (e.aliases || []).some((a) => a.toLowerCase().includes(query.toLowerCase()));
+    const matchQuery = !query || matchesEntityQuery(e, query);
     const matchType = typeFilter === 'all' || e.type === typeFilter;
     const matchWatch = !watchOnly || e.watchlist;
     return matchQuery && matchType && matchWatch;

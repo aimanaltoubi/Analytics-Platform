@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search as SearchIcon, Users, FileText, Share2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { matchesEntityQuery } from '@/lib/entitySearch';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -37,10 +38,7 @@ export default function Search() {
       ]);
       const ql = q.toLowerCase();
       setResults({
-        entities: ents.filter((e) =>
-          e.name?.toLowerCase().includes(ql) ||
-          (e.aliases || []).some((a) => a.toLowerCase().includes(ql))
-        ).slice(0, 20),
+        entities: ents.filter((e) => matchesEntityQuery(e, q)).slice(0, 20),
         documents: docs.filter((d) =>
           d.title?.toLowerCase().includes(ql) ||
           (d.summary || '').toLowerCase().includes(ql)

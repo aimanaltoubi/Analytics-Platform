@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
+import { matchesEntityQuery } from '@/lib/entitySearch';
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
@@ -55,7 +56,7 @@ export default function WorkspaceDetail() {
   };
 
   const searchResults = search
-    ? allEntities.filter((e) => !(workspace.entity_ids || []).includes(e.id) && e.name?.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
+    ? allEntities.filter((e) => !(workspace.entity_ids || []).includes(e.id) && matchesEntityQuery(e, search)).slice(0, 8)
     : [];
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
