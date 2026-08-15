@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpDown, ArrowUp, ArrowDown, Flag } from 'lucide-react';
+import { Image } from '@/components/ui/image';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -95,7 +96,12 @@ export default function WorkspaceEntitiesTable({ entities }) {
           {sorted.map((e) => (
             <tr key={e.id} className="border-t border-border hover:bg-accent/30">
               <td className="px-3 py-2">
-                <Link to={`/entities/${e.id}`} className="font-medium hover:underline inline-flex items-center gap-1">
+                <Link to={`/entities/${e.id}`} className="font-medium hover:underline inline-flex items-center gap-2">
+                  {e.photo_url ? (
+                    <Image src={e.photo_url} alt={e.name} className="w-7 h-7 rounded-full shrink-0" fittingType="fill" />
+                  ) : (
+                    <span className="w-7 h-7 rounded-full bg-accent text-muted-foreground text-xs font-bold flex items-center justify-center shrink-0">{e.name?.charAt(0) || '؟'}</span>
+                  )}
                   {e.watchlist && <Flag className="w-3 h-3 text-amber-500 shrink-0" />}
                   <span className="truncate max-w-[180px]">{e.name}</span>
                 </Link>

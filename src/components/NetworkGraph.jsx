@@ -187,6 +187,12 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     return m;
   }, [nodes]);
 
+  const entityById = useMemo(() => {
+    const m = {};
+    entities.forEach((e) => (m[e.id] = e));
+    return m;
+  }, [entities]);
+
   const handlePointerDown = (e, id) => { setDragId(id); };
   const handlePointerMove = (e) => {
     if (!dragId) return;
@@ -348,6 +354,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
           const isHover = hover === n.id;
           const r = nodeRadius(n.id);
           const dispR = isSel || isHover ? r + 3 : r;
+          const photo = entityById[n.id]?.photo_url;
           return (
             <g
               key={n.id}
@@ -359,14 +366,32 @@ export default function NetworkGraph({ entities = [], connections = [], height =
               onMouseLeave={() => setHover(null)}
             >
               <circle r={dispR + 6} fill={color} opacity={isSel ? 0.22 : isHover ? 0.14 : 0.08} />
-              <circle
-                r={dispR}
-                fill={color}
-                stroke="#fff"
-                strokeWidth={2}
-                filter={isSel || isHover ? 'url(#nodeGlow)' : undefined}
-              />
-          <circle r={dispR - 3} fill="#fff" opacity={0.25} />
+              {photo ? (
+                <>
+                  <clipPath id={`clip-${n.id}`}><circle r={dispR} /></clipPath>
+                  <image
+                    href={photo}
+                    x={-dispR}
+                    y={-dispR}
+                    width={dispR * 2}
+                    height={dispR * 2}
+                    preserveAspectRatio="xMidYMid slice"
+                    clipPath={`url(#clip-${n.id})`}
+                  />
+                  <circle r={dispR} fill="none" stroke="#fff" strokeWidth={2} filter={isSel || isHover ? 'url(#nodeGlow)' : undefined} />
+                </>
+              ) : (
+                <>
+                  <circle
+                    r={dispR}
+                    fill={color}
+                    stroke="#fff"
+                    strokeWidth={2}
+                    filter={isSel || isHover ? 'url(#nodeGlow)' : undefined}
+                  />
+                  <circle r={dispR - 3} fill="#fff" opacity={0.25} />
+                </>
+              )}
               <text
                 y={dispR + 14}
                 textAnchor="middle"
