@@ -33,6 +33,12 @@ export default function TimelineAnalysis({ entities, connections, documents }) {
     return m;
   }, [documents]);
 
+  const nameById = useMemo(() => {
+    const m = {};
+    entities.forEach((e) => (m[e.id] = e.name));
+    return m;
+  }, [entities]);
+
   const events = useMemo(() => {
     const list = [];
     connections.forEach((c) => {
@@ -156,10 +162,10 @@ export default function TimelineAnalysis({ entities, connections, documents }) {
                   <div key={e.id} className="flex items-start gap-2 rounded-lg bg-accent/30 p-2.5">
                     <ArrowLeft className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm">
-                        <Link to={`/entities/${e.sourceId}`} className="font-medium hover:underline">{e.sourceName}</Link>
-                        <span className="text-muted-foreground mx-1">—{e.rel}→</span>
-                        <Link to={`/entities/${e.targetId}`} className="font-medium hover:underline">{e.targetName}</Link>
+                      <div className="text-sm flex items-center gap-1.5 flex-wrap">
+                        <Link to={`/entities/${e.sourceId}`} className="font-medium hover:underline truncate max-w-[40%]">{e.sourceName || nameById[e.sourceId] || 'كيان محذوف'}</Link>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">{e.rel}</span>
+                        <Link to={`/entities/${e.targetId}`} className="font-medium hover:underline truncate max-w-[40%]">{e.targetName || nameById[e.targetId] || 'كيان محذوف'}</Link>
                       </div>
                       {e.location && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
