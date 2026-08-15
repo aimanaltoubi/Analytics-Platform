@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X } from 'lucide-react';
+import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -38,6 +38,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [newLocName, setNewLocName] = useState('');
   const [trackEntity, setTrackEntity] = useState('all');
   const [placing, setPlacing] = useState(false);
+  const [mapStyle, setMapStyle] = useState('satellite');
   const timer = useRef(null);
   const { toast } = useToast();
 
@@ -199,6 +200,14 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         {/* صف الرسم ومسارات الحركة */}
         <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
           <button
+            onClick={() => setMapStyle((s) => (s === 'satellite' ? 'street' : 'satellite'))}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border bg-card hover:bg-accent transition-colors"
+            title="تبديل نوع الخريطة"
+          >
+            {mapStyle === 'satellite' ? <Satellite className="w-4 h-4" /> : <MapIcon className="w-4 h-4" />}
+            {mapStyle === 'satellite' ? 'قمر صناعي' : 'خرائط'}
+          </button>
+          <button
             onClick={() => setDrawMode((d) => !d)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
               drawMode ? 'bg-primary text-primary-foreground border-primary' : 'bg-card hover:bg-accent border-border'
@@ -255,7 +264,12 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             style={{ height: 560, width: '100%', cursor: drawMode ? 'crosshair' : '' }}
             scrollWheelZoom
           >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+            <TileLayer
+              url={mapStyle === 'satellite'
+                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}
+              attribution={mapStyle === 'satellite' ? 'Tiles © Esri' : '© OpenStreetMap, © CARTO'}
+            />
             <ClickHandler active={drawMode} onClick={handleMapClick} />
 
             {/* المواقع الثابتة */}
