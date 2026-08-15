@@ -7,29 +7,49 @@ import NetworkGraph from '@/components/NetworkGraph';
 export default function Network() {
   const [entities, setEntities] = useState([]);
   const [connections, setConnections] = useState([]);
+  const [mentions, setMentions] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [minRisk, setMinRisk] = useState(0);
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const [ents, conns] = await Promise.all([
+        const [ents, conns, ment, wss] = await Promise.all([
           base44.entities.Entity.list('-mention_count', 200),
-          base44.entities.Connection.list('-created_date', 300)
+          base44.entities.Connection.list('-created_date', 300),
+          base44.entities.Mention.list('-created_date', 500),
+          base44.entities.Workspace.list('-created_date', 100)
         ]);
         setEntities(ents);
         setConnections(conns);
+        setMentions(ment);
+        setWorkspaces(wss);
       } catch (e) {} finally { setLoading(false); }
     })();
   }, []);
 
+  const workspaceEntityIds = (() => {
+    if (workspaceFilter === 'all') return null;
+    const ws = workspaces.find((w) => w.id === workspaceFilter);
+    if (!ws) return null;
+    const ids = new Set(ws.entity_ids || []);
+    const docIds = new Set(ws.document_ids || []);
+    for (const m of mentions) {
+      if (docIds.has(m.document_id)) ids.add(m.entity_id);
+    }
+    return ids;
+  })();
+
   const types = ['all', ...new Set(entities.map((e) => e.type))];
   const filteredEntities = entities.filter((e) => {
+    const matchWorkspace = !workspaceEntityIds || workspaceEntityIds.has(e.id);
     const matchType = filter === 'all' || e.type === filter;
     const matchRisk = (e.risk_score || 0) >= minRisk;
-    return matchType && matchRisk;
+    return matchWorkspace && matchType && matchRisk;
   });
   const filteredIds = new Set(filteredEntities.map((e) => e.id));
   const filteredConnections = connections.filter(
@@ -44,6 +64,19 @@ export default function Network() {
           <p className="text-sm text-muted-foreground mt-1">خريطة الكيانات والروابط بينها — اسحب العقد لإعادة الترتيب</p>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">مساحة العمل:</span>
+          <select
+            value={workspaceFilter}
+            onChange={(e) => setWorkspaceFilter(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="all">الكل</option>
+            {workspaces.map((w) => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">النوع:</span>
           <select
