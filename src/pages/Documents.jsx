@@ -8,7 +8,7 @@ const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
   financial_transaction: 'معاملة مالية',
   police_report: 'تقرير شرطة',
-  intelligence_report: 'تقرير استخباراتي',
+  intelligence_report: 'تقرير تحليلي',
   other: 'أخرى'
 };
 

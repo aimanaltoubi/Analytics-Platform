@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend, CartesianGrid
 } from 'recharts';
-import { Users, Share2, FileText, TrendingUp } from 'lucide-react';
+import { Users, Share2, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const TYPE_LABELS = {
@@ -116,8 +116,7 @@ export default function Analytics() {
   const summaryCards = [
     { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500' },
     { label: 'إجمالي الروابط', value: connections.length, icon: Share2, color: 'bg-emerald-500' },
-    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500' },
-    { label: 'متوسط الذكر لكل كيان', value: entities.length ? Math.round(connections.length / entities.length * 10) / 10 : 0, icon: TrendingUp, color: 'bg-amber-500' }
+    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500' }
   ];
 
   return (
@@ -128,7 +127,7 @@ export default function Analytics() {
       </div>
 
       {/* بطاقات ملخصة */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {summaryCards.map((c) => {
           const Icon = c.icon;
           return (
@@ -269,6 +268,6 @@ const TYPE_LABELS_DOC = {
   phone_log: 'سجل مكالمات',
   financial_transaction: 'معاملة مالية',
   police_report: 'تقرير شرطة',
-  intelligence_report: 'تقرير استخباراتي',
+  intelligence_report: 'تقرير تحليلي',
   other: 'أخرى'
 };
