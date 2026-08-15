@@ -29,7 +29,7 @@ export default function Layout() {
             <NetworkIcon className="w-5 h-5" />
           </div>
           <div className="leading-tight">
-            <div className="font-heading font-bold text-sm">محلّل الشبكات</div>
+            <div className="font-heading font-bold text-sm">محلّل الكيانات</div>
             <div className="text-[11px] text-muted-foreground">تحليل روابط</div>
           </div>
         </div>
