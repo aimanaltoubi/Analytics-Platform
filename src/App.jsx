@@ -18,6 +18,8 @@ import DocumentDetail from '@/pages/DocumentDetail';
 import Entities from '@/pages/Entities';
 import EntityDetail from '@/pages/EntityDetail';
 import Analytics from '@/pages/Analytics';
+import GeoTemporal from '@/pages/GeoTemporal';
+import Alerts from '@/pages/Alerts';
 import Search from '@/pages/Search';
 import Import from '@/pages/Import';
 import Workspaces from '@/pages/Workspaces';
@@ -58,6 +60,8 @@ const AuthenticatedApp = () => {
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<EntityDetail />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/geo" element={<GeoTemporal />} />
+          <Route path="/alerts" element={<Alerts />} />
           <Route path="/search" element={<Search />} />
           <Route path="/import" element={<Import />} />
           <Route path="/workspaces" element={<Workspaces />} />

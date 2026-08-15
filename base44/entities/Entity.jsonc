@@ -37,6 +37,14 @@
       "type": "string",
       "title": "\u0635\u0648\u0631\u0629 \u0627\u0644\u0643\u064a\u0627\u0646"
     },
+    "latitude": {
+      "type": "number",
+      "title": "\u062e\u0637 \u0627\u0644\u0639\u0631\u0636"
+    },
+    "longitude": {
+      "type": "number",
+      "title": "\u062e\u0637 \u0627\u0644\u0637\u0648\u0644"
+    },
     "mention_count": {
       "type": "number",
       "default": 1,

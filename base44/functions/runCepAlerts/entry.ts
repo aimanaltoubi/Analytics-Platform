@@ -1,0 +1,146 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+
+    // ضمان وجود ملفات خطر افتراضية
+    let profiles = await base44.asServiceRole.entities.RiskProfile.filter({ enabled: true }, '-created_date', 100);
+    if (!profiles || profiles.length === 0) {
+      const defaults = [
+        { name: 'كيان عالي الخطورة', description: 'درجة خطورة الكيان تتجاوز العتبة', rule_type: 'risk_threshold', conditions: { min_risk_score: 70 }, severity: 'high', enabled: true },
+        { name: 'كيان في قائمة المراقبة', description: 'كيان مُدرج في قائمة المراقبة', rule_type: 'watchlist', conditions: {}, severity: 'critical', enabled: true },
+        { name: 'كيان محوري', description: 'كيان مرتبط بعدد كبير من الكيانات', rule_type: 'hub', conditions: { min_degree: 10 }, severity: 'medium', enabled: true },
+        { name: 'تشارك مكثّف', description: 'كيانان يظهران معاً في عدة مستندات', rule_type: 'co_occurrence', conditions: { min_shared_docs: 2, require_high_risk: false }, severity: 'medium', enabled: true },
+        { name: 'عنقود شبكي كبير', description: 'شبكة مترابطة بحجم كبير', rule_type: 'cluster_size', conditions: { min_size: 8 }, severity: 'high', enabled: true }
+      ];
+      await base44.asServiceRole.entities.RiskProfile.bulkCreate(defaults);
+      profiles = await base44.asServiceRole.entities.RiskProfile.filter({ enabled: true }, '-created_date', 100);
+    }
+
+    const entities = await base44.asServiceRole.entities.Entity.list('-mention_count', 1000);
+    const connections = await base44.asServiceRole.entities.Connection.list('-created_date', 2000);
+
+    const entById = {};
+    entities.forEach((e) => { entById[e.id] = e; });
+
+    // درجة الارتباط لكل كيان
+    const degree = {};
+    connections.forEach((c) => {
+      degree[c.source_entity_id] = (degree[c.source_entity_id] || 0) + 1;
+      degree[c.target_entity_id] = (degree[c.target_entity_id] || 0) + 1;
+    });
+
+    // التشارك في المستندات
+    const docEntities = {};
+    entities.forEach((e) => {
+      (e.document_ids || []).forEach((did) => {
+        (docEntities[did] = docEntities[did] || new Set()).add(e.id);
+      });
+    });
+    const pairCount = {};
+    Object.values(docEntities).forEach((set) => {
+      const ids = [...set];
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const key = ids[i] < ids[j] ? ids[i] + '|' + ids[j] : ids[j] + '|' + ids[i];
+          pairCount[key] = (pairCount[key] || 0) + 1;
+        }
+      }
+    });
+
+    // العناقيد (union-find)
+    const parent = {};
+    const find = (x) => { if (parent[x] === undefined) parent[x] = x; if (parent[x] !== x) parent[x] = find(parent[x]); return parent[x]; };
+    const union = (a, b) => { parent[find(a)] = find(b); };
+    connections.forEach((c) => {
+      if (c.source_entity_id && c.target_entity_id) union(c.source_entity_id, c.target_entity_id);
+    });
+    const clusters = {};
+    entities.forEach((e) => { const r = find(e.id); (clusters[r] = clusters[r] || []).push(e.id); });
+
+    // التنبيهات الحالية غير المحلولة لمنع التكرار
+    const existing = await base44.asServiceRole.entities.Alert.filter({ status: { $ne: 'resolved' } }, '-created_date', 500);
+    const existingKeys = new Set((existing || []).map((a) =>
+      (a.rule_id || a.rule_name || '') + '|' + (a.details && a.details.signature ? a.details.signature : '')
+    ));
+
+    const now = new Date().toISOString();
+    const toCreate = [];
+    const addAlert = (profile, signature, title, description, entityIds, extra) => {
+      const key = (profile.id || profile.name) + '|' + signature;
+      if (existingKeys.has(key)) return;
+      existingKeys.add(key);
+      const ents = (entityIds || []).map((id) => entById[id]).filter(Boolean);
+      toCreate.push({
+        title,
+        description,
+        severity: profile.severity || 'medium',
+        rule_id: profile.id || '',
+        rule_name: profile.name,
+        rule_type: profile.rule_type,
+        entity_ids: entityIds || [],
+        entity_names: ents.map((e) => e.name),
+        status: 'new',
+        triggered_at: now,
+        details: Object.assign({ signature }, extra || {})
+      });
+    };
+
+    let evaluated = 0;
+    profiles.forEach((p) => {
+      evaluated++;
+      const cond = p.conditions || {};
+      if (p.rule_type === 'risk_threshold') {
+        const min = cond.min_risk_score || 0;
+        entities.forEach((e) => {
+          if ((e.risk_score || 0) >= min) {
+            addAlert(p, 'risk:' + e.id, 'خطورة عالية: ' + e.name, 'درجة الخطورة ' + (e.risk_score || 0) + ' تتجاوز العتبة ' + min, [e.id], { risk_score: e.risk_score || 0 });
+          }
+        });
+      } else if (p.rule_type === 'watchlist') {
+        entities.forEach((e) => {
+          if (e.watchlist) addAlert(p, 'watch:' + e.id, 'مراقبة: ' + e.name, 'الكيان مُدرج في قائمة المراقبة', [e.id]);
+        });
+      } else if (p.rule_type === 'hub') {
+        const min = cond.min_degree || 5;
+        entities.forEach((e) => {
+          if ((degree[e.id] || 0) >= min) addAlert(p, 'hub:' + e.id, 'كيان محوري: ' + e.name, 'مرتبط بـ ' + (degree[e.id] || 0) + ' كيان', [e.id], { degree: degree[e.id] || 0 });
+        });
+      } else if (p.rule_type === 'co_occurrence') {
+        const min = cond.min_shared_docs || 2;
+        Object.entries(pairCount).forEach(([key, cnt]) => {
+          if (cnt < min) return;
+          const [a, b] = key.split('|');
+          if (cond.require_high_risk) {
+            const ea = entById[a], eb = entById[b];
+            if (!((ea && (ea.risk_score || 0) >= 50) || (eb && (eb.risk_score || 0) >= 50))) return;
+          }
+          addAlert(p, 'cooc:' + key, 'تشارك مكثّف: ' + (entById[a] ? entById[a].name : '?') + ' ↔ ' + (entById[b] ? entById[b].name : '?'), 'ظهران معاً في ' + cnt + ' مستند', [a, b], { shared_docs: cnt });
+        });
+      } else if (p.rule_type === 'cluster_size') {
+        const min = cond.min_size || 5;
+        Object.values(clusters).forEach((members) => {
+          if (members.length >= min) {
+            addAlert(p, 'cluster:' + members.slice().sort().join(','), 'عنقود شبكي كبير (' + members.length + ' كيان)', 'شبكة مترابطة بحجم كبير', members, { size: members.length });
+          }
+        });
+      }
+    });
+
+    let created = 0;
+    if (toCreate.length > 0) {
+      const res = await base44.asServiceRole.entities.Alert.bulkCreate(toCreate);
+      created = Array.isArray(res) ? res.length : toCreate.length;
+    }
+
+    return Response.json({
+      evaluated,
+      alerts_created: created,
+      by_severity: toCreate.reduce((acc, a) => { acc[a.severity] = (acc[a.severity] || 0) + 1; return acc; }, {}),
+      total_active: (existing ? existing.length : 0) + created
+    });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
