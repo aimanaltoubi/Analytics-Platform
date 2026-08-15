@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
-import TimelineAnalysis from '@/components/TimelineAnalysis';
+import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 
@@ -84,7 +84,7 @@ export default function WorkspaceDetail() {
 
       <WorkspaceNetwork workspace={workspace} />
 
-      <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
+      <WorkspaceTimelineExplorer entities={entities} connections={connections} documents={documents} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
