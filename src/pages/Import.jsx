@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UploadCloud, FileSpreadsheet, Loader2, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import WatchlistImporter from '@/components/WatchlistImporter';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -180,6 +181,8 @@ export default function Import() {
           <li>باقي الأعمدة تُخزّن تلقائياً كسمات للكيان</li>
         </ul>
       </div>
+
+      <WatchlistImporter />
     </div>
   );
 }

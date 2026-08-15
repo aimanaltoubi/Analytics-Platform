@@ -11,6 +11,7 @@ import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import GeoTemporalMap from '@/components/GeoTemporalMap';
 import { matchesEntityQuery } from '@/lib/entitySearch';
+import InvestigationReport from '@/components/InvestigationReport';
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
@@ -152,6 +153,8 @@ export default function WorkspaceDetail() {
       </div>
 
       <WorkspaceCsvExport workspace={workspace} entities={entities} />
+
+      <InvestigationReport title={workspace.name} entities={entities} connections={connections} documents={documents} />
 
       <WorkspacePdfLoader workspace={workspace} onLoaded={loadAll} />
     </div>

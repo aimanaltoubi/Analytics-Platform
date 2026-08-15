@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Users, Share2, FileText, Flag, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import EntityTimeline from '@/components/EntityTimeline';
+import InvestigationReport from '@/components/InvestigationReport';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -237,6 +239,10 @@ export default function EntityDetail() {
           )}
         </div>
       </div>
+
+      <EntityTimeline entityId={id} />
+
+      <InvestigationReport title={entity.name} entities={[entity]} connections={connections} />
     </div>
   );
 }

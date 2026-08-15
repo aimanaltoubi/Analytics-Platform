@@ -4,6 +4,7 @@ import { Network, RefreshCw, Users, Share2, GitFork, Unlink, Search, ArrowRight 
 import { base44 } from '@/api/base44Client';
 import BarList from '@/components/BarList';
 import GraphCanvas from '@/components/GraphCanvas';
+import PathAnalysis from '@/components/PathAnalysis';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
@@ -263,6 +264,8 @@ export default function GraphIndex() {
           </div>
         )}
       </div>
+
+      <PathAnalysis entities={entities} />
     </div>
   );
 }
