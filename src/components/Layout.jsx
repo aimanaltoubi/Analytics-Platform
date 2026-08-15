@@ -62,7 +62,7 @@ export default function Layout() {
           </div>
           <div className="leading-tight">
             <div className="font-heading font-bold text-sm leading-tight">Strategic Data Fusion</div>
-            <div className="text-[10px] text-muted-foreground tracking-wide">محرك دمج البيانات</div>
+            <div className="text-[10px] text-muted-foreground tracking-wide">نظام التحليلات الاستراتيجية</div>
           </div>
         </div>
 
