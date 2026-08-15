@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Network, RefreshCw, Users, Share2, GitFork, Unlink, Search, ArrowRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import BarList from '@/components/BarList';
+import GraphCanvas from '@/components/GraphCanvas';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
@@ -32,15 +33,53 @@ export default function GraphIndex() {
 
   useEffect(() => { load(); }, []);
 
-  const explore = async (id) => {
+  const [gNodes, setGNodes] = useState([]);
+  const [gEdges, setGEdges] = useState([]);
+
+  const buildInitialGraph = (d) => {
+    const nodes = new Map();
+    const edges = [];
+    const seen = new Set();
+    const addNode = (n) => { if (!nodes.has(n.id)) nodes.set(n.id, { id: n.id, name: n.name, type: n.type, degree: n.degree || 0 }); };
+    (d.hubs || []).slice(0, 8).forEach((h) => {
+      addNode(h);
+      const adj = d.adjacency && d.adjacency[h.id];
+      (adj && adj.neighbors || []).slice(0, 6).forEach((nb) => {
+        addNode({ id: nb.id, name: nb.name, type: nb.type, degree: 0 });
+        const key = [h.id, nb.id].sort().join('|');
+        if (!seen.has(key)) { seen.add(key); edges.push({ source: h.id, target: nb.id, rel: nb.rel }); }
+      });
+    });
+    setGNodes([...nodes.values()]);
+    setGEdges(edges);
+  };
+
+  const expandNode = async (id) => {
     setFocusId(id);
     if (!id) { setFocus(null); return; }
     setFocusLoading(true);
     try {
       const res = await base44.functions.invoke('buildGraphIndex', { focus_id: id });
-      setFocus(res.data.focus);
+      const f = res.data.focus;
+      setFocus(f);
+      setGNodes((prev) => {
+        const map = new Map(prev.map((n) => [n.id, n]));
+        (f.hop1 || []).forEach((nb) => { if (!map.has(nb.id)) map.set(nb.id, { id: nb.id, name: nb.name, type: nb.type, degree: 0 }); });
+        return [...map.values()];
+      });
+      setGEdges((prev) => {
+        const set = new Set(prev.map((e) => [e.source, e.target].sort().join('|')));
+        const next = [...prev];
+        (f.hop1 || []).forEach((nb) => {
+          const key = [id, nb.id].sort().join('|');
+          if (!set.has(key)) { set.add(key); next.push({ source: id, target: nb.id, rel: nb.rel }); }
+        });
+        return next;
+      });
     } catch (e) {} finally { setFocusLoading(false); }
   };
+
+  useEffect(() => { if (data) buildInitialGraph(data); }, [data]);
 
   const filteredEntities = useMemo(() => {
     const ql = filter.trim().toLowerCase();
@@ -132,6 +171,17 @@ export default function GraphIndex() {
         </div>
       </div>
 
+      {/* خريطة الروابط التفاعلية */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <h3 className="font-heading font-semibold flex items-center gap-2">
+          <Network className="w-4 h-4 text-primary" /> خريطة الروابط التفاعلية (Graph Canvas)
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          انقر على أي عقدة لتوسيع شبكة علاقاتها، واسحب العقد لإعادة ترتيبها. العقدة المحددة وعلاقاتها تُبرز باللون الأزرق.
+        </p>
+        <GraphCanvas nodes={gNodes} edges={gEdges} focusId={focusId} onNodeClick={expandNode} />
+      </div>
+
       {/* مستكشف الشبكة */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h3 className="font-heading font-semibold flex items-center gap-2">
@@ -150,7 +200,7 @@ export default function GraphIndex() {
           </div>
           <select
             value={focusId}
-            onChange={(e) => explore(e.target.value)}
+            onChange={(e) => expandNode(e.target.value)}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-[260px]"
           >
             <option value="">— اختر كياناً —</option>
