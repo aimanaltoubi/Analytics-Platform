@@ -25,6 +25,13 @@ const TYPE_LABELS = {
   other: 'أخرى'
 };
 
+function relColor(type) {
+  if (!type) return '#94a3b8';
+  let h = 0;
+  for (let i = 0; i < type.length; i++) h = (h * 31 + type.charCodeAt(i)) % 360;
+  return `hsl(${h} 55% 55%)`;
+}
+
 export default function NetworkGraph({ entities = [], connections = [], height = 560 }) {
   const navigate = useNavigate();
   const svgRef = useRef(null);
@@ -34,7 +41,23 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const [dragId, setDragId] = useState(null);
   const dims = useRef({ w: 800, h: height });
 
-  // بناء العقد
+  // درجة كل كيان (عدد الروابط)
+  const degreeMap = useMemo(() => {
+    const m = {};
+    connections.forEach((c) => {
+      m[c.source_entity_id] = (m[c.source_entity_id] || 0) + 1;
+      m[c.target_entity_id] = (m[c.target_entity_id] || 0) + 1;
+    });
+    return m;
+  }, [connections]);
+
+  // أنواع العلاقات الموجودة
+  const relTypes = useMemo(() => {
+    const set = new Set();
+    connections.forEach((c) => set.add(c.relationship_type || 'غير محدد'));
+    return Array.from(set);
+  }, [connections]);
+
   useEffect(() => {
     const w = svgRef.current?.clientWidth || 800;
     dims.current.w = w;
@@ -52,8 +75,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
         x: cx + Math.cos(angle) * r + (Math.random() - 0.5) * 20,
         y: cy + Math.sin(angle) * r + (Math.random() - 0.5) * 20,
         vx: 0,
-        vy: 0,
-        degree: 0
+        vy: 0
       };
     });
     setNodes(Object.values(byId));
@@ -61,11 +83,15 @@ export default function NetworkGraph({ entities = [], connections = [], height =
 
   const edges = useMemo(() => {
     return connections
-      .map((c) => ({ source: c.source_entity_id, target: c.target_entity_id, type: c.relationship_type, evidence: c.evidence }))
+      .map((c) => ({
+        source: c.source_entity_id,
+        target: c.target_entity_id,
+        type: c.relationship_type,
+        evidence: c.evidence
+      }))
       .filter((e) => e.source && e.target);
   }, [connections]);
 
-  // محاكاة القوى
   useEffect(() => {
     if (!nodes.length) return;
     let raf;
@@ -78,7 +104,6 @@ export default function NetworkGraph({ entities = [], connections = [], height =
         prev.forEach((n) => (map[n.id] = { ...n }));
         const arr = prev.map((n) => ({ ...n, vx: 0, vy: 0 }));
 
-        // التنافر
         for (let i = 0; i < arr.length; i++) {
           for (let j = i + 1; j < arr.length; j++) {
             const dx = arr[i].x - arr[j].x;
@@ -93,7 +118,6 @@ export default function NetworkGraph({ entities = [], connections = [], height =
             arr[j].vy -= fy;
           }
         }
-        // التجاذب على الحواف
         for (const e of edges) {
           const a = map[e.source] || arr.find((n) => n.id === e.source);
           const b = map[e.target] || arr.find((n) => n.id === e.target);
@@ -101,7 +125,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = (dist - 120) * 0.04;
+          const force = (dist - 130) * 0.04;
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
           const na = arr.find((n) => n.id === a.id);
@@ -109,7 +133,6 @@ export default function NetworkGraph({ entities = [], connections = [], height =
           if (na) { na.vx += fx; na.vy += fy; }
           if (nb) { nb.vx -= fx; nb.vy -= fy; }
         }
-        // المركز
         for (const n of arr) {
           n.vx += (w / 2 - n.x) * 0.01;
           n.vy += (h / 2 - n.y) * 0.01;
@@ -124,8 +147,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
       raf = requestAnimationFrame(run);
     };
     raf = requestAnimationFrame(run);
-    let stopped = false;
-    setTimeout(() => { stopped = true; cancelAnimationFrame(raf); }, 2500);
+    setTimeout(() => cancelAnimationFrame(raf), 2500);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line
   }, [nodes.length, edges.length]);
@@ -136,9 +158,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     return m;
   }, [nodes]);
 
-  const handlePointerDown = (e, id) => {
-    setDragId(id);
-  };
+  const handlePointerDown = (e, id) => { setDragId(id); };
   const handlePointerMove = (e) => {
     if (!dragId) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -154,34 +174,95 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     ? edges.filter((e) => e.source === selected || e.target === selected)
     : [];
 
+  const nodeRadius = (id) => {
+    const deg = degreeMap[id] || 0;
+    return 7 + Math.min(deg * 1.6, 10);
+  };
+
+  // مسار منحني للحافة
+  const edgePath = (a, b) => {
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    // انحناء بسيط عمودي على الخط
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const norm = -dy * 0.12;
+    const norm2 = dx * 0.12;
+    return `M${a.x},${a.y} Q${mx + norm},${my + norm2} ${b.x},${b.y}`;
+  };
+
   return (
     <div className="relative">
       <svg
         ref={svgRef}
         width="100%"
         height={height}
-        className="rounded-xl border border-border bg-[radial-gradient(circle_at_center,#f8fafc,#f1f5f9)]"
+        className="rounded-xl border border-border bg-[radial-gradient(circle_at_30%_20%,#eff6ff,#f8fafc_55%,#eef2f7)]"
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
+        <defs>
+          <filter id="nodeGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="3.5" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {relTypes.map((t) => (
+            <marker
+              key={t}
+              id={`arrow-${t}`}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={relColor(t)} />
+            </marker>
+          ))}
+        </defs>
+
         {/* الحواف */}
         {edges.map((e, i) => {
           const a = nodeById[e.source];
           const b = nodeById[e.target];
           if (!a || !b) return null;
           const active = selected && (e.source === selected || e.target === selected);
+          const color = relColor(e.type);
           return (
-            <line
+            <path
               key={i}
-              x1={a.x}
-              y1={a.y}
-              x2={b.x}
-              y2={b.y}
-              stroke={active ? '#0ea5e9' : '#cbd5e1'}
-              strokeWidth={active ? 2 : 1}
-              strokeOpacity={active ? 0.9 : 0.5}
+              d={edgePath(a, b)}
+              fill="none"
+              stroke={active ? color : '#cbd5e1'}
+              strokeWidth={active ? 2.2 : 1.1}
+              strokeOpacity={active ? 0.95 : 0.45}
+              markerEnd={`url(#arrow-${e.type})`}
             />
+          );
+        })}
+
+        {/* تسميات العلاقات عند التحويم أو الاختيار */}
+        {edges.map((e, i) => {
+          const a = nodeById[e.source];
+          const b = nodeById[e.target];
+          if (!a || !b) return null;
+          const active = selected && (e.source === selected || e.target === selected);
+          const hovered = hover && (e.source === hover || e.target === hover);
+          if (!active && !hovered) return null;
+          const mx = (a.x + b.x) / 2;
+          const my = (a.y + b.y) / 2;
+          return (
+            <g key={`l-${i}`} pointerEvents="none">
+              <rect x={mx - 26} y={my - 9} width="52" height="16" rx="8" fill="#fff" stroke={relColor(e.type)} strokeOpacity="0.5" />
+              <text x={mx} y={my + 3} textAnchor="middle" style={{ fontSize: 9, fontWeight: 600 }} fill={relColor(e.type)}>
+                {(e.type || '').length > 14 ? (e.type || '').slice(0, 13) + '…' : (e.type || 'رابط')}
+              </text>
+            </g>
           );
         })}
 
@@ -190,7 +271,8 @@ export default function NetworkGraph({ entities = [], connections = [], height =
           const color = TYPE_COLORS[n.type] || TYPE_COLORS.other;
           const isSel = selected === n.id;
           const isHover = hover === n.id;
-          const r = isSel || isHover ? 11 : 8;
+          const r = nodeRadius(n.id);
+          const dispR = isSel || isHover ? r + 3 : r;
           return (
             <g
               key={n.id}
@@ -201,13 +283,20 @@ export default function NetworkGraph({ entities = [], connections = [], height =
               onMouseEnter={() => setHover(n.id)}
               onMouseLeave={() => setHover(null)}
             >
-              <circle r={r + 4} fill={color} opacity={isSel ? 0.18 : 0} />
-              <circle r={r} fill={color} stroke="#fff" strokeWidth={2} />
+              <circle r={dispR + 6} fill={color} opacity={isSel ? 0.22 : isHover ? 0.14 : 0.08} />
+              <circle
+                r={dispR}
+                fill={color}
+                stroke="#fff"
+                strokeWidth={2}
+                filter={isSel || isHover ? 'url(#nodeGlow)' : undefined}
+              />
+          <circle r={dispR - 3} fill="#fff" opacity={0.25} />
               <text
-                y={r + 14}
+                y={dispR + 14}
                 textAnchor="middle"
                 className="fill-foreground"
-                style={{ fontSize: 11, fontWeight: 500 }}
+                style={{ fontSize: 11, fontWeight: 600, paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeOpacity: 0.7 }}
               >
                 {n.name.length > 18 ? n.name.slice(0, 17) + '…' : n.name}
               </text>
@@ -216,22 +305,34 @@ export default function NetworkGraph({ entities = [], connections = [], height =
         })}
       </svg>
 
-      {/* مفتاح الأنواع */}
-      <div className="absolute top-3 left-3 flex flex-wrap gap-2 max-w-[60%]">
+      {/* مفتاح أنواع الكيانات */}
+      <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[55%]">
         {Object.entries(TYPE_COLORS).map(([k, c]) => (
-          <span key={k} className="inline-flex items-center gap-1.5 bg-background/80 backdrop-blur px-2 py-1 rounded-md text-[11px] border border-border">
+          <span key={k} className="inline-flex items-center gap-1 bg-background/85 backdrop-blur px-2 py-1 rounded-md text-[11px] border border-border">
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
             {TYPE_LABELS[k]}
           </span>
         ))}
       </div>
 
+      {/* مفتاح أنواع العلاقات */}
+      {relTypes.length > 0 && (
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[60%]">
+          {relTypes.slice(0, 6).map((t) => (
+            <span key={t} className="inline-flex items-center gap-1 bg-background/85 backdrop-blur px-2 py-1 rounded-md text-[11px] border border-border">
+              <span className="w-3 h-0.5 rounded-full" style={{ background: relColor(t) }} />
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* لوحة التفاصيل */}
       {selectedNode && selectedEntity && (
-        <div className="absolute top-3 right-3 w-64 bg-card border border-border rounded-xl shadow-lg p-4">
+        <div className="absolute top-3 right-3 w-72 bg-card border border-border rounded-xl shadow-lg p-4 max-h-[calc(100%-1.5rem)] overflow-auto">
           <div className="flex items-start justify-between mb-2">
-            <div>
-              <div className="font-heading font-semibold text-sm">{selectedEntity.name}</div>
+            <div className="min-w-0">
+              <div className="font-heading font-semibold text-sm truncate">{selectedEntity.name}</div>
               <span
                 className="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] text-white"
                 style={{ background: TYPE_COLORS[selectedEntity.type] || TYPE_COLORS.other }}
@@ -246,22 +347,42 @@ export default function NetworkGraph({ entities = [], connections = [], height =
               أسماء بديلة: {selectedEntity.aliases.join('، ')}
             </div>
           )}
-          <div className="text-xs text-muted-foreground mb-3">
-            ذُكر {selectedEntity.mention_count || 0} مرة • {selectedEdges.length} رابط
+          <div className="text-xs text-muted-foreground mb-2">
+            ذُكر {selectedEntity.mention_count || 0} مرة • {selectedEdges.length} رابط • درجة {degreeMap[selectedEntity.id] || 0}
           </div>
+
+          {selectedEntity.attributes && Object.keys(selectedEntity.attributes).length > 0 && (
+            <div className="mb-3 rounded-lg bg-accent/40 p-2.5">
+              <div className="text-[11px] font-medium text-muted-foreground mb-1.5">السمات</div>
+              <div className="space-y-1">
+                {Object.entries(selectedEntity.attributes).map(([k, v]) => (
+                  <div key={k} className="flex items-start justify-between gap-2 text-xs">
+                    <span className="text-muted-foreground shrink-0">{k}</span>
+                    <span className="font-medium text-left break-all">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedEdges.length > 0 && (
-            <div className="space-y-1 mb-3 max-h-32 overflow-auto">
-              {selectedEdges.slice(0, 5).map((e, i) => {
+            <div className="space-y-1 mb-3">
+              <div className="text-[11px] font-medium text-muted-foreground">الروابط</div>
+              {selectedEdges.slice(0, 6).map((e, i) => {
                 const other = e.source === selected ? e.target : e.source;
                 const otherEnt = entities.find((x) => x.id === other);
                 return (
-                  <div key={i} className="text-[11px] text-muted-foreground">
-                    <span className="text-foreground font-medium">{e.type}</span> — {otherEnt?.name || '...'}
+                  <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: relColor(e.type) }} />
+                    <span className="text-foreground font-medium">{e.type}</span>
+                    <span className="text-muted-foreground">←</span>
+                    <span className="text-muted-foreground truncate">{otherEnt?.name || '...'}</span>
                   </div>
                 );
               })}
             </div>
           )}
+
           <button
             onClick={() => navigate(`/entities/${selectedEntity.id}`)}
             className="w-full text-xs py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
