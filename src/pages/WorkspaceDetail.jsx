@@ -4,6 +4,7 @@ import { ArrowRight, Plus, X, Users, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
+import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
@@ -119,6 +120,8 @@ export default function WorkspaceDetail() {
           )}
         </div>
       </div>
+
+      <WorkspaceCsvExport workspace={workspace} entities={entities} />
 
       <WorkspacePdfLoader workspace={workspace} onLoaded={loadAll} />
     </div>
