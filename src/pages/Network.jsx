@@ -13,6 +13,7 @@ export default function Network() {
   const [filter, setFilter] = useState('all');
   const [minRisk, setMinRisk] = useState(0);
   const [workspaceFilter, setWorkspaceFilter] = useState('all');
+  const [hiddenRels, setHiddenRels] = useState(new Set());
 
   useEffect(() => {
     (async () => {
@@ -55,6 +56,17 @@ export default function Network() {
   const filteredConnections = connections.filter(
     (c) => filteredIds.has(c.source_entity_id) && filteredIds.has(c.target_entity_id)
   );
+
+  const relTypes = Array.from(new Set(connections.map((c) => c.relationship_type).filter(Boolean)));
+  const visibleConnections = filteredConnections.filter((c) => !hiddenRels.has(c.relationship_type));
+
+  const toggleRel = (type) => {
+    setHiddenRels((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type); else next.add(type);
+      return next;
+    });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -103,6 +115,30 @@ export default function Network() {
         </div>
       </div>
 
+      {relTypes.length > 0 && !loading && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground shrink-0">إظهار العلاقات:</span>
+          {relTypes.map((t) => {
+            const hidden = hiddenRels.has(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggleRel(t)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                  hidden ? 'text-muted-foreground border-border line-through opacity-60' : 'bg-primary/10 text-primary border-primary/30'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${hidden ? 'bg-muted-foreground' : 'bg-primary'}`} />
+                {t}
+              </button>
+            );
+          })}
+          {hiddenRels.size > 0 && (
+            <button onClick={() => setHiddenRels(new Set())} className="text-xs text-primary hover:underline">إظهار الكل</button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="text-sm text-muted-foreground py-12 text-center">جارٍ تحميل الشبكة...</div>
       ) : filteredEntities.length === 0 ? (
@@ -111,7 +147,7 @@ export default function Network() {
           <p className="text-sm">لا توجد بيانات بعد. ارفع مستندات لإنشاء الشبكة.</p>
         </div>
       ) : (
-        <NetworkGraph entities={filteredEntities} connections={filteredConnections} height={580} />
+        <NetworkGraph entities={filteredEntities} connections={visibleConnections} height={580} />
       )}
 
       {!loading && filteredEntities.length > 0 && (
@@ -141,7 +177,7 @@ export default function Network() {
               <Share2 className="w-4 h-4" /> أحدث الروابط
             </h3>
             <div className="space-y-2">
-              {filteredConnections.slice(0, 10).map((c) => (
+              {visibleConnections.slice(0, 10).map((c) => (
                 <div key={c.id} className="p-2.5 rounded-lg bg-accent/30 text-sm">
                   <span className="font-medium">{c.source_entity_name}</span>
                   <span className="text-muted-foreground mx-1">—{c.relationship_type}→</span>
