@@ -89,7 +89,7 @@ export default function TransitAnalytics() {
   const routeDist = {};
   manifests.forEach((m) => {
     if (!m.departure_location || !m.destination_location) return;
-    const r = `${m.departure_location} → ${m.destination_location}`;
+    const r = `${m.departure_location} ← ${m.destination_location}`;
     routeDist[r] = (routeDist[r] || 0) + 1;
   });
   const topRoutes = Object.entries(routeDist).map(([k, v]) => ({ name: k, value: v }))

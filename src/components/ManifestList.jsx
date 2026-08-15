@@ -62,7 +62,7 @@ export default function ManifestList() {
                       {m.status === 'cleared' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {m.departure_location || '—'} → {m.destination_location || '—'}
+                      {m.departure_location || '—'} ← {m.destination_location || '—'}
                       {m.departure_datetime && ` • ${new Date(m.departure_datetime).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}`}
                     </div>
                   </div>
