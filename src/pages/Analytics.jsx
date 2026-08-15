@@ -180,7 +180,7 @@ export default function Analytics() {
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground" style={{ fontSize: 24, fontWeight: 700 }}>{entities.length}</text>
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" dy={18} className="fill-muted-foreground" style={{ fontSize: 11 }}>إجمالي</text>
                 <Tooltip content={<ChartTooltip />} />
-                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12, lineHeight: '20px', paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -192,15 +192,15 @@ export default function Analytics() {
           {topEntities.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">لا توجد بيانات</p>
           ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={topEntities} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={Math.max(340, topEntities.length * 42)}>
+              <BarChart data={topEntities} layout="vertical" margin={{ left: 24, right: 24, top: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} tickFormatter={(v) => (v && v.length > 14 ? v.slice(0, 13) + '…' : v)} stroke="#94a3b8" />
+                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} interval={0} tickLine={false} axisLine={false} tickFormatter={(v) => (v && v.length > 12 ? v.slice(0, 11) + '…' : v)} stroke="#94a3b8" />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="ذكر" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={12} />
-                <Bar dataKey="روابط" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                <Bar dataKey="ذكر" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={11} />
+                <Bar dataKey="روابط" fill="#10b981" radius={[0, 4, 4, 0]} barSize={11} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -212,13 +212,13 @@ export default function Analytics() {
           {relDistribution.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">لا توجد بيانات</p>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={relDistribution} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={Math.max(320, relDistribution.length * 40)}>
+              <BarChart data={relDistribution} layout="vertical" margin={{ left: 24, right: 24, top: 8, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                 <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} tickFormatter={(v) => (v && v.length > 20 ? v.slice(0, 19) + '…' : v)} stroke="#94a3b8" />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={150} interval={0} tickLine={false} axisLine={false} tickFormatter={(v) => (v && v.length > 18 ? v.slice(0, 17) + '…' : v)} stroke="#94a3b8" />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
-                <Bar dataKey="value" name="عدد الروابط" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={16} />
+                <Bar dataKey="value" name="عدد الروابط" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -240,7 +240,7 @@ export default function Analytics() {
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground" style={{ fontSize: 24, fontWeight: 700 }}>{documents.length}</text>
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" dy={18} className="fill-muted-foreground" style={{ fontSize: 11 }}>إجمالي</text>
                 <Tooltip content={<ChartTooltip />} />
-                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12, lineHeight: '20px', paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
           )}
