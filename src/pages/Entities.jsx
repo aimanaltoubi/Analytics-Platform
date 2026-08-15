@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Users, Search, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { matchesEntityQuery } from '@/lib/entitySearch';
+import { getNationality, hasPassport, hasPhone, hasEmail, hasCoordinates, riskTier } from '@/lib/entityClassify';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -34,6 +35,10 @@ export default function Entities() {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [watchOnly, setWatchOnly] = useState(false);
+  const [sort, setSort] = useState('mentions');
+  const [nationality, setNationality] = useState('all');
+  const [riskFilter, setRiskFilter] = useState('all');
+  const [attrFilters, setAttrFilters] = useState({ passport: false, phone: false, email: false, coords: false });
 
   useEffect(() => {
     (async () => {
@@ -46,12 +51,32 @@ export default function Entities() {
   }, []);
 
   const types = ['all', ...new Set(entities.map((e) => e.type))];
+  const nationalities = [...new Set(entities.map(getNationality).filter(Boolean))].sort();
+  const typeCounts = {};
+  entities.forEach((e) => { typeCounts[e.type] = (typeCounts[e.type] || 0) + 1; });
+
   const filtered = entities.filter((e) => {
-    const matchQuery = !query || matchesEntityQuery(e, query);
-    const matchType = typeFilter === 'all' || e.type === typeFilter;
-    const matchWatch = !watchOnly || e.watchlist;
-    return matchQuery && matchType && matchWatch;
+    if (query && !matchesEntityQuery(e, query)) return false;
+    if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+    if (watchOnly && !e.watchlist) return false;
+    if (nationality !== 'all' && getNationality(e) !== nationality) return false;
+    if (attrFilters.passport && !hasPassport(e)) return false;
+    if (attrFilters.phone && !hasPhone(e)) return false;
+    if (attrFilters.email && !hasEmail(e)) return false;
+    if (attrFilters.coords && !hasCoordinates(e)) return false;
+    if (riskFilter !== 'all' && riskTier(e) !== riskFilter) return false;
+    return true;
   });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'risk') return (b.risk_score || 0) - (a.risk_score || 0);
+    if (sort === 'recent') return new Date(b.created_date || 0) - new Date(a.created_date || 0);
+    if (sort === 'name') return (a.name || '').localeCompare(b.name || '', 'ar');
+    return (b.mention_count || 0) - (a.mention_count || 0);
+  });
+
+  const hasActiveFilters = nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean);
+  const resetFilters = () => { setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); };
 
   return (
     <div className="p-6 space-y-6">
@@ -60,34 +85,89 @@ export default function Entities() {
         <p className="text-sm text-muted-foreground mt-1">جميع الكيانات المحلولة عبر المستندات</p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="بحث بالاسم أو الاسم البديل..."
-            className="w-full pr-10 pl-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="بحث بالاسم أو الاسم البديل..."
+              className="w-full pr-10 pl-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="mentions">الأكثر ذكراً</option>
+            <option value="risk">الأعلى خطورة</option>
+            <option value="recent">الأحدث</option>
+            <option value="name">الاسم</option>
+          </select>
+          <button
+            onClick={() => setWatchOnly((w) => !w)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${
+              watchOnly ? 'bg-amber-100 text-amber-800 border-amber-300' : 'border-border hover:bg-accent'
+            }`}
+          >
+            <Flag className="w-4 h-4" /> المراقبة
+          </button>
         </div>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          {types.map((t) => (
-            <option key={t} value={t}>{t === 'all' ? 'كل الأنواع' : TYPE_LABELS[t] || t}</option>
+
+        {/* شرائح النوع — تصنيف تلقائي بعدّاد */}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setTypeFilter('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              typeFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border hover:bg-accent'
+            }`}
+          >
+            الكل ({entities.length})
+          </button>
+          {types.filter((t) => t !== 'all').map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(typeFilter === t ? 'all' : t)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                typeFilter === t ? 'bg-primary text-primary-foreground border-primary' : `${TYPE_COLORS[t] || TYPE_COLORS.other} border-transparent hover:opacity-80`
+              }`}
+            >
+              {TYPE_LABELS[t] || t} ({typeCounts[t] || 0})
+            </button>
           ))}
-        </select>
-        <button
-          onClick={() => setWatchOnly((w) => !w)}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${
-            watchOnly ? 'bg-amber-100 text-amber-800 border-amber-300' : 'border-border hover:bg-accent'
-          }`}
-        >
-          <Flag className="w-4 h-4" />
-          المراقبة
-        </button>
+        </div>
+
+        {/* مرشحات السمات المكتشفة */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={nationality} onChange={(e) => setNationality(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="all">كل الجنسيات</option>
+            {nationalities.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="all">كل مستويات الخطورة</option>
+            <option value="high">خطورة عالية</option>
+            <option value="medium">خطورة متوسطة</option>
+            <option value="low">خطورة منخفضة</option>
+            <option value="none">بدون خطورة</option>
+          </select>
+          {[
+            { key: 'passport', label: 'جواز سفر' },
+            { key: 'phone', label: 'هاتف' },
+            { key: 'email', label: 'بريد' },
+            { key: 'coords', label: 'إحداثيات' }
+          ].map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setAttrFilters((p) => ({ ...p, [f.key]: !p[f.key] }))}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                attrFilters[f.key] ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border hover:bg-accent'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {hasActiveFilters && (
+            <button onClick={resetFilters} className="px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground">إعادة ضبط</button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -98,8 +178,10 @@ export default function Entities() {
           <p className="text-sm">لا توجد كيانات.</p>
         </div>
       ) : (
+        <>
+        <div className="text-xs text-muted-foreground">{sorted.length} كيان</div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((e) => (
+          {sorted.map((e) => (
             <Link
               key={e.id}
               to={`/entities/${e.id}`}
@@ -136,6 +218,7 @@ export default function Entities() {
             </Link>
           ))}
         </div>
+        </>
       )}
     </div>
   );
