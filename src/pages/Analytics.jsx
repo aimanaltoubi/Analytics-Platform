@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend, CartesianGrid
 } from 'recharts';
-import { Users, Share2, FileText } from 'lucide-react';
+import { Users, Share2, FileText, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
@@ -11,6 +11,7 @@ import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
 import BarList from '@/components/BarList';
 import NationalityOverview from '@/components/NationalityOverview';
+import GeoTemporalMap from '@/components/GeoTemporalMap';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -60,21 +61,21 @@ export default function Analytics() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [ents, conns, docs] = await Promise.all([
-          base44.entities.Entity.list('-mention_count', 500),
-          base44.entities.Connection.list('-created_date', 500),
-          base44.entities.Document.list('-created_date', 500)
-        ]);
-        setEntities(ents);
-        setConnections(conns);
-        setDocuments(docs);
-      } catch (e) {} finally { setLoading(false); }
-    })();
-  }, []);
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [ents, conns, docs] = await Promise.all([
+        base44.entities.Entity.list('-mention_count', 500),
+        base44.entities.Connection.list('-created_date', 500),
+        base44.entities.Document.list('-created_date', 500)
+      ]);
+      setEntities(ents);
+      setConnections(conns);
+      setDocuments(docs);
+    } catch (e) {} finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadAll(); }, []);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
 
@@ -255,6 +256,13 @@ export default function Analytics() {
       <NationalityOverview entities={entities} />
 
       <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
+
+      {/* الخريطة الجغرافية الزمنية — مسارات حركة الكيانات */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الجغرافية الزمنية</h3>
+        <p className="text-xs text-muted-foreground">تتبّع مسارات حركة الكيانات وتطوّر تحركاتهم عبر الزمن بناءً على البيانات المستخرجة. استخدم شريط الزمن لتشغيل تطوّر الأحداث، وفعّل «رسم المواقع» لترميز إحداثيات المواقع بالنقر على الخريطة.</p>
+        <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
+      </div>
 
       {/* جدول أكثر الكيانات ذكراً */}
       <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
