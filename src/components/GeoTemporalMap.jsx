@@ -297,14 +297,33 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
 
   return (
     <div className="space-y-3">
+      {/* مقدمة توضيحية */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <Route className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="font-heading font-bold text-base">التطور الجغرافي للحركات والتحولات</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              يعرض مواقع ذكر الكيانات عبر الزمن. اضغط «تشغيل زمني» لمشاهدة ظهور كل الكيانات في مواقعها زمنياً بالترتيب، أو اختر كياناً محدداً ونطاقاً زمنياً للتركيز على حركته فقط.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* شريط الأدوات: الزمن + الرسم */}
       <div className="rounded-xl border border-border bg-card p-3 space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <button disabled={displayIncidents.length === 0} onClick={() => { setIdx(0); setPlaying(false); }} className={btn} title="من البداية">
+          <button disabled={displayIncidents.length === 0} onClick={() => { setIdx(0); setPlaying(false); }} className={btn} title="إعادة من البداية">
             <SkipBack className="w-4 h-4" />
           </button>
-          <button disabled={displayIncidents.length === 0} onClick={() => setPlaying((p) => !p)} className={btn + ' bg-primary text-primary-foreground hover:bg-primary/90 border-primary'} title="تشغيل/إيقاف">
+          <button
+            disabled={displayIncidents.length === 0}
+            onClick={() => setPlaying((p) => !p)}
+            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors"
+            title="يشغّل جميع الأحداث زمنياً بالترتيب (كل الكيانات)"
+          >
             {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {playing ? 'إيقاف' : 'تشغيل زمني'}
           </button>
           <div className="flex-1 min-w-[200px]" dir="ltr">
             <input
@@ -321,6 +340,10 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             {currentTime ? fmt(currentTime) : '—'}
           </div>
           <span className="text-xs text-muted-foreground shrink-0">{visibleIncidents.length}/{displayIncidents.length} حدث</span>
+          <span className="text-xs text-primary shrink-0 hidden sm:inline-flex items-center gap-1">
+            <Route className="w-3.5 h-3.5" />
+            {hideAll ? 'الخريطة مخفية' : movementPerson ? `تركيز: ${entities.find((e) => e.id === movementPerson)?.name || ''}` : 'كل الكيانات'}
+          </span>
         </div>
 
         {/* صف الرسم ومسارات الحركة */}
