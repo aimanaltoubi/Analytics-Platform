@@ -9,10 +9,10 @@ const TYPE_LABELS = {
 };
 
 const TIERS = [
-  { key: 'critical', label: 'حرجة', min: 70, badge: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', ring: 'border-r-red-400' },
-  { key: 'high', label: 'عالية', min: 40, badge: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500', ring: 'border-r-orange-400' },
-  { key: 'medium', label: 'متوسطة', min: 10, badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', ring: 'border-r-amber-400' },
-  { key: 'low', label: 'منخفضة', min: 1, badge: 'bg-lime-100 text-lime-700 border-lime-200', dot: 'bg-lime-500', ring: 'border-r-lime-400' }
+  { key: 'critical', label: 'حرجة', min: 70, badge: 'bg-red-100 text-red-800 border-red-300', dot: 'bg-red-700', card: 'border-2 border-red-800 bg-red-50/40' },
+  { key: 'high', label: 'عالية', min: 40, badge: 'bg-orange-100 text-orange-800 border-orange-300', dot: 'bg-red-600', card: 'border-2 border-red-700 bg-red-50/30' },
+  { key: 'medium', label: 'متوسطة', min: 10, badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', card: 'border border-border border-r-4 border-r-amber-400' },
+  { key: 'low', label: 'منخفضة', min: 1, badge: 'bg-lime-100 text-lime-700 border-lime-200', dot: 'bg-lime-500', card: 'border border-border border-r-4 border-r-lime-400' }
 ];
 
 function tierOf(score) {
@@ -56,7 +56,11 @@ export default function SecurityWatchPanel() {
   });
 
   const filtered = tierFilter === 'all' ? matched : matched.filter((e) => e.tier && e.tier.key === tierFilter);
-  const sorted = [...filtered].sort((a, b) => b.score - a.score);
+  const sorted = [...filtered].sort((a, b) => {
+    const pa = (a.watchlist ? 1000 : 0) + a.score;
+    const pb = (b.watchlist ? 1000 : 0) + b.score;
+    return pb - pa;
+  });
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -115,7 +119,7 @@ export default function SecurityWatchPanel() {
               <Link
                 key={e.id}
                 to={`/entities/${e.id}`}
-                className={`flex items-start gap-3 p-3 rounded-lg border border-r-4 ${tier.ring} border-border hover:bg-accent/40 transition-colors`}
+                className={`flex items-start gap-3 p-3 rounded-lg ${tier.card} hover:bg-accent/40 transition-colors`}
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${tier.dot} mt-1.5 shrink-0`} />
                 <div className="flex-1 min-w-0">
