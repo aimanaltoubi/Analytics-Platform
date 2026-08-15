@@ -39,6 +39,8 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const [selected, setSelected] = useState(null);
   const [hover, setHover] = useState(null);
   const [dragId, setDragId] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [hoverEdge, setHoverEdge] = useState(null);
   const dims = useRef({ w: 800, h: height });
 
   // درجة كل كيان (عدد الروابط)
@@ -179,18 +181,6 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     return 7 + Math.min(deg * 1.6, 10);
   };
 
-  // مسار منحني للحافة
-  const edgePath = (a, b) => {
-    const mx = (a.x + b.x) / 2;
-    const my = (a.y + b.y) / 2;
-    // انحناء بسيط عمودي على الخط
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const norm = -dy * 0.12;
-    const norm2 = dx * 0.12;
-    return `M${a.x},${a.y} Q${mx + norm},${my + norm2} ${b.x},${b.y}`;
-  };
-
   return (
     <div className="relative">
       <svg
@@ -201,6 +191,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        onClick={(e) => { if (e.target === svgRef.current) { setSelectedEdge(null); setSelected(null); } }}
       >
         <defs>
           <filter id="nodeGlow" x="-60%" y="-60%" width="220%" height="220%">
@@ -232,39 +223,46 @@ export default function NetworkGraph({ entities = [], connections = [], height =
           const b = nodeById[e.target];
           if (!a || !b) return null;
           const active = selected && (e.source === selected || e.target === selected);
+          const isEdgeSel = selectedEdge && selectedEdge.source === e.source && selectedEdge.target === e.target && selectedEdge.type === e.type;
+          const isEdgeHover = hoverEdge && hoverEdge.source === e.source && hoverEdge.target === e.target;
           const color = relColor(e.type);
+          const hit = isEdgeSel || isEdgeHover;
           return (
-            <path
+            <line
               key={i}
-              d={edgePath(a, b)}
-              fill="none"
-              stroke={active ? color : '#cbd5e1'}
-              strokeWidth={active ? 2.2 : 1.1}
-              strokeOpacity={active ? 0.95 : 0.45}
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke={hit ? color : active ? color : '#cbd5e1'}
+              strokeWidth={hit ? 2.8 : active ? 2.2 : 1.2}
+              strokeOpacity={hit ? 1 : active ? 0.9 : 0.5}
               markerEnd={`url(#arrow-${e.type})`}
+              style={{ cursor: 'pointer' }}
+              onClick={(ev) => { ev.stopPropagation(); setSelectedEdge(e); }}
+              onMouseEnter={() => setHoverEdge(e)}
+              onMouseLeave={() => setHoverEdge(null)}
             />
           );
         })}
 
-        {/* تسميات العلاقات عند التحويم أو الاختيار */}
-        {edges.map((e, i) => {
-          const a = nodeById[e.source];
-          const b = nodeById[e.target];
+        {/* تسمية العلاقة عند النقر أو التحويم */}
+        {(() => {
+          const shown = selectedEdge || hoverEdge;
+          if (!shown) return null;
+          const a = nodeById[shown.source];
+          const b = nodeById[shown.target];
           if (!a || !b) return null;
-          const active = selected && (e.source === selected || e.target === selected);
-          const hovered = hover && (e.source === hover || e.target === hover);
-          if (!active && !hovered) return null;
           const mx = (a.x + b.x) / 2;
           const my = (a.y + b.y) / 2;
+          const isSel = !!selectedEdge;
+          const color = relColor(shown.type);
           return (
-            <g key={`l-${i}`} pointerEvents="none">
-              <rect x={mx - 26} y={my - 9} width="52" height="16" rx="8" fill="#fff" stroke={relColor(e.type)} strokeOpacity="0.5" />
-              <text x={mx} y={my + 3} textAnchor="middle" style={{ fontSize: 9, fontWeight: 600 }} fill={relColor(e.type)}>
-                {(e.type || '').length > 14 ? (e.type || '').slice(0, 13) + '…' : (e.type || 'رابط')}
+            <g pointerEvents="none">
+              <rect x={mx - 32} y={my - 11} width="64" height="20" rx="10" fill="#fff" stroke={color} strokeWidth={isSel ? 1.5 : 1} />
+              <text x={mx} y={my + 4} textAnchor="middle" style={{ fontSize: 10, fontWeight: 700 }} fill={color}>
+                {(shown.type || 'رابط').length > 16 ? (shown.type || 'رابط').slice(0, 15) + '…' : (shown.type || 'رابط')}
               </text>
             </g>
           );
-        })}
+        })()}
 
         {/* العقد */}
         {nodes.map((n) => {
