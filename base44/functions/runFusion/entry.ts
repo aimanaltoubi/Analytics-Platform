@@ -9,6 +9,93 @@ const TYPE_LABELS = {
   location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
 
+// === محرك حلّ الكيانات (Entity Resolution) ===
+// مطابقة حتمية عبر المعرّفات القوية + مطابقة احتمالية (Jaro-Winkler + تاريخ الميلاد + Soundex)
+const STRONG_KEYS = [
+  'رقم الجواز', 'الرقم الوطني / رقم الهوية', 'رقم الهاتف', 'البريد الإلكتروني',
+  'رقم الحساب', 'البصمة', 'رقم رخصة القيادة'
+];
+const RES_THRESHOLD = 0.92;
+const WEIGHTS = { name: 0.5, dob: 0.3, soundex: 0.2 };
+
+const SOUNDEX_MAP = {
+  b: '1', f: '1', v: '1', p: '1',
+  c: '2', g: '2', j: '2', k: '2', q: '2', s: '2', x: '2', z: '2',
+  d: '3', t: '3', l: '4', m: '5', n: '5', r: '6',
+  'ب': '1', 'ف': '1', 'ث': '1', 'پ': '1',
+  'ج': '2', 'ح': '2', 'خ': '2', 'ك': '2', 'ق': '2', 'گ': '2', 'س': '2', 'ز': '2', 'ش': '2', 'ص': '2',
+  'د': '3', 'ت': '3', 'ط': '3', 'ظ': '3', 'ض': '3',
+  'ل': '4', 'م': '5', 'ن': '5', 'ر': '6',
+  'ع': '7', 'غ': '7', 'ه': '7', 'ء': '7', 'أ': '7', 'إ': '7', 'آ': '7', 'ؤ': '7', 'ئ': '7', 'ى': '7',
+  'ا': '0', 'و': '0', 'ي': '0'
+};
+
+function jaro(a, b) {
+  if (!a || !b) return 0;
+  const md = Math.floor(Math.max(a.length, b.length) / 2) - 1;
+  const am = new Array(a.length).fill(false);
+  const bm = new Array(b.length).fill(false);
+  let m = 0;
+  for (let i = 0; i < a.length; i++) {
+    const st = Math.max(0, i - md);
+    const en = Math.min(i + md + 1, b.length);
+    for (let j = st; j < en; j++) {
+      if (bm[j] || a[i] !== b[j]) continue;
+      am[i] = bm[j] = true;
+      m++;
+      break;
+    }
+  }
+  if (m === 0) return 0;
+  let t = 0, k = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (!am[i]) continue;
+    while (!bm[k]) k++;
+    if (a[i] !== b[k]) t++;
+    k++;
+  }
+  t = t / 2;
+  return (m / a.length + m / b.length + (m - t) / m) / 3;
+}
+
+function jaroWinkler(a, b) {
+  const j = jaro(a, b);
+  let p = 0;
+  for (let i = 0; i < Math.min(a.length, b.length, 4); i++) {
+    if (a[i] === b[i]) p++;
+    else break;
+  }
+  return j + p * 0.1 * (1 - j);
+}
+
+function soundex(s) {
+  s = norm(s);
+  if (!s) return '';
+  let code = '';
+  let last = SOUNDEX_MAP[s[0]] || '';
+  for (let i = 1; i < s.length && code.length < 3; i++) {
+    const c = SOUNDEX_MAP[s[i]];
+    if (!c || c === '0') continue;
+    if (c === last) continue;
+    code += c;
+    last = c;
+  }
+  while (code.length < 3) code += '0';
+  return s[0] + code;
+}
+
+function matchProb(a, b) {
+  const n1 = norm(a.name), n2 = norm(b.name);
+  const jw = jaroWinkler(n1, n2);
+  const sx = soundex(n1) === soundex(n2) ? 1 : 0;
+  const da = norm((a.attributes || {})['تاريخ الميلاد']);
+  const db = norm((b.attributes || {})['تاريخ الميلاد']);
+  let dob;
+  if (!da || !db) dob = 0.5;
+  else dob = da === db ? 1 : 0;
+  return WEIGHTS.name * jw + WEIGHTS.dob * dob + WEIGHTS.soundex * sx;
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -30,12 +117,47 @@ export default async function(req) {
       connCount[c.target_entity_id] = (connCount[c.target_entity_id] || 0) + 1;
     });
 
-    // 1) تحليل الكيانات: دمج المكررات حسب (النوع + الاسم المؤسس)
-    const groups = {};
+    // 1) حلّ الكيانات: مطابقة حتمية + احتمالية (Entity Resolution)
+    const uf = {};
+    const efind = (x) => { if (uf[x] === undefined) uf[x] = x; if (uf[x] !== x) uf[x] = efind(uf[x]); return uf[x]; };
+    const eunion = (a, b) => { uf[efind(a)] = efind(b); };
+
+    // (أ) مطابقة حتمية: اسم مؤسس مطابق أو معرّف قوي متطابق (جواز/هوية/هاتف/بريد/حساب/بصمة)
+    const byKey = {};
     entities.forEach((e) => {
-      const key = (e.type || 'other') + '|' + norm(e.name);
-      (groups[key] = groups[key] || []).push(e);
+      const nk = 'name|' + (e.type || 'other') + '|' + norm(e.name);
+      (byKey[nk] = byKey[nk] || []).push(e.id);
+      STRONG_KEYS.forEach((sk) => {
+        const v = norm((e.attributes || {})[sk]);
+        if (!v) return;
+        const kk = sk + '|' + v;
+        (byKey[kk] = byKey[kk] || []).push(e.id);
+      });
     });
+    Object.values(byKey).forEach((ids) => {
+      if (ids.length < 2) return;
+      for (let i = 1; i < ids.length; i++) eunion(ids[0], ids[i]);
+    });
+
+    // (ب) مطابقة احتمالية: Jaro-Winkler(الاسم) + تاريخ الميلاد + Soundex
+    const byType = {};
+    entities.forEach((e) => { (byType[e.type || 'other'] = byType[e.type || 'other'] || []).push(e); });
+    const probMatches = [];
+    Object.values(byType).forEach((arr) => {
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          if (efind(arr[i].id) === efind(arr[j].id)) continue;
+          const p = matchProb(arr[i], arr[j]);
+          if (p >= RES_THRESHOLD) {
+            eunion(arr[i].id, arr[j].id);
+            probMatches.push({ a: arr[i].name, b: arr[j].name, probability: +p.toFixed(3) });
+          }
+        }
+      }
+    });
+
+    const groups = {};
+    entities.forEach((e) => { const r = efind(e.id); (groups[r] = groups[r] || []).push(e); });
 
     const canonMap = {};      // dupId -> canonicalId
     const mergedGroups = [];  // للإبلاغ
@@ -146,7 +268,7 @@ export default async function(req) {
     });
 
     const nameById = {};
-    entities.forEach((e) => { nameById[can(e.id)] = e.name; });
+    entities.forEach((e) => { nameById[canon(e.id)] = e.name; });
 
     const newCooc = [];
     const newPairKeys = new Set();
@@ -270,7 +392,13 @@ export default async function(req) {
       top_cooccurrence: topCooc,
       risk_network: riskNetwork,
       incidents_by_type: docTypeDist,
-      merge_report: mergedGroups
+      merge_report: mergedGroups,
+      resolution: {
+        threshold: RES_THRESHOLD,
+        weights: WEIGHTS,
+        probabilistic_merges: probMatches.length,
+        probabilistic_sample: probMatches.slice(0, 12)
+      }
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

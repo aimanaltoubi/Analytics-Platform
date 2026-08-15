@@ -196,6 +196,49 @@ export default function FusionInsights() {
         </div>
       )}
 
+      {/* تقرير حلّ الكيانات */}
+      {insights.resolution && (
+        <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
+          <h4 className="font-heading font-semibold mb-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-violet-500" /> حلّ الكيانات (Entity Resolution)
+          </h4>
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-xs text-muted-foreground">
+            <span className="px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+              عتبة الدمج: {Math.round((insights.resolution.threshold || 0) * 100)}٪
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              مطابقات احتمالية: {insights.resolution.probabilistic_merges || 0}
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              الاسم (Jaro-Winkler) × {(insights.resolution.weights?.name || 0)}
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              تاريخ الميلاد × {(insights.resolution.weights?.dob || 0)}
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200">
+              Soundex × {(insights.resolution.weights?.soundex || 0)}
+            </span>
+          </div>
+          {(insights.resolution.probabilistic_sample || []).length > 0 && (
+            <div className="space-y-1.5">
+              {insights.resolution.probabilistic_sample.map((m, i) => (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-accent/40 text-sm">
+                  <span className="font-medium truncate">{m.a}</span>
+                  <span className="text-muted-foreground shrink-0">≡</span>
+                  <span className="font-medium truncate">{m.b}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 shrink-0 ms-auto">
+                    {Math.round((m.probability || 0) * 100)}٪
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-3">
+            يدمج النظام تلقائياً السجلات التي يتجاوز احتمال تطابقها ٩٢٪ (اسم + تاريخ ميلاد + تطابق صوتي) والسجلات ذات المعرّفات القوية المتطابقة (جواز/هوية/بصمة…).
+          </p>
+        </div>
+      )}
+
       {/* تقرير الدمج */}
       {(insights.merge_report || []).length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
