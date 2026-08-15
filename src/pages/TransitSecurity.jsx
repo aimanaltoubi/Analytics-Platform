@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ShieldCheck, ListChecks, BarChart3 } from 'lucide-react';
 import ManifestForm from '@/components/ManifestForm';
+import ManifestTextUploader from '@/components/ManifestTextUploader';
 import ManifestList from '@/components/ManifestList';
 import TransitAnalytics from '@/components/TransitAnalytics';
 
@@ -44,6 +45,7 @@ export default function TransitSecurity() {
 
       {tab === 'manifests' ? (
         <>
+          <ManifestTextUploader onExtracted={() => setTick((t) => t + 1)} />
           <ManifestForm onSubmitted={() => setTick((t) => t + 1)} />
           <ManifestList key={tick} />
         </>
