@@ -90,11 +90,11 @@ export default function Home() {
   };
 
   const kpis = [
-    { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents' },
-    { label: 'الكيانات', value: stats.entities, icon: Users, to: '/entities' },
-    { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph' },
-    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: '/documents' },
-    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: '/alerts' }
+    { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents', tint: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
+    { label: 'الكيانات', value: stats.entities, icon: Users, to: '/entities', tint: 'text-violet-600', bg: 'bg-violet-50', bar: 'bg-violet-500' },
+    { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph', tint: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: '/documents', tint: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
+    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: '/alerts', tint: 'text-red-600', bg: 'bg-red-50', bar: 'bg-red-500' }
   ];
 
   return (
@@ -125,9 +125,9 @@ export default function Home() {
             const Icon = k.icon;
             return (
               <Link key={k.label} to={k.to} className="group relative rounded-lg border border-border bg-card p-3.5 hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden">
-                <span className="absolute top-0 right-0 left-0 h-0.5 bg-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className={`absolute top-0 right-0 left-0 h-0.5 ${k.bar} opacity-70 group-hover:opacity-100 transition-opacity`} />
                 <div className="flex items-center justify-between mb-2.5">
-                  <div className="w-8 h-8 rounded-md bg-muted text-primary flex items-center justify-center">
+                  <div className={`w-8 h-8 rounded-md ${k.bg} ${k.tint} flex items-center justify-center`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <ChevronLeft className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
