@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { norm, nameSimilarity } from '../../shared/entityResolution.ts';
+import { notifyWatchlistMatches } from '../../shared/notify.ts';
 
 const STRONG_KEYS = ['رقم الجواز', 'الرقم الوطني / رقم الهوية', 'رقم الهاتف', 'البريد الإلكتروني', 'رقم الحساب'];
 
@@ -115,6 +116,12 @@ export default async function(req) {
 
     if (toCreate.length > 0) await base44.asServiceRole.entities.Alert.bulkCreate(toCreate);
 
+    // إشعار فوري للمسؤولين عند مطابقة قائمة المراقبة
+    let notified = { sent: 0 };
+    if (toCreate.length > 0) {
+      try { notified = await notifyWatchlistMatches(base44, manifest, flags, cargoFlags); } catch (e) {}
+    }
+
     const status = (flags.length > 0 || cargoFlags.length > 0) ? 'flagged' : 'cleared';
     await base44.asServiceRole.entities.Manifest.update(manifest.id, {
       status,
@@ -134,7 +141,8 @@ export default async function(req) {
       passengers_screened: passengers.length,
       passengers_flagged: flags.length,
       cargo_flagged: cargoFlags.length,
-      alerts_created: toCreate.length
+      alerts_created: toCreate.length,
+      notifications_sent: notified.sent
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
