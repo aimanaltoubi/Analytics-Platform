@@ -1,5 +1,17 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
+import { useToast } from '@/components/ui/use-toast';
+
+const SUGGESTED_ATTRS = {
+  person: ['الجنسية', 'تاريخ الميلاد', 'رقم الجواز', 'الرقم الوطني', 'المهنة', 'العنوان', 'رقم الهاتف'],
+  organization: ['رقم التسجيل', 'الدولة', 'القطاع', 'العنوان', 'الموقع الإلكتروني'],
+  phone: ['المالك', 'المشغل', 'المنطقة'],
+  email: ['المالك', 'المزود'],
+  location: ['الدولة', 'المدينة', 'الإحداثيات'],
+  account: ['البنك', 'العملة', 'المالك'],
+  other: ['ملاحظة']
+};
 
 const TYPE_COLORS = {
   person: '#3b82f6',
@@ -32,8 +44,9 @@ function relColor(type) {
   return `hsl(${h} 55% 55%)`;
 }
 
-export default function NetworkGraph({ entities = [], connections = [], height = 560 }) {
+export default function NetworkGraph({ entities = [], connections = [], height = 560, onEntityUpdated }) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const svgRef = useRef(null);
   const [nodes, setNodes] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -41,6 +54,9 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const [dragId, setDragId] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [hoverEdge, setHoverEdge] = useState(null);
+  const [newKey, setNewKey] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const [saving, setSaving] = useState(false);
   const dims = useRef({ w: 800, h: height });
 
   // درجة كل كيان (عدد الروابط)
@@ -175,6 +191,35 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const selectedEdges = selected
     ? edges.filter((e) => e.source === selected || e.target === selected)
     : [];
+
+  const addAttr = async () => {
+    if (!newKey.trim() || !newValue.trim() || !selectedEntity) return;
+    setSaving(true);
+    const attrs = { ...(selectedEntity.attributes || {}) };
+    attrs[newKey.trim()] = newValue.trim();
+    try {
+      await base44.entities.Entity.update(selectedEntity.id, { attributes: attrs });
+      const merged = { ...selectedEntity, attributes: attrs };
+      if (onEntityUpdated) onEntityUpdated(selectedEntity.id, merged);
+      toast({ title: 'تم حفظ المعلومة' });
+      setNewKey(''); setNewValue('');
+    } catch (e) {
+      toast({ title: 'تعذّر الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  const deleteAttr = async (k) => {
+    if (!selectedEntity) return;
+    const attrs = { ...(selectedEntity.attributes || {}) };
+    delete attrs[k];
+    try {
+      await base44.entities.Entity.update(selectedEntity.id, { attributes: attrs });
+      if (onEntityUpdated) onEntityUpdated(selectedEntity.id, { ...selectedEntity, attributes: attrs });
+      toast({ title: 'تم حذف المعلومة' });
+    } catch (e) {
+      toast({ title: 'تعذّر الحذف', description: e.message, variant: 'destructive' });
+    }
+  };
 
   const nodeRadius = (id) => {
     const deg = degreeMap[id] || 0;
@@ -349,19 +394,51 @@ export default function NetworkGraph({ entities = [], connections = [], height =
             ذُكر {selectedEntity.mention_count || 0} مرة • {selectedEdges.length} رابط • درجة {degreeMap[selectedEntity.id] || 0}
           </div>
 
-          {selectedEntity.attributes && Object.keys(selectedEntity.attributes).length > 0 && (
-            <div className="mb-3 rounded-lg bg-accent/40 p-2.5">
-              <div className="text-[11px] font-medium text-muted-foreground mb-1.5">السمات</div>
-              <div className="space-y-1">
-                {Object.entries(selectedEntity.attributes).map(([k, v]) => (
+          <div className="mb-3 rounded-lg bg-accent/40 p-2.5">
+            <div className="text-[11px] font-medium text-muted-foreground mb-1.5">المعلومات</div>
+            <div className="space-y-1 mb-2">
+              {selectedEntity.attributes && Object.keys(selectedEntity.attributes).length > 0 ? (
+                Object.entries(selectedEntity.attributes).map(([k, v]) => (
                   <div key={k} className="flex items-start justify-between gap-2 text-xs">
-                    <span className="text-muted-foreground shrink-0">{k}</span>
-                    <span className="font-medium text-left break-all">{String(v)}</span>
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">{k}: </span>
+                      <span className="font-medium break-all">{String(v)}</span>
+                    </div>
+                    <button onClick={() => deleteAttr(k)} className="text-muted-foreground hover:text-destructive shrink-0 leading-none">×</button>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <div className="text-xs text-muted-foreground">لا توجد معلومات إضافية. أضف معلومة أدناه.</div>
+              )}
             </div>
-          )}
+            <div className="flex gap-1.5">
+              <input
+                list="attr-suggestions"
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+                placeholder="الحقل (مثال: الجنسية)"
+                className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <input
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                placeholder="القيمة"
+                className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                onClick={addAttr}
+                disabled={saving || !newKey.trim() || !newValue.trim()}
+                className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50"
+              >
+                {saving ? '...' : 'إضافة'}
+              </button>
+            </div>
+            <datalist id="attr-suggestions">
+              {(SUGGESTED_ATTRS[selectedEntity.type] || SUGGESTED_ATTRS.other).map((k) => (
+                <option key={k} value={k} />
+              ))}
+            </datalist>
+          </div>
 
           {selectedEdges.length > 0 && (
             <div className="space-y-1 mb-3">

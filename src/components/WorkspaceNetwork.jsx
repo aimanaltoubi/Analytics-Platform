@@ -175,7 +175,12 @@ export default function WorkspaceNetwork({ workspace }) {
           <p className="text-sm">لا توجد روابط مؤرخة ضمن النطاق المحدد.</p>
         </div>
       ) : (
-        <NetworkGraph entities={visibleEntities} connections={filteredConnections} height={520} />
+        <NetworkGraph
+          entities={visibleEntities}
+          connections={filteredConnections}
+          height={520}
+          onEntityUpdated={(id, updated) => setEntities((prev) => prev.map((e) => (e.id === id ? updated : e)))}
+        />
       )}
     </div>
   );
