@@ -42,6 +42,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [linkEntityId, setLinkEntityId] = useState('');
   const [linkLocId, setLinkLocId] = useState('');
   const [linking, setLinking] = useState(false);
+  const [linkDate, setLinkDate] = useState('');
   const [focusEntity, setFocusEntity] = useState('');
   const timer = useRef(null);
   const { toast } = useToast();
@@ -51,10 +52,12 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     documents.forEach((d) => { docsById[d.id] = d; });
     const locByDoc = {};
     const dateByDoc = {};
+    const locById = {};
     const locs = [];
     entities.forEach((e) => {
       if (e.type === 'location' && e.latitude != null && e.longitude != null) {
         locs.push(e);
+        locById[e.id] = e;
         (e.document_ids || []).forEach((did) => { locByDoc[did] = e; });
       }
       if (e.type === 'date') {
@@ -66,23 +69,41 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     });
     const list = [];
     connections.forEach((c) => {
-      const doc = c.document_id ? docsById[c.document_id] : null;
-      const loc = c.document_id ? locByDoc[c.document_id] : null;
-      if (!loc) return;
-      const date = (c.document_id && dateByDoc[c.document_id]) || (doc ? parseDate(doc.created_date) : null);
-      if (!date) return;
-      list.push({
-        id: c.id,
-        lat: loc.latitude,
-        lng: loc.longitude,
-        date,
-        sourceName: c.source_entity_name || '',
-        targetName: c.target_entity_name || '',
-        label: (c.source_entity_name || '') + ' ↔ ' + (c.target_entity_name || ''),
-        rel: c.relationship_type,
-        docTitle: doc ? doc.title : null,
-        locName: loc.name
-      });
+      if (c.document_id) {
+        const doc = docsById[c.document_id] || null;
+        const loc = locByDoc[c.document_id] || null;
+        if (!loc) return;
+        const date = dateByDoc[c.document_id] || (doc ? parseDate(doc.created_date) : null);
+        if (!date) return;
+        list.push({
+          id: c.id,
+          lat: loc.latitude,
+          lng: loc.longitude,
+          date,
+          sourceName: c.source_entity_name || '',
+          targetName: c.target_entity_name || '',
+          label: (c.source_entity_name || '') + ' ↔ ' + (c.target_entity_name || ''),
+          rel: c.relationship_type,
+          docTitle: doc ? doc.title : null,
+          locName: loc.name
+        });
+      } else if (c.relationship_type === 'موجود في' && locById[c.target_entity_id]) {
+        const loc = locById[c.target_entity_id];
+        const date = parseDate(c.evidence);
+        if (!date) return;
+        list.push({
+          id: c.id,
+          lat: loc.latitude,
+          lng: loc.longitude,
+          date,
+          sourceName: c.source_entity_name || '',
+          targetName: loc.name,
+          label: (c.source_entity_name || '') + ' ↔ ' + loc.name,
+          rel: 'موجود في',
+          docTitle: null,
+          locName: loc.name
+        });
+      }
     });
     list.sort((a, b) => a.date - b.date);
     return { incidents: list, locations: locs };
@@ -143,6 +164,15 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const linkableEntities = useMemo(() => entities.filter((e) => e.type !== 'location').slice(0, 300), [entities]);
   const geoLocations = useMemo(() => locEntities.filter((e) => e.latitude != null), [locEntities]);
   const locEntityIds = useMemo(() => new Set(locEntities.map((e) => e.id)), [locEntities]);
+  const linkedByLoc = useMemo(() => {
+    const m = {};
+    connections.forEach((c) => {
+      if (c.relationship_type === 'موجود في') {
+        (m[c.target_entity_id] || (m[c.target_entity_id] = [])).push(c.source_entity_name);
+      }
+    });
+    return m;
+  }, [connections]);
   const linkedLocIds = useMemo(() => {
     if (!focusEntity) return null;
     const ids = new Set();
@@ -155,6 +185,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
 
   const createLink = async () => {
     if (!linkEntityId || !linkLocId) { toast({ variant: 'destructive', title: 'اختر كياناً وموقعاً' }); return; }
+    if (!linkDate) { toast({ variant: 'destructive', title: 'حدد تاريخ الذكر' }); return; }
     setLinking(true);
     try {
       const ent = entities.find((e) => e.id === linkEntityId);
@@ -165,11 +196,13 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         source_entity_name: ent?.name || '',
         target_entity_name: loc?.name || '',
         relationship_type: 'موجود في',
+        evidence: new Date(linkDate).toISOString(),
         strength: 1
       });
-      toast({ title: 'تم ربط الكيان بالموقع', description: `${ent?.name} → ${loc?.name}` });
+      toast({ title: 'تم ربط الكيان بالموقع', description: `${ent?.name} → ${loc?.name} بتاريخ ${linkDate}` });
       setLinkEntityId('');
       setLinkLocId('');
+      setLinkDate('');
       onLocationsChanged && await onLocationsChanged();
     } catch (e) {
       toast({ variant: 'destructive', title: 'فشل الربط', description: e.message });
@@ -310,9 +343,16 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>
+          <input
+            type="date"
+            value={linkDate}
+            onChange={(e) => setLinkDate(e.target.value)}
+            className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            title="تاريخ الذكر"
+          />
           <button
             onClick={createLink}
-            disabled={linking || !linkEntityId || !linkLocId}
+            disabled={linking || !linkEntityId || !linkLocId || !linkDate}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <Plus className="w-4 h-4" /> {linking ? 'جارٍ الربط...' : 'ربط'}
@@ -360,9 +400,19 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
               return (
                 <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={linked ? 7 : 4} pathOptions={{ color: linked ? '#dc2626' : '#94a3b8', fillColor: linked ? '#dc2626' : '#94a3b8', fillOpacity: linked ? 0.7 : 0.2 }}>
                   <Popup>
-                    <div className="text-xs">
-                      <div className="font-semibold">{l.name}</div>
+                    <div className="text-xs space-y-1 min-w-[170px]">
+                      <div className="font-semibold text-sm">{l.name}</div>
                       <div className="text-muted-foreground">{l.latitude?.toFixed(4)}، {l.longitude?.toFixed(4)}</div>
+                      {(linkedByLoc[l.id] || []).length > 0 && (
+                        <div className="pt-1.5 border-t border-border">
+                          <div className="text-muted-foreground text-[11px] mb-1">الكيانات المرتبطة ({linkedByLoc[l.id].length}):</div>
+                          <div className="flex flex-wrap gap-1">
+                            {linkedByLoc[l.id].map((n, i) => (
+                              <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-accent">{n}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </Popup>
                 </CircleMarker>
@@ -391,12 +441,17 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
                   pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: isLatest ? 0.9 : 0.5 }}
                 >
                   <Popup>
-                    <div className="text-xs space-y-0.5">
-                      <div className="font-semibold">{ev.label}</div>
-                      <div className="text-muted-foreground">{fmt(ev.date)}</div>
-                      {ev.rel && <div className="text-muted-foreground">{ev.rel}</div>}
-                      {ev.locName && <div>📍 {ev.locName}</div>}
-                      {ev.docTitle && <div className="text-muted-foreground">المستند: {ev.docTitle}</div>}
+                    <div className="text-xs space-y-1 min-w-[190px]">
+                      <div className="font-semibold text-sm">{ev.sourceName || ev.label}</div>
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="w-3 h-3" /> {fmt(ev.date)}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-primary" /> {ev.locName}
+                      </div>
+                      {ev.rel && <span className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{ev.rel}</span>}
+                      {ev.targetName && ev.targetName !== ev.locName && <div className="text-muted-foreground">المرتبط: {ev.targetName}</div>}
+                      {ev.docTitle && <div className="text-muted-foreground text-[11px]">المستند: {ev.docTitle}</div>}
                     </div>
                   </Popup>
                 </CircleMarker>
