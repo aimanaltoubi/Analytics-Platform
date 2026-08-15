@@ -42,6 +42,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [linkEntityId, setLinkEntityId] = useState('');
   const [linkLocId, setLinkLocId] = useState('');
   const [linking, setLinking] = useState(false);
+  const [focusEntity, setFocusEntity] = useState('');
   const timer = useRef(null);
   const { toast } = useToast();
 
@@ -141,6 +142,16 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const unlocatedCount = locEntities.filter((e) => e.latitude == null).length;
   const linkableEntities = useMemo(() => entities.filter((e) => e.type !== 'location').slice(0, 300), [entities]);
   const geoLocations = useMemo(() => locEntities.filter((e) => e.latitude != null), [locEntities]);
+  const locEntityIds = useMemo(() => new Set(locEntities.map((e) => e.id)), [locEntities]);
+  const linkedLocIds = useMemo(() => {
+    if (!focusEntity) return null;
+    const ids = new Set();
+    connections.forEach((c) => {
+      if (c.source_entity_id === focusEntity && locEntityIds.has(c.target_entity_id)) ids.add(c.target_entity_id);
+      if (c.target_entity_id === focusEntity && locEntityIds.has(c.source_entity_id)) ids.add(c.source_entity_id);
+    });
+    return ids;
+  }, [focusEntity, connections, locEntityIds]);
 
   const createLink = async () => {
     if (!linkEntityId || !linkLocId) { toast({ variant: 'destructive', title: 'اختر كياناً وموقعاً' }); return; }
@@ -307,6 +318,23 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             <Plus className="w-4 h-4" /> {linking ? 'جارٍ الربط...' : 'ربط'}
           </button>
         </div>
+
+        {/* إبراز مواقع كيان */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
+          <MapPin className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-muted-foreground shrink-0">إبراز مواقع كيان:</span>
+          <select className={sel} value={focusEntity} onChange={(e) => setFocusEntity(e.target.value)}>
+            <option value="">— كل المواقع —</option>
+            {linkableEntities.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+          {focusEntity && (
+            <button onClick={() => setFocusEntity('')} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> مسح
+            </button>
+          )}
+        </div>
       </div>
 
       {/* الخريطة */}
@@ -327,16 +355,19 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             <ClickHandler active={drawMode} onClick={handleMapClick} />
 
             {/* المواقع الثابتة */}
-            {locations.map((l) => (
-              <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={5} pathOptions={{ color: '#94a3b8', fillColor: '#94a3b8', fillOpacity: 0.35 }}>
-                <Popup>
-                  <div className="text-xs">
-                    <div className="font-semibold">{l.name}</div>
-                    <div className="text-muted-foreground">{l.latitude?.toFixed(4)}، {l.longitude?.toFixed(4)}</div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
+            {locations.map((l) => {
+              const linked = !linkedLocIds || linkedLocIds.has(l.id);
+              return (
+                <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={linked ? 7 : 4} pathOptions={{ color: linked ? '#dc2626' : '#94a3b8', fillColor: linked ? '#dc2626' : '#94a3b8', fillOpacity: linked ? 0.7 : 0.2 }}>
+                  <Popup>
+                    <div className="text-xs">
+                      <div className="font-semibold">{l.name}</div>
+                      <div className="text-muted-foreground">{l.latitude?.toFixed(4)}، {l.longitude?.toFixed(4)}</div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
 
             {/* مسارات الحركة المتكشفة */}
             {revealedTracks.map((t) => (
