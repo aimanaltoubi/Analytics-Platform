@@ -21,6 +21,7 @@ import Analytics from '@/pages/Analytics';
 import GeoTemporal from '@/pages/GeoTemporal';
 import Alerts from '@/pages/Alerts';
 import TransitSecurity from '@/pages/TransitSecurity';
+import GraphIndex from '@/pages/GraphIndex';
 import Search from '@/pages/Search';
 import Import from '@/pages/Import';
 import Workspaces from '@/pages/Workspaces';
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
           <Route path="/geo" element={<GeoTemporal />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/transit" element={<TransitSecurity />} />
+          <Route path="/graph" element={<GraphIndex />} />
           <Route path="/search" element={<Search />} />
           <Route path="/import" element={<Import />} />
           <Route path="/workspaces" element={<Workspaces />} />

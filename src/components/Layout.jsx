@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, BarChart3, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, BarChart3, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/geo', label: 'الخريطة الزمنية', icon: MapPin, end: false },
   { to: '/alerts', label: 'التنبيهات', icon: Bell, end: false },
   { to: '/transit', label: 'أمن العبور', icon: ShieldCheck, end: false },
+  { to: '/graph', label: 'فهرس العلاقات', icon: GitFork, end: false },
   { to: '/search', label: 'البحث', icon: Search, end: false }
 ];
 
