@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Users, Share2, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import TimelineAnalysis from '@/components/TimelineAnalysis';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -239,6 +240,8 @@ export default function Analytics() {
           )}
         </div>
       </div>
+
+      <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
 
       {/* جدول أكثر الكيانات ذكراً */}
       <div className="rounded-xl border border-border bg-card p-5">
