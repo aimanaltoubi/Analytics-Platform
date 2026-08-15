@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
+import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 
 export default function WorkspaceDetail() {
@@ -123,6 +124,11 @@ export default function WorkspaceDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> جدول الكيانات والسمات</h3>
+        <WorkspaceEntitiesTable entities={entities} />
       </div>
 
       <WorkspaceCsvExport workspace={workspace} entities={entities} />
