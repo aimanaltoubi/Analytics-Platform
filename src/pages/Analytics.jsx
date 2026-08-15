@@ -9,6 +9,7 @@ import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
+import BarList from '@/components/BarList';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -192,17 +193,22 @@ export default function Analytics() {
           {topEntities.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">لا توجد بيانات</p>
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(340, topEntities.length * 42)}>
-              <BarChart data={topEntities} layout="vertical" margin={{ left: 24, right: 24, top: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={130} interval={0} tickLine={false} axisLine={false} tickFormatter={(v) => (v && v.length > 12 ? v.slice(0, 11) + '…' : v)} stroke="#94a3b8" />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Bar dataKey="ذكر" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={11} />
-                <Bar dataKey="روابط" fill="#10b981" radius={[0, 4, 4, 0]} barSize={11} />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> ذكر</span>
+                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> روابط</span>
+              </div>
+              <BarList
+                max={Math.max(...topEntities.flatMap((e) => [e.ذكر, e.روابط]), 1)}
+                items={topEntities.map((e) => ({
+                  name: e.name,
+                  values: [
+                    { label: 'ذكر', value: e.ذكر, color: '#3b82f6' },
+                    { label: 'روابط', value: e.روابط, color: '#10b981' }
+                  ]
+                }))}
+              />
+            </>
           )}
         </div>
 
@@ -212,15 +218,13 @@ export default function Analytics() {
           {relDistribution.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">لا توجد بيانات</p>
           ) : (
-            <ResponsiveContainer width="100%" height={Math.max(320, relDistribution.length * 40)}>
-              <BarChart data={relDistribution} layout="vertical" margin={{ left: 24, right: 24, top: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={150} interval={0} tickLine={false} axisLine={false} tickFormatter={(v) => (v && v.length > 18 ? v.slice(0, 17) + '…' : v)} stroke="#94a3b8" />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
-                <Bar dataKey="value" name="عدد الروابط" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
+            <BarList
+              max={Math.max(...relDistribution.map((r) => r.value), 1)}
+              items={relDistribution.map((r) => ({
+                name: r.name,
+                values: [{ label: '', value: r.value, color: '#8b5cf6' }]
+              }))}
+            />
           )}
         </div>
 
