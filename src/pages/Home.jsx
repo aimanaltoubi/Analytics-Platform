@@ -99,12 +99,6 @@ export default function Home() {
 
   return (
     <div className="min-h-full">
-      {/* شريط التصنيف */}
-      <div className="h-7 bg-slate-800 text-slate-100 flex items-center justify-center gap-2 text-[11px] tracking-wide">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-        تحليل روابط · للاستخدام الداخلي فقط — غير مخصص للتوزيع
-      </div>
-
       {/* رأسية العمليات */}
       <div className="px-6 pt-5 pb-4 border-b border-border bg-card/40">
         <div className="flex items-end justify-between gap-4">
