@@ -20,6 +20,7 @@ import Entities from '@/pages/Entities';
 import EntityDetail from '@/pages/EntityDetail';
 import Analytics from '@/pages/Analytics';
 import Search from '@/pages/Search';
+import Import from '@/pages/Import';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
           <Route path="/entities/:id" element={<EntityDetail />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/import" element={<Import />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
