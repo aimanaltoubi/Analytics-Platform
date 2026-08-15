@@ -25,6 +25,7 @@ export default function EntityDetail() {
   const [riskScore, setRiskScore] = useState(0);
   const [watchlist, setWatchlist] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [nameMap, setNameMap] = useState({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,10 +36,14 @@ export default function EntityDetail() {
         setEntity(ent);
         setRiskScore(ent.risk_score || 0);
         setWatchlist(!!ent.watchlist);
-        const [conns, ment] = await Promise.all([
+        const [conns, ment, allEnts] = await Promise.all([
           base44.entities.Connection.list('-created_date', 200),
-          base44.entities.Mention.filter({ entity_id: id }, '-created_date', 50)
+          base44.entities.Mention.filter({ entity_id: id }, '-created_date', 50),
+          base44.entities.Entity.list('-mention_count', 1000)
         ]);
+        const nm = {};
+        allEnts.forEach((e) => { nm[e.id] = e.name; });
+        setNameMap(nm);
         setConnections(conns.filter((c) => c.source_entity_id === id || c.target_entity_id === id));
         setMentions(ment);
       } catch (e) {} finally { setLoading(false); }
@@ -193,11 +198,9 @@ export default function EntityDetail() {
                     to={`/entities/${otherId}`}
                     className="block p-2.5 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors"
                   >
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">{isSource ? '→' : '←'} </span>
-                      <span className="font-medium">{c.relationship_type}</span>
-                      <span className="text-muted-foreground"> — </span>
-                      <span className="font-medium">{otherName}</span>
+                    <div className="text-sm flex items-center gap-2 flex-wrap">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.relationship_type}</span>
+                      <span className="font-medium">{otherName || nameMap[otherId] || 'كيان محذوف'}</span>
                     </div>
                     {c.evidence && (
                       <div className="text-xs text-muted-foreground mt-1 italic">"{c.evidence}"</div>

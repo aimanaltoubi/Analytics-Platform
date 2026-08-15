@@ -145,6 +145,9 @@ export default async function(req) {
       (docEntitySet[m.document_id] = docEntitySet[m.document_id] || new Set()).add(eid);
     });
 
+    const nameById = {};
+    entities.forEach((e) => { nameById[can(e.id)] = e.name; });
+
     const newCooc = [];
     const newPairKeys = new Set();
     Object.entries(docEntitySet).forEach(([docId, set]) => {
@@ -158,6 +161,8 @@ export default async function(req) {
           newCooc.push({
             source_entity_id: arr[i],
             target_entity_id: arr[j],
+            source_entity_name: nameById[arr[i]] || '',
+            target_entity_name: nameById[arr[j]] || '',
             relationship_type: 'ذُكر معاً',
             document_id: docId,
             evidence: doc ? `تشارك في: ${doc.title}` : 'تشارك في مستند',
