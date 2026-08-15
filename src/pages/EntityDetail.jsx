@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, Users, Share2, FileText, Flag, Save } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ArrowRight, Users, Share2, FileText, Flag, Save, GitMerge } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
 import InvestigationReport from '@/components/InvestigationReport';
+import EntityMergeDialog from '@/components/EntityMergeDialog';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -20,6 +21,7 @@ const TYPE_LABELS = {
 
 export default function EntityDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [entity, setEntity] = useState(null);
   const [connections, setConnections] = useState([]);
   const [mentions, setMentions] = useState([]);
@@ -27,6 +29,7 @@ export default function EntityDetail() {
   const [riskScore, setRiskScore] = useState(0);
   const [watchlist, setWatchlist] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showMerge, setShowMerge] = useState(false);
   const [nameMap, setNameMap] = useState({});
   const { toast } = useToast();
 
@@ -83,9 +86,17 @@ export default function EntityDetail() {
               {TYPE_LABELS[entity.type] || 'أخرى'}
             </span>
           </div>
-          <div className="text-left">
-            <div className="text-2xl font-bold font-heading">{entity.mention_count || 0}</div>
-            <div className="text-xs text-muted-foreground">ذكر</div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-left">
+              <div className="text-2xl font-bold font-heading">{entity.mention_count || 0}</div>
+              <div className="text-xs text-muted-foreground">ذكر</div>
+            </div>
+            <button
+              onClick={() => setShowMerge(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-border bg-card hover:bg-accent transition-colors"
+            >
+              <GitMerge className="w-3.5 h-3.5" /> دمج مع كيان آخر
+            </button>
           </div>
         </div>
 
@@ -243,6 +254,8 @@ export default function EntityDetail() {
       <EntityTimeline entityId={id} />
 
       <InvestigationReport title={entity.name} entities={[entity]} connections={connections} />
+
+      <EntityMergeDialog open={showMerge} onOpenChange={setShowMerge} primaryEntity={entity} onMerged={() => navigate('/entities')} />
     </div>
   );
 }
