@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
+import WorkspaceNetwork from '@/components/WorkspaceNetwork';
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
@@ -70,6 +71,8 @@ export default function WorkspaceDetail() {
         <h1 className="font-heading text-2xl font-bold">{workspace.name}</h1>
         {workspace.description && <p className="text-sm text-muted-foreground mt-1">{workspace.description}</p>}
       </div>
+
+      <WorkspaceNetwork workspace={workspace} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
