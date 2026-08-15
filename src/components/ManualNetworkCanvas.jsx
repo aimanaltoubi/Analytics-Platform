@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Pencil, Plus, Link2, Trash2, Eraser } from 'lucide-react';
+import { Pencil, Link2, Trash2, Eraser } from 'lucide-react';
 
 const PALETTE = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
 const TYPE_COLORS = {
@@ -17,7 +17,7 @@ export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
   const [dragId, setDragId] = useState(null);
   const [connectFrom, setConnectFrom] = useState(null);
   const [hover, setHover] = useState(null);
-  const [showPicker, setShowPicker] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
 
   const toLocal = (e) => {
@@ -28,19 +28,25 @@ export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
   const placedIds = new Set(nodes.filter((n) => n.entity_id).map((n) => n.entity_id));
   const availableEntities = entities.filter((e) => !placedIds.has(e.id));
 
-  const addEntityNode = (ent) => {
+  const addEntityNode = (ent, x, y) => {
     const w = svgRef.current?.clientWidth || 800;
+    const px = x ?? (w / 2 + (Math.random() - 0.5) * 120);
+    const py = y ?? (height / 2 + (Math.random() - 0.5) * 120);
     setNodes((prev) => [
       ...prev,
-      {
-        id: uid(),
-        entity_id: ent.id,
-        label: ent.name,
-        x: w / 2 + (Math.random() - 0.5) * 120,
-        y: height / 2 + (Math.random() - 0.5) * 120,
-        color: TYPE_COLORS[ent.type] || TYPE_COLORS.other
-      }
+      { id: uid(), entity_id: ent.id, label: ent.name, x: px, y: py, color: TYPE_COLORS[ent.type] || TYPE_COLORS.other }
     ]);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const eid = e.dataTransfer.getData('text/entity');
+    if (!eid) return;
+    const ent = entities.find((x) => x.id === eid);
+    if (!ent || placedIds.has(ent.id)) return;
+    const { x, y } = toLocal(e);
+    addEntityNode(ent, x, y);
   };
 
   const addCustomNode = () => {
@@ -133,29 +139,6 @@ export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
           <Pencil className="w-4 h-4" /> لوحة رسم حرّة
         </h3>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <button onClick={() => setShowPicker((v) => !v)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="w-3.5 h-3.5" /> عقدة جديدة
-            </button>
-            {showPicker && (
-              <div className="absolute z-20 mt-1 left-0 w-64 rounded-lg border border-border bg-popover shadow-lg max-h-72 overflow-auto">
-                {availableEntities.length === 0 ? (
-                  <div className="p-3 text-xs text-muted-foreground">لا توجد كيانات متاحة في مساحة العمل.</div>
-                ) : (
-                  availableEntities.map((e) => (
-                    <button key={e.id} onClick={() => { addEntityNode(e); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 text-right">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TYPE_COLORS[e.type] || TYPE_COLORS.other }} />
-                      <span className="truncate">{e.name}</span>
-                    </button>
-                  ))
-                )}
-                <div className="p-2 border-t border-border flex gap-1.5">
-                  <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="عقدة مخصصة" className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
-                  <button onClick={addCustomNode} disabled={!customLabel.trim()} className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50">إضافة</button>
-                </div>
-              </div>
-            )}
-          </div>
           {modeBtn('select', Pencil, 'تحريك')}
           {modeBtn('connect', Link2, 'ربط')}
           {modeBtn('delete', Trash2, 'حذف')}
@@ -166,20 +149,50 @@ export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
       </div>
 
       <div className="text-[11px] text-muted-foreground mb-2">
-        {mode === 'select' && 'اسحب العقد لترتيبها. انقر مزدوجاً لتعديل الاسم.'}
+        {mode === 'select' && 'اسحب الكيانات من القائمة إلى اللوحة، ثم حرّك العقد أو ارسم الروابط. انقر مزدوجاً لتعديل الاسم.'}
         {mode === 'connect' && (connectFrom ? 'اختر العقدة الثانية لإنشاء الرابط.' : 'اختر العقدة الأولى.' )}
         {mode === 'delete' && 'انقر على عقدة أو رابط لحذفه.'}
       </div>
 
-      <svg
+      <div className="flex gap-4">
+        <div className="w-56 shrink-0 rounded-lg border border-border bg-background p-2.5 flex flex-col">
+          <div className="text-[11px] font-medium text-muted-foreground mb-2 px-1">اسحب الكيانات إلى اللوحة</div>
+          <div className="space-y-1.5 flex-1 overflow-auto max-h-[460px]">
+            {availableEntities.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-1 py-3 text-center">كل الكيانات موضوعة على اللوحة.</p>
+            ) : (
+              availableEntities.map((e) => (
+                <div
+                  key={e.id}
+                  draggable
+                  onDragStart={(ev) => { ev.dataTransfer.setData('text/entity', e.id); ev.dataTransfer.effectAllowed = 'copy'; }}
+                  className="flex items-center gap-2 rounded-md bg-card border border-border px-2.5 py-2 text-sm cursor-grab hover:border-primary/60 hover:bg-accent/40"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TYPE_COLORS[e.type] || TYPE_COLORS.other }} />
+                  <span className="truncate">{e.name}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-2 pt-2 border-t border-border flex gap-1.5">
+            <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="عقدة مخصصة" className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+            <button onClick={addCustomNode} disabled={!customLabel.trim()} className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50">إضافة</button>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+        <svg
         ref={svgRef}
         width="100%"
         height={height}
-        className="rounded-lg border border-border bg-white cursor-default select-none"
+        className={`rounded-lg border-2 bg-white cursor-default select-none ${dragOver ? 'border-primary border-dashed' : 'border-border'}`}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
         onClick={onCanvasClick}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
       >
         <defs>
           <marker id="manualArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -228,6 +241,8 @@ export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
           );
         })}
       </svg>
+        </div>
+      </div>
 
       <div className="mt-2 text-[11px] text-muted-foreground">
         {nodes.length} عقدة • {edges.length} رابط
