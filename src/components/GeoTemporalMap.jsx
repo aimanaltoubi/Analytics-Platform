@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon } from 'lucide-react';
+import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon, Link2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -39,6 +39,9 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [trackEntity, setTrackEntity] = useState('all');
   const [placing, setPlacing] = useState(false);
   const [mapStyle, setMapStyle] = useState('satellite');
+  const [linkEntityId, setLinkEntityId] = useState('');
+  const [linkLocId, setLinkLocId] = useState('');
+  const [linking, setLinking] = useState(false);
   const timer = useRef(null);
   const { toast } = useToast();
 
@@ -136,6 +139,31 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
 
   const locEntities = useMemo(() => entities.filter((e) => e.type === 'location'), [entities]);
   const unlocatedCount = locEntities.filter((e) => e.latitude == null).length;
+  const linkableEntities = useMemo(() => entities.filter((e) => e.type !== 'location').slice(0, 300), [entities]);
+  const geoLocations = useMemo(() => locEntities.filter((e) => e.latitude != null), [locEntities]);
+
+  const createLink = async () => {
+    if (!linkEntityId || !linkLocId) { toast({ variant: 'destructive', title: 'اختر كياناً وموقعاً' }); return; }
+    setLinking(true);
+    try {
+      const ent = entities.find((e) => e.id === linkEntityId);
+      const loc = entities.find((e) => e.id === linkLocId);
+      await base44.entities.Connection.create({
+        source_entity_id: linkEntityId,
+        target_entity_id: linkLocId,
+        source_entity_name: ent?.name || '',
+        target_entity_name: loc?.name || '',
+        relationship_type: 'موجود في',
+        strength: 1
+      });
+      toast({ title: 'تم ربط الكيان بالموقع', description: `${ent?.name} → ${loc?.name}` });
+      setLinkEntityId('');
+      setLinkLocId('');
+      onLocationsChanged && await onLocationsChanged();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'فشل الربط', description: e.message });
+    } finally { setLinking(false); }
+  };
 
   const handleMapClick = async (latlng) => {
     if (!drawMode) return;
@@ -252,6 +280,32 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
               ))}
             </select>
           </div>
+        </div>
+
+        {/* صف ربط الكيانات بالمواقع */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
+          <Link2 className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-muted-foreground shrink-0">ربط كيان بموقع:</span>
+          <select className={sel} value={linkEntityId} onChange={(e) => setLinkEntityId(e.target.value)}>
+            <option value="">— اختر كياناً —</option>
+            {linkableEntities.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+          <span className="text-muted-foreground text-sm">→</span>
+          <select className={sel} value={linkLocId} onChange={(e) => setLinkLocId(e.target.value)}>
+            <option value="">— اختر موقعاً —</option>
+            {geoLocations.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={createLink}
+            disabled={linking || !linkEntityId || !linkLocId}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> {linking ? 'جارٍ الربط...' : 'ربط'}
+          </button>
         </div>
       </div>
 
