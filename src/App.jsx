@@ -27,6 +27,7 @@ import Import from '@/pages/Import';
 import Workspaces from '@/pages/Workspaces';
 import WorkspaceDetail from '@/pages/WorkspaceDetail';
 import NationalityDetail from '@/pages/NationalityDetail';
+import CrossLingualSearch from '@/pages/CrossLingualSearch';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
           <Route path="/transit" element={<TransitSecurity />} />
           <Route path="/graph" element={<GraphIndex />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/clir" element={<CrossLingualSearch />} />
           <Route path="/import" element={<Import />} />
           <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
