@@ -20,10 +20,10 @@ const STATUS_LABELS = {
 };
 
 const STATUS_STYLE = {
-  processed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  processing: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  failed: 'bg-red-500/10 text-red-400 border-red-500/20'
+  processed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  processing: 'bg-blue-50 text-blue-700 border-blue-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  failed: 'bg-red-50 text-red-700 border-red-200'
 };
 
 const ENTITY_TYPE_LABELS = {
@@ -90,11 +90,11 @@ export default function Home() {
   };
 
   const kpis = [
-    { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents', tint: 'text-blue-400', bg: 'bg-blue-500/10', bar: 'bg-blue-500' },
-    { label: 'الكيانات', value: stats.entities, icon: Users, to: '/entities', tint: 'text-violet-400', bg: 'bg-violet-500/10', bar: 'bg-violet-500' },
-    { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph', tint: 'text-emerald-400', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500' },
-    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: '/documents', tint: 'text-amber-400', bg: 'bg-amber-500/10', bar: 'bg-amber-500' },
-    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: '/alerts', tint: 'text-red-400', bg: 'bg-red-500/10', bar: 'bg-red-500' }
+    { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents' },
+    { label: 'الكيانات', value: stats.entities, icon: Users, to: '/entities' },
+    { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph' },
+    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: '/documents' },
+    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: '/alerts' }
   ];
 
   return (
@@ -125,9 +125,9 @@ export default function Home() {
             const Icon = k.icon;
             return (
               <Link key={k.label} to={k.to} className="group relative rounded-lg border border-border bg-card p-3.5 hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden">
-                <span className={`absolute top-0 right-0 left-0 h-0.5 ${k.bar} opacity-60 group-hover:opacity-100 transition-opacity`} />
+                <span className="absolute top-0 right-0 left-0 h-0.5 bg-primary opacity-60 group-hover:opacity-100 transition-opacity" />
                 <div className="flex items-center justify-between mb-2.5">
-                  <div className={`w-8 h-8 rounded-md ${k.bg} ${k.tint} flex items-center justify-center`}>
+                  <div className="w-8 h-8 rounded-md bg-muted text-primary flex items-center justify-center">
                     <Icon className="w-4 h-4" />
                   </div>
                   <ChevronLeft className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
@@ -169,7 +169,7 @@ export default function Home() {
                   </thead>
                   <tbody>
                     {recent.map((d) => (
-                      <tr key={d.id} className="border-b border-border/50 last:border-0 hover:bg-white/5 transition-colors">
+                      <tr key={d.id} className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors">
                         <td className="px-4 py-2.5">
                           <Link to={`/documents/${d.id}`} className="font-medium hover:text-primary line-clamp-1">{d.title}</Link>
                         </td>
@@ -206,7 +206,7 @@ export default function Home() {
             ) : (
               <div className="divide-y divide-border/50">
                 {topEntities.map((e, i) => (
-                  <Link key={e.id} to={`/entities/${e.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors">
+                  <Link key={e.id} to={`/entities/${e.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors">
                     <span className="font-mono text-[11px] tabular-nums text-muted-foreground w-5">{String(i + 1).padStart(2, '0')}</span>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate flex items-center gap-1.5">
