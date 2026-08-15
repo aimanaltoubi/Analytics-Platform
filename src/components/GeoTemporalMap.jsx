@@ -241,6 +241,12 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     } finally { setLinking(false); }
   };
 
+  const clearMap = () => {
+    setMovementPerson(''); setDateFrom(''); setDateTo('');
+    setFocusEntity(''); setTrackEntity('all');
+    setIdx(0); setPlaying(false);
+  };
+
   const handleMapClick = async (latlng) => {
     if (!drawMode) return;
     const { lat, lng } = latlng;
@@ -405,9 +411,9 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         {/* تتبع حركة شخص ضمن نطاق زمني */}
         <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
           <Route className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground shrink-0">تتبع حركة شخص:</span>
+          <span className="text-xs font-medium text-muted-foreground shrink-0">عرض الحركات ضمن نطاق زمني:</span>
           <select className={sel} value={movementPerson} onChange={(e) => setMovementPerson(e.target.value)}>
-            <option value="">— اختر شخصاً —</option>
+            <option value="">كل الكيانات</option>
             {linkableEntities.map((e) => (
               <option key={e.id} value={e.id}>{e.name}</option>
             ))}
@@ -416,11 +422,9 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
           <span className="text-xs text-muted-foreground">إلى</span>
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-          {(movementPerson || dateFrom || dateTo) && (
-            <button onClick={() => { setMovementPerson(''); setDateFrom(''); setDateTo(''); }} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1">
-              <X className="w-3.5 h-3.5" /> مسح
-            </button>
-          )}
+          <button onClick={clearMap} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-card hover:bg-accent">
+            <X className="w-3.5 h-3.5" /> مسح الخريطة
+          </button>
         </div>
       </div>
 
