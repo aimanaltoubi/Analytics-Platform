@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Search, Flag } from 'lucide-react';
+import { Users, Search, Flag, Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import { getNationality, hasPassport, hasPhone, hasEmail, hasCoordinates, riskTier } from '@/lib/entityClassify';
@@ -39,6 +39,8 @@ export default function Entities() {
   const [nationality, setNationality] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
   const [attrFilters, setAttrFilters] = useState({ passport: false, phone: false, email: false, coords: false });
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -65,6 +67,11 @@ export default function Entities() {
     if (attrFilters.email && !hasEmail(e)) return false;
     if (attrFilters.coords && !hasCoordinates(e)) return false;
     if (riskFilter !== 'all' && riskTier(e) !== riskFilter) return false;
+    if (dateFrom || dateTo) {
+      const d = new Date(e.created_date || 0);
+      if (dateFrom && d < new Date(dateFrom)) return false;
+      if (dateTo && d > new Date(dateTo + 'T23:59:59')) return false;
+    }
     return true;
   });
 
@@ -75,8 +82,8 @@ export default function Entities() {
     return (b.mention_count || 0) - (a.mention_count || 0);
   });
 
-  const hasActiveFilters = nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean);
-  const resetFilters = () => { setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); };
+  const hasActiveFilters = nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
+  const resetFilters = () => { setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
 
   return (
     <div className="p-6 space-y-6">
@@ -164,6 +171,13 @@ export default function Entities() {
               {f.label}
             </button>
           ))}
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-border bg-card">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">من</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-transparent text-xs focus:outline-none" />
+            <span className="text-xs text-muted-foreground">إلى</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-transparent text-xs focus:outline-none" />
+          </div>
           {hasActiveFilters && (
             <button onClick={resetFilters} className="px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground">إعادة ضبط</button>
           )}
