@@ -21,6 +21,8 @@ import EntityDetail from '@/pages/EntityDetail';
 import Analytics from '@/pages/Analytics';
 import Search from '@/pages/Search';
 import Import from '@/pages/Import';
+import Workspaces from '@/pages/Workspaces';
+import WorkspaceDetail from '@/pages/WorkspaceDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -59,6 +61,8 @@ const AuthenticatedApp = () => {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/search" element={<Search />} />
           <Route path="/import" element={<Import />} />
+          <Route path="/workspaces" element={<Workspaces />} />
+          <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
