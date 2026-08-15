@@ -64,6 +64,14 @@ export default function Network() {
   const relTypes = Array.from(new Set(connections.map((c) => c.relationship_type).filter(Boolean)));
   const visibleConnections = filteredConnections.filter((c) => !hiddenRels.has(c.relationship_type));
 
+  const scopedDocuments = (() => {
+    if (workspaceFilter === 'all') return documents;
+    const ws = workspaces.find((w) => w.id === workspaceFilter);
+    const docIds = new Set(ws?.document_ids || []);
+    visibleConnections.forEach((c) => { if (c.document_id) docIds.add(c.document_id); });
+    return documents.filter((d) => docIds.has(d.id));
+  })();
+
   const toggleRel = (type) => {
     setHiddenRels((prev) => {
       const next = new Set(prev);
@@ -155,7 +163,7 @@ export default function Network() {
       )}
 
       {!loading && filteredEntities.length > 0 && (
-        <TimelineAnalysis entities={filteredEntities} connections={visibleConnections} documents={documents} />
+        <TimelineAnalysis entities={filteredEntities} connections={visibleConnections} documents={scopedDocuments} />
       )}
 
       {!loading && filteredEntities.length > 0 && (
