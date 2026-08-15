@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import EntityCorrector from '@/components/EntityCorrector';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -118,25 +119,22 @@ export default function DocumentDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-heading font-semibold mb-3">الكيانات المستخرجة</h3>
+          <h3 className="font-heading font-semibold mb-3 flex items-center justify-between">
+            <span>الكيانات المستخرجة</span>
+            <span className="text-[11px] font-normal text-muted-foreground">يمكن تصحيح الاسم أو النوع لكل كيان</span>
+          </h3>
           {entities.length === 0 ? (
             <p className="text-sm text-muted-foreground">لا توجد كيانات.</p>
           ) : (
             <div className="space-y-2">
               {entities.map((e) => (
-                <Link
+                <EntityCorrector
                   key={e.id}
-                  to={`/entities/${e.id}`}
-                  className="flex items-center justify-between p-2.5 rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div>
-                    <div className="text-sm font-medium">{e.name}</div>
-                    {e.aliases?.length > 0 && (
-                      <div className="text-xs text-muted-foreground">{e.aliases.join('، ')}</div>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">{e.type}</span>
-                </Link>
+                  entity={e}
+                  onSaved={(updated) =>
+                    setEntities((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)))
+                  }
+                />
               ))}
             </div>
           )}
