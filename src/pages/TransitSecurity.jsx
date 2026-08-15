@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { ShieldCheck, ListChecks, BarChart3 } from 'lucide-react';
+import { ShieldCheck, ListChecks, BarChart3, Radio } from 'lucide-react';
 import ManifestForm from '@/components/ManifestForm';
 import ManifestTextUploader from '@/components/ManifestTextUploader';
 import ManifestList from '@/components/ManifestList';
 import TransitAnalytics from '@/components/TransitAnalytics';
+import TransitMonitoring from '@/components/TransitMonitoring';
 
 export default function TransitSecurity() {
   const [tick, setTick] = useState(0);
-  const [tab, setTab] = useState('manifests');
+  const [tab, setTab] = useState('monitoring');
 
   const tabs = [
+    { id: 'monitoring', label: 'المراقبة', icon: Radio },
     { id: 'manifests', label: 'البيانات', icon: ListChecks },
     { id: 'analytics', label: 'التحليلات', icon: BarChart3 }
   ];
@@ -43,7 +45,9 @@ export default function TransitSecurity() {
         })}
       </div>
 
-      {tab === 'manifests' ? (
+      {tab === 'monitoring' ? (
+        <TransitMonitoring />
+      ) : tab === 'manifests' ? (
         <>
           <ManifestTextUploader onExtracted={() => setTick((t) => t + 1)} />
           <ManifestForm onSubmitted={() => setTick((t) => t + 1)} />

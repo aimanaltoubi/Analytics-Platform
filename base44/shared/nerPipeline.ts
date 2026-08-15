@@ -1,3 +1,5 @@
+import { evaluateImmediateAlerts } from './alertEngine.ts';
+
 // محرك استخراج الكيانات والعلاقات المشترك — يستخدمه processDocument و processManifest
 
 // تطبيع عربي شامل: تجريد التشكيل وتوحيد الألف والياء والتاء المربوطة،
@@ -202,5 +204,14 @@ export async function runNer(base44, doc, document_id, fullText) {
     connection_count: connectionCount
   });
 
-  return { status: 'processed', entity_count: entities.length, connection_count: connectionCount, summary };
+  // تنبيه فوري: مطابقة الكيانات المستخرجة مقابل قوائم المراقبة وملفات الخطر
+  const resolvedEntities = Object.values(resolved);
+  let alertsResult = { alerts_created: 0 };
+  try {
+    alertsResult = await evaluateImmediateAlerts(base44, resolvedEntities, { document_id, document_title: doc.title });
+  } catch (e) {
+    // لا تفشل المعالجة بسبب التنبيه
+  }
+
+  return { status: 'processed', entity_count: entities.length, connection_count: connectionCount, summary, alerts: alertsResult };
 }

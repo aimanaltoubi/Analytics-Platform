@@ -1,22 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { ensureDefaultProfiles } from '../../shared/alertEngine.ts';
 
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
 
-    // ضمان وجود ملفات خطر افتراضية
-    let profiles = await base44.asServiceRole.entities.RiskProfile.filter({ enabled: true }, '-created_date', 100);
-    if (!profiles || profiles.length === 0) {
-      const defaults = [
-        { name: 'كيان عالي الخطورة', description: 'درجة خطورة الكيان تتجاوز العتبة', rule_type: 'risk_threshold', conditions: { min_risk_score: 70 }, severity: 'high', enabled: true },
-        { name: 'كيان في قائمة المراقبة', description: 'كيان مُدرج في قائمة المراقبة', rule_type: 'watchlist', conditions: {}, severity: 'critical', enabled: true },
-        { name: 'كيان محوري', description: 'كيان مرتبط بعدد كبير من الكيانات', rule_type: 'hub', conditions: { min_degree: 10 }, severity: 'medium', enabled: true },
-        { name: 'تشارك مكثّف', description: 'كيانان يظهران معاً في عدة مستندات', rule_type: 'co_occurrence', conditions: { min_shared_docs: 2, require_high_risk: false }, severity: 'medium', enabled: true },
-        { name: 'عنقود شبكي كبير', description: 'شبكة مترابطة بحجم كبير', rule_type: 'cluster_size', conditions: { min_size: 8 }, severity: 'high', enabled: true }
-      ];
-      await base44.asServiceRole.entities.RiskProfile.bulkCreate(defaults);
-      profiles = await base44.asServiceRole.entities.RiskProfile.filter({ enabled: true }, '-created_date', 100);
-    }
+    // ضمان وجود ملفات خطر افتراضية (منطق مشترك مع محرك التنبيهات الفوري)
+    const profiles = await ensureDefaultProfiles(base44);
 
     const entities = await base44.asServiceRole.entities.Entity.list('-mention_count', 1000);
     const connections = await base44.asServiceRole.entities.Connection.list('-created_date', 2000);
