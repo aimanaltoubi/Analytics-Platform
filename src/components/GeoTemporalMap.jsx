@@ -42,8 +42,10 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [linkEntityId, setLinkEntityId] = useState('');
   const [linkLocId, setLinkLocId] = useState('');
   const [linking, setLinking] = useState(false);
-  const [linkDate, setLinkDate] = useState('');
   const [focusEntity, setFocusEntity] = useState('');
+  const [movementPerson, setMovementPerson] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const timer = useRef(null);
   const { toast } = useToast();
 
@@ -109,10 +111,23 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     return { incidents: list, locations: locs };
   }, [entities, connections, documents]);
 
+  const displayIncidents = useMemo(() => {
+    if (!movementPerson && !dateFrom && !dateTo) return incidents;
+    const personName = movementPerson ? entities.find((e) => e.id === movementPerson)?.name : null;
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+    return incidents.filter((inc) => {
+      if (personName && inc.sourceName !== personName && inc.targetName !== personName) return false;
+      if (from && inc.date < from) return false;
+      if (to && inc.date > to) return false;
+      return true;
+    });
+  }, [incidents, movementPerson, dateFrom, dateTo, entities]);
+
   // مسارات الحركة لكل كيان (نقاط مرتبة زمنياً)
   const tracks = useMemo(() => {
     const byEnt = {};
-    incidents.forEach((inc) => {
+    displayIncidents.forEach((inc) => {
       [inc.sourceName, inc.targetName].forEach((name) => {
         if (!name) return;
         if (!byEnt[name]) byEnt[name] = [];
@@ -126,29 +141,29 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
       .map(([name, pts], i) => ({ name, points: pts, color: TRACK_COLORS[i % TRACK_COLORS.length] }))
       .filter((t) => t.points.length >= 2)
       .sort((a, b) => b.points.length - a.points.length);
-  }, [incidents]);
+  }, [displayIncidents]);
 
-  useEffect(() => { setIdx(0); setPlaying(false); }, [incidents.length]);
+  useEffect(() => { setIdx(0); setPlaying(false); }, [displayIncidents.length]);
 
   useEffect(() => {
-    if (!playing || incidents.length === 0) {
+    if (!playing || displayIncidents.length === 0) {
       if (timer.current) { clearInterval(timer.current); timer.current = null; }
       return;
     }
     timer.current = setInterval(() => {
       setIdx((p) => {
-        if (p >= incidents.length - 1) { setPlaying(false); return p; }
+        if (p >= displayIncidents.length - 1) { setPlaying(false); return p; }
         return p + 1;
       });
     }, 900);
     return () => { if (timer.current) { clearInterval(timer.current); timer.current = null; } };
-  }, [playing, incidents.length]);
+  }, [playing, displayIncidents.length]);
 
-  const hasGeo = incidents.length > 0 || locations.length > 0;
-  const safeIdx = Math.min(idx, Math.max(incidents.length - 1, 0));
-  const currentTime = incidents.length > 0 ? incidents[safeIdx].date : null;
-  const visibleIncidents = incidents.filter((e) => e.date <= currentTime);
-  const latestId = incidents.length > 0 ? incidents[safeIdx].id : null;
+  const hasGeo = displayIncidents.length > 0 || locations.length > 0;
+  const safeIdx = Math.min(idx, Math.max(displayIncidents.length - 1, 0));
+  const currentTime = displayIncidents.length > 0 ? displayIncidents[safeIdx].date : null;
+  const visibleIncidents = displayIncidents.filter((e) => e.date <= currentTime);
+  const latestId = displayIncidents.length > 0 ? displayIncidents[safeIdx].id : null;
 
   const center = useMemo(() => {
     if (locations.length > 0) {
@@ -185,24 +200,41 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
 
   const createLink = async () => {
     if (!linkEntityId || !linkLocId) { toast({ variant: 'destructive', title: 'اختر كياناً وموقعاً' }); return; }
-    if (!linkDate) { toast({ variant: 'destructive', title: 'حدد تاريخ الذكر' }); return; }
     setLinking(true);
     try {
       const ent = entities.find((e) => e.id === linkEntityId);
       const loc = entities.find((e) => e.id === linkLocId);
+      // اشتقاق تاريخ الذكر تلقائياً من تقارير ذكر الكيان
+      let dateStr = null;
+      try {
+        const mentions = await base44.entities.Mention.filter({ entity_id: linkEntityId }, '-created_date', 50);
+        const docIds = [...new Set(mentions.map((m) => m.document_id).filter(Boolean))];
+        for (const did of docIds) {
+          const dateEnt = entities.find((e) => e.type === 'date' && (e.document_ids || []).includes(did));
+          if (dateEnt) { const d = parseDate(dateEnt.name); if (d) { dateStr = d.toISOString(); break; } }
+        }
+        if (!dateStr && docIds.length > 0) {
+          const doc = documents.find((d) => docIds.includes(d.id));
+          if (doc) { const d = parseDate(doc.created_date); if (d) dateStr = d.toISOString(); }
+        }
+      } catch (_) {}
       await base44.entities.Connection.create({
         source_entity_id: linkEntityId,
         target_entity_id: linkLocId,
         source_entity_name: ent?.name || '',
         target_entity_name: loc?.name || '',
         relationship_type: 'موجود في',
-        evidence: new Date(linkDate).toISOString(),
+        evidence: dateStr || '',
         strength: 1
       });
-      toast({ title: 'تم ربط الكيان بالموقع', description: `${ent?.name} → ${loc?.name} بتاريخ ${linkDate}` });
+      toast({
+        title: 'تم ربط الكيان بالموقع',
+        description: dateStr
+          ? `${ent?.name} → ${loc?.name} • تاريخ الذكر: ${fmt(new Date(dateStr))}`
+          : `${ent?.name} → ${loc?.name} (لم يُعثر على تاريخ ذكر — لن يظهر على الخط الزمني)`
+      });
       setLinkEntityId('');
       setLinkLocId('');
-      setLinkDate('');
       onLocationsChanged && await onLocationsChanged();
     } catch (e) {
       toast({ variant: 'destructive', title: 'فشل الربط', description: e.message });
@@ -246,17 +278,17 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
       {/* شريط الأدوات: الزمن + الرسم */}
       <div className="rounded-xl border border-border bg-card p-3 space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <button disabled={incidents.length === 0} onClick={() => { setIdx(0); setPlaying(false); }} className={btn} title="من البداية">
+          <button disabled={displayIncidents.length === 0} onClick={() => { setIdx(0); setPlaying(false); }} className={btn} title="من البداية">
             <SkipBack className="w-4 h-4" />
           </button>
-          <button disabled={incidents.length === 0} onClick={() => setPlaying((p) => !p)} className={btn + ' bg-primary text-primary-foreground hover:bg-primary/90 border-primary'} title="تشغيل/إيقاف">
+          <button disabled={displayIncidents.length === 0} onClick={() => setPlaying((p) => !p)} className={btn + ' bg-primary text-primary-foreground hover:bg-primary/90 border-primary'} title="تشغيل/إيقاف">
             {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
           <div className="flex-1 min-w-[200px]" dir="ltr">
             <input
               type="range"
               min={0}
-              max={Math.max(incidents.length - 1, 0)}
+              max={Math.max(displayIncidents.length - 1, 0)}
               value={safeIdx}
               onChange={(e) => { setIdx(Number(e.target.value)); setPlaying(false); }}
               className="w-full accent-primary"
@@ -266,7 +298,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             <Calendar className="w-4 h-4" />
             {currentTime ? fmt(currentTime) : '—'}
           </div>
-          <span className="text-xs text-muted-foreground shrink-0">{visibleIncidents.length}/{incidents.length} حدث</span>
+          <span className="text-xs text-muted-foreground shrink-0">{visibleIncidents.length}/{displayIncidents.length} حدث</span>
         </div>
 
         {/* صف الرسم ومسارات الحركة */}
@@ -329,7 +361,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         {/* صف ربط الكيانات بالمواقع */}
         <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
           <Link2 className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground shrink-0">ربط كيان بموقع:</span>
+          <span className="text-xs font-medium text-muted-foreground shrink-0">ربط كيان بموقع (التاريخ تلقائي من التقارير):</span>
           <select className={sel} value={linkEntityId} onChange={(e) => setLinkEntityId(e.target.value)}>
             <option value="">— اختر كياناً —</option>
             {linkableEntities.map((e) => (
@@ -343,17 +375,11 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>
-          <input
-            type="date"
-            value={linkDate}
-            onChange={(e) => setLinkDate(e.target.value)}
-            className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            title="تاريخ الذكر"
-          />
           <button
             onClick={createLink}
-            disabled={linking || !linkEntityId || !linkLocId || !linkDate}
+            disabled={linking || !linkEntityId || !linkLocId}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            title="يُشتق تاريخ الذكر تلقائياً من التقارير"
           >
             <Plus className="w-4 h-4" /> {linking ? 'جارٍ الربط...' : 'ربط'}
           </button>
@@ -371,6 +397,27 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
           </select>
           {focusEntity && (
             <button onClick={() => setFocusEntity('')} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> مسح
+            </button>
+          )}
+        </div>
+
+        {/* تتبع حركة شخص ضمن نطاق زمني */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
+          <Route className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-muted-foreground shrink-0">تتبع حركة شخص:</span>
+          <select className={sel} value={movementPerson} onChange={(e) => setMovementPerson(e.target.value)}>
+            <option value="">— اختر شخصاً —</option>
+            {linkableEntities.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">من</span>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          <span className="text-xs text-muted-foreground">إلى</span>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          {(movementPerson || dateFrom || dateTo) && (
+            <button onClick={() => { setMovementPerson(''); setDateFrom(''); setDateTo(''); }} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1">
               <X className="w-3.5 h-3.5" /> مسح
             </button>
           )}
