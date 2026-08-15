@@ -1,13 +1,59 @@
+// جزيئات عربية ولاتينية تُجرد قبل المطابقة (مشكلة «أل» التعريف و النسبة)
+const ARABIC_PARTICLES = ['ابن', 'بن', 'أبو', 'ابو', 'أبي', ' Abdul'.trim()];
+const LATIN_PARTICLES = ['al', 'el', 'bin', 'ibn', 'abu', 'ben', 'bint', 'abdul'];
+
+// تجريد جزيئات النسبة والتعريف من اسم مطبّع — يحافظ على الجذر الصوتي
+function stripParticles(s) {
+  let r = s;
+  // بادئات لاتينية موصولة بشرطة أو فاصلة: al-/el-/bin-
+  r = r.replace(/\b(al|el|bin|ibn|abu|ben|bint|abdul)[\-\s]?/g, ' ');
+  // جزيئات لاتينية مستقلة
+  r = r.replace(/\b(al|el|bin|ibn|abu|ben|bint|abdul)\b/g, ' ');
+  // «ال» التعريف العربية في بداية كل كلمة
+  r = r.replace(/(?:^|\s)ال/g, ' ');
+  // جزيئات نسبة عربية مستقلة
+  for (const p of ARABIC_PARTICLES) {
+    r = r.replace(new RegExp('(?:^|\\s)' + p + '(?:\\s|$)', 'g'), ' ');
+  }
+  return r.replace(/\s+/g, ' ').trim();
+}
+
 export function norm(s) {
-  return String(s || '')
-    .replace(/[\u064B-\u0652]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ى/g, 'ي')
-    .replace(/ة/g, 'ه')
-    .replace(/\u0640/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+  return stripParticles(
+    String(s || '')
+      .replace(/[\u064B-\u0652]/g, '')
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/\u0640/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+  );
+}
+
+// محرك التوطين العربي → لاتيني على خط أساس صوتي موحد (ICU-like baseline)
+const AR2LAT = {
+  'ا': 'a', 'أ': 'a', 'إ': 'i', 'آ': 'a', 'ب': 'b', 'ت': 't', 'ث': 'th', 'ج': 'j',
+  'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'dh', 'ر': 'r', 'ز': 'z', 'س': 's', 'ش': 'sh',
+  'ص': 's', 'ض': 'd', 'ط': 't', 'ظ': 'z', 'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'q',
+  'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ه': 'h', 'ة': 'a', 'و': 'w', 'ي': 'y',
+  'ؤ': 'u', 'ئ': 'i', 'ء': 'a'
+};
+
+export function arabicToLatin(s) {
+  if (!s) return '';
+  const str = String(s).replace(/[\u064B-\u0652]/g, '').replace(/\u0640/g, '');
+  let out = '';
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    out += AR2LAT[ch] || ch;
+  }
+  return out.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+export function isArabic(s) {
+  return /[\u0600-\u06FF]/.test(String(s || ''));
 }
 
 const SOUNDEX_MAP = {
@@ -83,5 +129,18 @@ export function nameSimilarity(a, b) {
   if (n1 === n2) return 1;
   const jw = jaroWinkler(n1, n2);
   const sx = soundex(n1) === soundex(n2);
-  return Math.max(jw, sx ? 0.92 : 0);
+  let best = Math.max(jw, sx ? 0.92 : 0);
+  // مطابقة عبر الكتابات:حوّل الجانب العربي إلى لاتيني وقارنه بالجانب اللاتيني
+  const ar1 = isArabic(a), ar2 = isArabic(b);
+  if (ar1 !== ar2) {
+    const lat1 = ar1 ? norm(arabicToLatin(a)) : n1;
+    const lat2 = ar2 ? norm(arabicToLatin(b)) : n2;
+    if (lat1 && lat2) {
+      if (lat1 === lat2) return 1;
+      const cjw = jaroWinkler(lat1, lat2);
+      const csx = soundex(lat1) === soundex(lat2);
+      best = Math.max(best, cjw, csx ? 0.92 : 0);
+    }
+  }
+  return best;
 }
