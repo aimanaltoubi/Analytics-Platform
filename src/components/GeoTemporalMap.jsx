@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon, Link2 } from 'lucide-react';
+import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon, Link2, Eye } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -45,6 +45,8 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [movementPerson, setMovementPerson] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [hideAll, setHideAll] = useState(false);
+  const [selected, setSelected] = useState(null);
   const timer = useRef(null);
   const { toast } = useToast();
 
@@ -111,6 +113,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   }, [entities, connections, documents]);
 
   const displayIncidents = useMemo(() => {
+    if (hideAll) return [];
     if (!movementPerson && !dateFrom && !dateTo) return incidents;
     const personName = movementPerson ? entities.find((e) => e.id === movementPerson)?.name : null;
     const from = dateFrom ? new Date(dateFrom) : null;
@@ -121,7 +124,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
       if (to && inc.date > to) return false;
       return true;
     });
-  }, [incidents, movementPerson, dateFrom, dateTo, entities]);
+  }, [incidents, movementPerson, dateFrom, dateTo, entities, hideAll]);
 
   const entityColorMap = useMemo(() => {
     const names = new Set();
@@ -253,8 +256,10 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   };
 
   const clearMap = () => {
+    setHideAll(true);
     setMovementPerson(''); setDateFrom(''); setDateTo('');
     setTrackEntity('all');
+    setSelected(null);
     setIdx(0); setPlaying(false);
   };
 
@@ -406,21 +411,48 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
           <Route className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-muted-foreground shrink-0">استكشاف حركة كيان ضمن نطاق زمني:</span>
-          <select className={sel} value={movementPerson} onChange={(e) => setMovementPerson(e.target.value)}>
+          <select className={sel} value={movementPerson} onChange={(e) => { setHideAll(false); setMovementPerson(e.target.value); }}>
             <option value="">كل الكيانات</option>
             {linkableEntities.map((e) => (
               <option key={e.id} value={e.id}>{e.name}</option>
             ))}
           </select>
           <span className="text-xs text-muted-foreground">من</span>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          <input type="date" value={dateFrom} onChange={(e) => { setHideAll(false); setDateFrom(e.target.value); }} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
           <span className="text-xs text-muted-foreground">إلى</span>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-          <button onClick={clearMap} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-card hover:bg-accent">
-            <X className="w-3.5 h-3.5" /> مسح الخريطة
-          </button>
+          <input type="date" value={dateTo} onChange={(e) => { setHideAll(false); setDateTo(e.target.value); }} className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          {hideAll ? (
+            <button onClick={() => setHideAll(false)} className="text-xs text-primary inline-flex items-center gap-1 px-2 py-1 rounded border border-primary/40 bg-primary/5 hover:bg-primary/10">
+              <Eye className="w-3.5 h-3.5" /> استعادة الخريطة
+            </button>
+          ) : (
+            <button onClick={clearMap} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-card hover:bg-accent">
+              <X className="w-3.5 h-3.5" /> مسح الخريطة
+            </button>
+          )}
         </div>
       </div>
+
+      {/* بطاقة تفاصيل الحدث المختار */}
+      {selected && (
+        <div className="rounded-xl border border-primary/40 bg-card p-4 flex items-start gap-3">
+          <span className="w-3 h-3 rounded-full mt-1.5 shrink-0" style={{ background: entityColorMap[selected.sourceName] || '#dc2626' }} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-heading font-bold text-base">{selected.sourceName || selected.label}</span>
+              {selected.rel && <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{selected.rel}</span>}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-xs">
+              <div><div className="text-muted-foreground">التاريخ</div><div className="font-medium">{fmt(selected.date)}</div></div>
+              <div><div className="text-muted-foreground">الموقع</div><div className="font-medium">{selected.locName}</div></div>
+              <div><div className="text-muted-foreground">الإحداثيات</div><div className="font-mono">{selected.lat.toFixed(4)}، {selected.lng.toFixed(4)}</div></div>
+              <div><div className="text-muted-foreground">المرتبط</div><div className="font-medium">{selected.targetName || '—'}</div></div>
+            </div>
+            {selected.docTitle && <div className="text-xs text-muted-foreground mt-2">المستند: {selected.docTitle}</div>}
+          </div>
+          <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground shrink-0"><X className="w-4 h-4" /></button>
+        </div>
+      )}
 
       {/* الخريطة */}
       <div className={`rounded-xl border border-border overflow-hidden ${drawMode ? 'ring-2 ring-primary/40' : ''}`}>
@@ -485,6 +517,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
                   center={[ev.lat, ev.lng]}
                   radius={isLatest ? 10 : 6}
                   pathOptions={{ color: '#ffffff', weight: isLatest ? 3 : 2, fillColor: color, fillOpacity: isLatest ? 1 : 0.9 }}
+                  eventHandlers={{ click: () => setSelected(ev) }}
                 >
                   <Tooltip direction="top" offset={[0, -6]} opacity={1}>
                     <span className="font-semibold">{ev.sourceName || ev.label}</span> · {fmt(ev.date)} · {ev.locName}
