@@ -69,7 +69,7 @@ export default function GeoTemporal() {
       {loading ? (
         <div className="rounded-xl border border-border bg-card p-10 text-sm text-muted-foreground text-center">جارٍ التحميل...</div>
       ) : (
-        <GeoTemporalMap entities={entities} connections={connections} documents={documents} />
+        <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={load} />
       )}
     </div>
   );

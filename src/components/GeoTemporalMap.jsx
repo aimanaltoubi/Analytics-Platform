@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, SkipBack, Calendar } from 'lucide-react';
+import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useToast } from '@/components/ui/use-toast';
 
 function parseDate(str) {
   if (!str) return null;
@@ -21,10 +23,23 @@ function fmt(d) {
   return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export default function GeoTemporalMap({ entities, connections, documents }) {
+const TRACK_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
+
+function ClickHandler({ onClick, active }) {
+  useMapEvents({ click: (e) => { if (active) onClick(e.latlng); } });
+  return null;
+}
+
+export default function GeoTemporalMap({ entities, connections, documents, onLocationsChanged }) {
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
+  const [selectedLocId, setSelectedLocId] = useState('');
+  const [newLocName, setNewLocName] = useState('');
+  const [trackEntity, setTrackEntity] = useState('all');
+  const [placing, setPlacing] = useState(false);
   const timer = useRef(null);
+  const { toast } = useToast();
 
   const { incidents, locations } = useMemo(() => {
     const docsById = {};
@@ -56,6 +71,8 @@ export default function GeoTemporalMap({ entities, connections, documents }) {
         lat: loc.latitude,
         lng: loc.longitude,
         date,
+        sourceName: c.source_entity_name || '',
+        targetName: c.target_entity_name || '',
         label: (c.source_entity_name || '') + ' ↔ ' + (c.target_entity_name || ''),
         rel: c.relationship_type,
         docTitle: doc ? doc.title : null,
@@ -65,6 +82,25 @@ export default function GeoTemporalMap({ entities, connections, documents }) {
     list.sort((a, b) => a.date - b.date);
     return { incidents: list, locations: locs };
   }, [entities, connections, documents]);
+
+  // مسارات الحركة لكل كيان (نقاط مرتبة زمنياً)
+  const tracks = useMemo(() => {
+    const byEnt = {};
+    incidents.forEach((inc) => {
+      [inc.sourceName, inc.targetName].forEach((name) => {
+        if (!name) return;
+        if (!byEnt[name]) byEnt[name] = [];
+        const last = byEnt[name][byEnt[name].length - 1];
+        if (!last || last.lat !== inc.lat || last.lng !== inc.lng) {
+          byEnt[name].push({ lat: inc.lat, lng: inc.lng, date: inc.date, locName: inc.locName });
+        }
+      });
+    });
+    return Object.entries(byEnt)
+      .map(([name, pts], i) => ({ name, points: pts, color: TRACK_COLORS[i % TRACK_COLORS.length] }))
+      .filter((t) => t.points.length >= 2)
+      .sort((a, b) => b.points.length - a.points.length);
+  }, [incidents]);
 
   useEffect(() => { setIdx(0); setPlaying(false); }, [incidents.length]);
 
@@ -97,11 +133,45 @@ export default function GeoTemporalMap({ entities, connections, documents }) {
     return [33.5, 38.4];
   }, [locations]);
 
+  const locEntities = useMemo(() => entities.filter((e) => e.type === 'location'), [entities]);
+  const unlocatedCount = locEntities.filter((e) => e.latitude == null).length;
+
+  const handleMapClick = async (latlng) => {
+    if (!drawMode) return;
+    const { lat, lng } = latlng;
+    if (selectedLocId === 'new') {
+      if (!newLocName.trim()) { toast({ variant: 'destructive', title: 'أدخل اسم الموقع أولاً' }); return; }
+      setPlacing(true);
+      try {
+        await base44.entities.Entity.create({ name: newLocName.trim(), type: 'location', latitude: lat, longitude: lng });
+        toast({ title: 'تم إنشاء الموقع وتحديد إحداثياته' });
+        setNewLocName('');
+        onLocationsChanged && await onLocationsChanged();
+      } catch (e) { toast({ variant: 'destructive', title: 'فشل إنشاء الموقع' }); }
+      finally { setPlacing(false); }
+      return;
+    }
+    if (!selectedLocId) { toast({ variant: 'destructive', title: 'اختر موقعاً من القائمة أولاً' }); return; }
+    setPlacing(true);
+    try {
+      await base44.entities.Entity.update(selectedLocId, { latitude: lat, longitude: lng });
+      toast({ title: 'تم تحديث إحداثيات الموقع' });
+      onLocationsChanged && await onLocationsChanged();
+    } catch (e) { toast({ variant: 'destructive', title: 'فشل تحديث الإحداثيات' }); }
+    finally { setPlacing(false); }
+  };
+
+  const revealedTracks = tracks
+    .map((t) => ({ ...t, revealed: t.points.filter((p) => p.date <= currentTime) }))
+    .filter((t) => (trackEntity === 'all' || t.name === trackEntity) && t.revealed.length >= 2);
+
   const btn = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card hover:bg-accent disabled:opacity-40 transition-colors';
+  const sel = 'rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-[200px]';
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-border bg-card p-3">
+      {/* شريط الأدوات: الزمن + الرسم */}
+      <div className="rounded-xl border border-border bg-card p-3 space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
           <button disabled={incidents.length === 0} onClick={() => { setIdx(0); setPlaying(false); }} className={btn} title="من البداية">
             <SkipBack className="w-4 h-4" />
@@ -125,17 +195,93 @@ export default function GeoTemporalMap({ entities, connections, documents }) {
           </div>
           <span className="text-xs text-muted-foreground shrink-0">{visibleIncidents.length}/{incidents.length} حدث</span>
         </div>
+
+        {/* صف الرسم ومسارات الحركة */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
+          <button
+            onClick={() => setDrawMode((d) => !d)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              drawMode ? 'bg-primary text-primary-foreground border-primary' : 'bg-card hover:bg-accent border-border'
+            }`}
+            title="رسم المواقع بالنقر على الخريطة"
+          >
+            <Pencil className="w-4 h-4" /> رسم المواقع
+          </button>
+
+          {drawMode && (
+            <>
+              <select className={sel} value={selectedLocId} onChange={(e) => setSelectedLocId(e.target.value)}>
+                <option value="">— اختر موقعاً —</option>
+                {locEntities.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} {e.latitude != null ? '✓' : '(بدون إحداثيات)'}
+                  </option>
+                ))}
+                <option value="new">+ موقع جديد...</option>
+              </select>
+              {selectedLocId === 'new' && (
+                <input
+                  className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-w-[180px]"
+                  placeholder="اسم الموقع الجديد"
+                  value={newLocName}
+                  onChange={(e) => setNewLocName(e.target.value)}
+                />
+              )}
+              <span className="text-xs text-primary flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5" />
+                {placing ? 'جارٍ الحفظ...' : 'انقر على الخريطة لتحديد الإحداثيات'}
+              </span>
+            </>
+          )}
+
+          <div className="flex items-center gap-1.5 ms-auto">
+            <Route className="w-4 h-4 text-muted-foreground" />
+            <select className={sel} value={trackEntity} onChange={(e) => setTrackEntity(e.target.value)}>
+              <option value="all">كل مسارات الحركة</option>
+              {tracks.map((t) => (
+                <option key={t.name} value={t.name}>{t.name} ({t.points.length})</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border overflow-hidden">
+      {/* الخريطة */}
+      <div className={`rounded-xl border border-border overflow-hidden ${drawMode ? 'ring-2 ring-primary/40' : ''}`}>
         {hasGeo ? (
-          <MapContainer center={center} zoom={5} style={{ height: 560, width: '100%' }} scrollWheelZoom>
+          <MapContainer
+            center={center}
+            zoom={5}
+            style={{ height: 560, width: '100%', cursor: drawMode ? 'crosshair' : '' }}
+            scrollWheelZoom
+          >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+            <ClickHandler active={drawMode} onClick={handleMapClick} />
+
+            {/* المواقع الثابتة */}
             {locations.map((l) => (
               <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={5} pathOptions={{ color: '#94a3b8', fillColor: '#94a3b8', fillOpacity: 0.35 }}>
-                <Popup>{l.name}</Popup>
+                <Popup>
+                  <div className="text-xs">
+                    <div className="font-semibold">{l.name}</div>
+                    <div className="text-muted-foreground">{l.latitude?.toFixed(4)}، {l.longitude?.toFixed(4)}</div>
+                  </div>
+                </Popup>
               </CircleMarker>
             ))}
+
+            {/* مسارات الحركة المتكشفة */}
+            {revealedTracks.map((t) => (
+              <Polyline
+                key={t.name}
+                positions={t.revealed.map((p) => [p.lat, p.lng])}
+                pathOptions={{ color: t.color, weight: 3, opacity: 0.85, dashArray: '6 6' }}
+              >
+                <Tooltip sticky>{t.name} — {t.revealed.length} محطة</Tooltip>
+              </Polyline>
+            ))}
+
+            {/* الحوادث حتى اللحظة الحالية */}
             {visibleIncidents.map((ev) => {
               const isLatest = ev.id === latestId;
               return (
@@ -160,10 +306,39 @@ export default function GeoTemporalMap({ entities, connections, documents }) {
           </MapContainer>
         ) : (
           <div className="h-[560px] flex items-center justify-center text-sm text-muted-foreground text-center px-6">
-            لا توجد مواقع مُرمّزة جغرافياً بعد. استخدم زر «ترميز المواقع» أعلى الصفحة لتحديد إحداثيات كيانات المواقع، ثم ستظهر الحوادث على الخريطة.
+            لا توجد مواقع مُرمّزة جغرافياً بعد. فعّل «رسم المواقع» وانقر على الخريطة لتحديد إحداثيات كيانات المواقع، أو استخدم زر «ترميز المواقع» أعلى الصفحة.
           </div>
         )}
       </div>
+
+      {/* مفتاح مسارات الحركة */}
+      {tracks.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">مسارات الحركة:</span>
+            {tracks.map((t) => (
+              <button
+                key={t.name}
+                onClick={() => setTrackEntity(trackEntity === t.name ? 'all' : t.name)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                  trackEntity === t.name ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-accent'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.color }} />
+                {t.name}
+                <span className="text-muted-foreground">({t.points.length})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {unlocatedCount > 0 && (
+        <div className="text-xs text-amber-600 flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5" />
+          {unlocatedCount} موقع بدون إحداثيات — فعّل «رسم المواقع» لتحديدها بالنقر على الخريطة.
+        </div>
+      )}
     </div>
   );
 }
