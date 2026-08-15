@@ -1,6 +1,7 @@
 import { AlertOctagon } from 'lucide-react';
 import AlertsList from '@/components/AlertsList';
 import RiskProfileManager from '@/components/RiskProfileManager';
+import SecurityWatchPanel from '@/components/SecurityWatchPanel';
 
 export default function Alerts() {
   return (
@@ -13,6 +14,7 @@ export default function Alerts() {
           محرك قواعد يعمل في الخلفية ويقيّم البيانات الواردة مقابل ملفات الخطر المُعرّفة، ويُنشئ تنبيهات تلقائية عند تطابق الأنماط.
         </p>
       </div>
+      <SecurityWatchPanel />
       <RiskProfileManager />
       <AlertsList />
     </div>
