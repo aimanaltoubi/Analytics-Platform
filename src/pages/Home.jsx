@@ -103,8 +103,8 @@ export default function Home() {
       <div className="px-6 pt-5 pb-4 border-b border-border bg-card/40">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">لوحة العمليات</div>
-            <h1 className="font-heading text-2xl font-bold leading-tight">مركز القيادة التحليلي</h1>
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Strategic Analytics</div>
+            <h1 className="font-heading text-2xl font-bold leading-tight">التحليلات الاستراتيجية</h1>
             <p className="text-sm text-muted-foreground mt-1">استيعاب المستندات · استخراج الكيانات · كشف الروابط الخفية · التنبيهات اللحظية</p>
           </div>
           <button
