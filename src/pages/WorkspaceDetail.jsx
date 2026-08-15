@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
+import ManualNetworkCanvas from '@/components/ManualNetworkCanvas';
 import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
@@ -83,6 +84,8 @@ export default function WorkspaceDetail() {
       </div>
 
       <WorkspaceNetwork workspace={workspace} />
+
+      <ManualNetworkCanvas />
 
       <WorkspaceTimelineExplorer entities={entities} connections={connections} documents={documents} />
 
