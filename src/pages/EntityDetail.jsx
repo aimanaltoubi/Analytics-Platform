@@ -30,6 +30,8 @@ export default function EntityDetail() {
   const [watchlist, setWatchlist] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
   const [nameMap, setNameMap] = useState({});
   const { toast } = useToast();
 
@@ -41,6 +43,7 @@ export default function EntityDetail() {
         setEntity(ent);
         setRiskScore(ent.risk_score || 0);
         setWatchlist(!!ent.watchlist);
+        setNotes(ent.notes || '');
         const [conns, ment, allEnts] = await Promise.all([
           base44.entities.Connection.list('-created_date', 200),
           base44.entities.Mention.filter({ entity_id: id }, '-created_date', 50),
@@ -67,6 +70,17 @@ export default function EntityDetail() {
     } catch (e) {
       toast({ title: 'فشل الحفظ', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const saveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const updated = await base44.entities.Entity.update(id, { notes });
+      setEntity(updated);
+      toast({ title: 'تم حفظ الملاحظات' });
+    } catch (e) {
+      toast({ title: 'فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSavingNotes(false); }
   };
 
   const attrs = entity.attributes || {};
@@ -189,6 +203,29 @@ export default function EntityDetail() {
               {saving ? 'جارٍ الحفظ...' : 'حفظ'}
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-heading font-semibold mb-3 flex items-center gap-2">
+          <FileText className="w-4 h-4" /> ملاحظات المراجعة
+        </h3>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="دوّن تفاصيل يدوية حول تاريخ الكيان أو درجة الخطورة..."
+          rows={5}
+          className="w-full rounded-lg border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+        />
+        <div className="flex justify-end mt-3">
+          <button
+            onClick={saveNotes}
+            disabled={savingNotes}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {savingNotes ? 'جارٍ الحفظ...' : 'حفظ الملاحظات'}
+          </button>
         </div>
       </div>
 
