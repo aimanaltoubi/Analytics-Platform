@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import { Image } from '@/components/ui/image';
 
 const SUGGESTED_ATTRS = {
   person: [
@@ -66,6 +67,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
   const [newValue, setNewValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [fieldInputs, setFieldInputs] = useState({});
+  const [uploading, setUploading] = useState(false);
   const dims = useRef({ w: 800, h: height });
 
   // درجة كل كيان (عدد الروابط)
@@ -233,6 +235,24 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     }
   };
 
+  const onPhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedEntity) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.entities.Entity.update(selectedEntity.id, { photo_url: file_url });
+      const merged = { ...selectedEntity, photo_url: file_url };
+      if (onEntityUpdated) onEntityUpdated(selectedEntity.id, merged);
+      toast({ title: 'تم حفظ الصورة' });
+    } catch (err) {
+      toast({ title: 'تعذّر رفع الصورة', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const nodeRadius = (id) => {
     const deg = degreeMap[id] || 0;
     return 7 + Math.min(deg * 1.6, 10);
@@ -396,6 +416,25 @@ export default function NetworkGraph({ entities = [], connections = [], height =
               </span>
             </div>
             <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
+          </div>
+
+          <div className="flex items-center gap-3 mb-3">
+            {selectedEntity.photo_url ? (
+              <Image
+                src={selectedEntity.photo_url}
+                alt={selectedEntity.name}
+                className="w-14 h-14 rounded-full border-2 border-border shrink-0"
+                fittingType="fill"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-muted-foreground text-xl font-bold border-2 border-border shrink-0">
+                {selectedEntity.name?.charAt(0) || '؟'}
+              </div>
+            )}
+            <label className={`inline-block cursor-pointer text-xs px-2.5 py-1.5 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploading ? 'جارٍ الرفع...' : selectedEntity.photo_url ? 'تغيير الصورة' : 'إضافة صورة'}
+              <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} disabled={uploading} />
+            </label>
           </div>
           {selectedEntity.aliases?.length > 0 && (
             <div className="text-xs text-muted-foreground mb-2">
