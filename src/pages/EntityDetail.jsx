@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, Users, Share2, FileText } from 'lucide-react';
+import { ArrowRight, Users, Share2, FileText, Flag, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -21,6 +22,10 @@ export default function EntityDetail() {
   const [connections, setConnections] = useState([]);
   const [mentions, setMentions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [riskScore, setRiskScore] = useState(0);
+  const [watchlist, setWatchlist] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     (async () => {
@@ -28,6 +33,8 @@ export default function EntityDetail() {
       try {
         const ent = await base44.entities.Entity.get(id);
         setEntity(ent);
+        setRiskScore(ent.risk_score || 0);
+        setWatchlist(!!ent.watchlist);
         const [conns, ment] = await Promise.all([
           base44.entities.Connection.list('-created_date', 200),
           base44.entities.Mention.filter({ entity_id: id }, '-created_date', 50)
@@ -40,6 +47,17 @@ export default function EntityDetail() {
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!entity) return <div className="p-6 text-sm text-muted-foreground">الكيان غير موجود.</div>;
+
+  const saveFlags = async () => {
+    setSaving(true);
+    try {
+      const updated = await base44.entities.Entity.update(id, { risk_score: riskScore, watchlist });
+      setEntity(updated);
+      toast({ title: 'تم حفظ التغييرات' });
+    } catch (e) {
+      toast({ title: 'فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
 
   const attrs = entity.attributes || {};
   const attrKeys = Object.keys(attrs);
@@ -105,6 +123,55 @@ export default function EntityDetail() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* بطاقة الخطورة والمراقبة */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-heading font-semibold mb-4 flex items-center gap-2">
+          <Flag className="w-4 h-4 text-amber-600" /> الخطورة والمراقبة
+        </h3>
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          <div className="flex-1 w-full">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm text-muted-foreground">درجة الخطورة</label>
+              <span className={`text-sm font-bold ${
+                riskScore >= 70 ? 'text-red-600' : riskScore >= 40 ? 'text-amber-600' : 'text-emerald-600'
+              }`}>{riskScore}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={riskScore}
+              onChange={(e) => setRiskScore(Number(e.target.value))}
+              className="w-full accent-primary"
+            />
+            <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
+              <span>آمن</span><span>متوسط</span><span>خطير</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setWatchlist((w) => !w)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition-colors ${
+                watchlist
+                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                  : 'border-border hover:bg-accent'
+              }`}
+            >
+              <Flag className="w-4 h-4" />
+              {watchlist ? 'مُراقَب' : 'إضافة للمراقبة'}
+            </button>
+            <button
+              onClick={saveFlags}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'جارٍ الحفظ...' : 'حفظ'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

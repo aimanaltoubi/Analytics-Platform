@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Search } from 'lucide-react';
+import { Users, Search, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const TYPE_LABELS = {
@@ -32,6 +32,7 @@ export default function Entities() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [watchOnly, setWatchOnly] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -48,7 +49,8 @@ export default function Entities() {
     const matchQuery = !query || e.name?.toLowerCase().includes(query.toLowerCase()) ||
       (e.aliases || []).some((a) => a.toLowerCase().includes(query.toLowerCase()));
     const matchType = typeFilter === 'all' || e.type === typeFilter;
-    return matchQuery && matchType;
+    const matchWatch = !watchOnly || e.watchlist;
+    return matchQuery && matchType && matchWatch;
   });
 
   return (
@@ -77,6 +79,15 @@ export default function Entities() {
             <option key={t} value={t}>{t === 'all' ? 'كل الأنواع' : TYPE_LABELS[t] || t}</option>
           ))}
         </select>
+        <button
+          onClick={() => setWatchOnly((w) => !w)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${
+            watchOnly ? 'bg-amber-100 text-amber-800 border-amber-300' : 'border-border hover:bg-accent'
+          }`}
+        >
+          <Flag className="w-4 h-4" />
+          المراقبة
+        </button>
       </div>
 
       {loading ? (
@@ -96,7 +107,10 @@ export default function Entities() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{e.name}</div>
+                  <div className="flex items-center gap-1.5">
+                    {e.watchlist && <Flag className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                    <div className="font-medium text-sm truncate">{e.name}</div>
+                  </div>
                   {e.aliases?.length > 0 && (
                     <div className="text-xs text-muted-foreground truncate mt-0.5">{e.aliases.join('، ')}</div>
                   )}
@@ -105,8 +119,19 @@ export default function Entities() {
                   {TYPE_LABELS[e.type] || 'أخرى'}
                 </span>
               </div>
-              <div className="text-xs text-muted-foreground mt-3">
-                ذُكر {e.mention_count || 0} مرة • {e.document_ids?.length || 0} مستند
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-muted-foreground">
+                  ذُكر {e.mention_count || 0} مرة • {e.document_ids?.length || 0} مستند
+                </span>
+                {(e.risk_score > 0 || e.watchlist) && (
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${
+                    (e.risk_score || 0) >= 70 ? 'bg-red-100 text-red-700' :
+                    (e.risk_score || 0) >= 40 ? 'bg-amber-100 text-amber-700' :
+                    'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    خطورة {e.risk_score || 0}
+                  </span>
+                )}
               </div>
             </Link>
           ))}

@@ -9,6 +9,7 @@ export default function Network() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [minRisk, setMinRisk] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -25,7 +26,11 @@ export default function Network() {
   }, []);
 
   const types = ['all', ...new Set(entities.map((e) => e.type))];
-  const filteredEntities = filter === 'all' ? entities : entities.filter((e) => e.type === filter);
+  const filteredEntities = entities.filter((e) => {
+    const matchType = filter === 'all' || e.type === filter;
+    const matchRisk = (e.risk_score || 0) >= minRisk;
+    return matchType && matchRisk;
+  });
   const filteredIds = new Set(filteredEntities.map((e) => e.id));
   const filteredConnections = connections.filter(
     (c) => filteredIds.has(c.source_entity_id) && filteredIds.has(c.target_entity_id)
@@ -38,8 +43,9 @@ export default function Network() {
           <h1 className="font-heading text-2xl font-bold">شبكة العلاقات</h1>
           <p className="text-sm text-muted-foreground mt-1">خريطة الكيانات والروابط بينها — اسحب العقد لإعادة الترتيب</p>
         </div>
+        <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">تصفية حسب النوع:</span>
+          <span className="text-xs text-muted-foreground">النوع:</span>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -49,6 +55,18 @@ export default function Network() {
               <option key={t} value={t}>{t === 'all' ? 'الكل' : t}</option>
             ))}
           </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">أدنى خطورة: {minRisk}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={minRisk}
+            onChange={(e) => setMinRisk(Number(e.target.value))}
+            className="w-28 accent-primary"
+          />
+        </div>
         </div>
       </div>
 
