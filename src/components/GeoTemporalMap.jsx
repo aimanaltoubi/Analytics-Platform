@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon, Link2, Eye } from 'lucide-react';
+import { Play, Pause, SkipBack, Calendar, MapPin, Pencil, Plus, Route, X, Satellite, Map as MapIcon, Link2, Eye, Users, Flag, ArrowLeft } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import { Image as UIImage } from '@/components/ui/image';
 import { useToast } from '@/components/ui/use-toast';
 
 function parseDate(str) {
@@ -24,6 +26,11 @@ function fmt(d) {
 }
 
 const TRACK_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
+
+const TYPE_LABELS = {
+  person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
+};
 
 function ClickHandler({ onClick, active }) {
   useMapEvents({ click: (e) => { if (active) onClick(e.latlng); } });
@@ -137,6 +144,12 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     sorted.forEach((n, i) => { m[n] = TRACK_COLORS[i % TRACK_COLORS.length]; });
     return m;
   }, [displayIncidents]);
+
+  const entityByName = useMemo(() => {
+    const m = {};
+    entities.forEach((e) => { if (e.name && !m[e.name]) m[e.name] = e; });
+    return m;
+  }, [entities]);
 
   // مسارات الحركة لكل كيان (نقاط مرتبة زمنياً)
   const tracks = useMemo(() => {
@@ -261,6 +274,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     setTrackEntity('all');
     setSelected(null);
     setIdx(0); setPlaying(false);
+    toast({ title: 'تم مسح الخريطة' });
   };
 
   const handleMapClick = async (latlng) => {
@@ -456,26 +470,57 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
         </div>
       </div>
 
-      {/* بطاقة تفاصيل الحدث المختار */}
-      {selected && (
-        <div className="rounded-xl border border-primary/40 bg-card p-4 flex items-start gap-3">
-          <span className="w-3 h-3 rounded-full mt-1.5 shrink-0" style={{ background: entityColorMap[selected.sourceName] || '#dc2626' }} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-heading font-bold text-base">{selected.sourceName || selected.label}</span>
-              {selected.rel && <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{selected.rel}</span>}
+      {/* بطاقة تعريف الكيان المختار */}
+      {selected && (() => {
+        const ent = entityByName[selected.sourceName] || entityByName[selected.targetName];
+        const attrs = ent?.attributes || {};
+        return (
+          <div className="rounded-xl border border-primary/40 bg-card p-4 flex items-start gap-4">
+            <span className="w-3 h-3 rounded-full mt-2 shrink-0" style={{ background: entityColorMap[selected.sourceName] || '#dc2626' }} />
+            {ent?.photo_url ? (
+              <UIImage src={ent.photo_url} alt={ent.name} className="w-16 h-16 rounded-lg shrink-0" fittingType="fill" />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                <Users className="w-7 h-7 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-heading font-bold text-base">{ent?.name || selected.sourceName || selected.label}</span>
+                {ent && <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{TYPE_LABELS[ent.type] || ent.type}</span>}
+                {ent?.watchlist && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 inline-flex items-center gap-1"><Flag className="w-3 h-3" /> مراقَب</span>}
+                {selected.rel && <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent">{selected.rel}</span>}
+              </div>
+              {ent?.aliases?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {ent.aliases.map((a, i) => <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-accent">{a}</span>)}
+                </div>
+              )}
+              {Object.keys(attrs).length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 text-xs">
+                  {Object.entries(attrs).slice(0, 6).map(([k, v]) => (
+                    <div key={k} className="rounded bg-accent/40 px-2 py-1">
+                      <div className="text-[10px] text-muted-foreground">{k}</div>
+                      <div className="font-medium truncate">{String(v)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-xs">
+                <div><div className="text-muted-foreground">التاريخ</div><div className="font-medium">{fmt(selected.date)}</div></div>
+                <div><div className="text-muted-foreground">الموقع</div><div className="font-medium">{selected.locName}</div></div>
+                <div><div className="text-muted-foreground">الإحداثيات</div><div className="font-mono">{selected.lat.toFixed(4)}، {selected.lng.toFixed(4)}</div></div>
+                <div><div className="text-muted-foreground">المرتبط</div><div className="font-medium">{selected.targetName || '—'}</div></div>
+              </div>
+              {selected.docTitle && <div className="text-xs text-muted-foreground mt-2">المستند: {selected.docTitle}</div>}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-xs">
-              <div><div className="text-muted-foreground">التاريخ</div><div className="font-medium">{fmt(selected.date)}</div></div>
-              <div><div className="text-muted-foreground">الموقع</div><div className="font-medium">{selected.locName}</div></div>
-              <div><div className="text-muted-foreground">الإحداثيات</div><div className="font-mono">{selected.lat.toFixed(4)}، {selected.lng.toFixed(4)}</div></div>
-              <div><div className="text-muted-foreground">المرتبط</div><div className="font-medium">{selected.targetName || '—'}</div></div>
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+              {ent && <Link to={`/entities/${ent.id}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1">عرض الكيان <ArrowLeft className="w-3 h-3" /></Link>}
             </div>
-            {selected.docTitle && <div className="text-xs text-muted-foreground mt-2">المستند: {selected.docTitle}</div>}
           </div>
-          <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground shrink-0"><X className="w-4 h-4" /></button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* الخريطة */}
       <div className={`rounded-xl border border-border overflow-hidden ${drawMode ? 'ring-2 ring-primary/40' : ''}`}>
@@ -538,27 +583,13 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
                 <CircleMarker
                   key={ev.id}
                   center={[ev.lat, ev.lng]}
-                  radius={isLatest ? 10 : 6}
+                  radius={isLatest ? 11 : 7}
                   pathOptions={{ color: '#ffffff', weight: isLatest ? 3 : 2, fillColor: color, fillOpacity: isLatest ? 1 : 0.9 }}
                   eventHandlers={{ click: () => setSelected(ev) }}
                 >
                   <Tooltip direction="top" offset={[0, -6]} opacity={1}>
                     <span className="font-semibold">{ev.sourceName || ev.label}</span> · {fmt(ev.date)} · {ev.locName}
                   </Tooltip>
-                  <Popup>
-                    <div className="text-xs space-y-1 min-w-[190px]">
-                      <div className="font-semibold text-sm">{ev.sourceName || ev.label}</div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Calendar className="w-3 h-3" /> {fmt(ev.date)}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-primary" /> {ev.locName}
-                      </div>
-                      {ev.rel && <span className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{ev.rel}</span>}
-                      {ev.targetName && ev.targetName !== ev.locName && <div className="text-muted-foreground">المرتبط: {ev.targetName}</div>}
-                      {ev.docTitle && <div className="text-muted-foreground text-[11px]">المستند: {ev.docTitle}</div>}
-                    </div>
-                  </Popup>
                 </CircleMarker>
               );
             })}
