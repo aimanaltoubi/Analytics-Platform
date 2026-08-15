@@ -2,10 +2,14 @@ import { useState, useRef, useCallback } from 'react';
 import { Pencil, Plus, Link2, Trash2, Eraser } from 'lucide-react';
 
 const PALETTE = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
+const TYPE_COLORS = {
+  person: '#3b82f6', organization: '#8b5cf6', phone: '#f59e0b', email: '#10b981',
+  location: '#ef4444', account: '#06b6d4', date: '#64748b', event: '#ec4899', other: '#94a3b8'
+};
 let _id = 0;
 const uid = () => `m${Date.now()}_${_id++}`;
 
-export default function ManualNetworkCanvas({ height = 540 }) {
+export default function ManualNetworkCanvas({ entities = [], height = 540 }) {
   const svgRef = useRef(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -13,26 +17,47 @@ export default function ManualNetworkCanvas({ height = 540 }) {
   const [dragId, setDragId] = useState(null);
   const [connectFrom, setConnectFrom] = useState(null);
   const [hover, setHover] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [customLabel, setCustomLabel] = useState('');
 
   const toLocal = (e) => {
     const rect = svgRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const addNode = () => {
-    const label = window.prompt('اسم العقدة:');
-    if (!label || !label.trim()) return;
+  const placedIds = new Set(nodes.filter((n) => n.entity_id).map((n) => n.entity_id));
+  const availableEntities = entities.filter((e) => !placedIds.has(e.id));
+
+  const addEntityNode = (ent) => {
     const w = svgRef.current?.clientWidth || 800;
     setNodes((prev) => [
       ...prev,
       {
         id: uid(),
-        label: label.trim(),
+        entity_id: ent.id,
+        label: ent.name,
+        x: w / 2 + (Math.random() - 0.5) * 120,
+        y: height / 2 + (Math.random() - 0.5) * 120,
+        color: TYPE_COLORS[ent.type] || TYPE_COLORS.other
+      }
+    ]);
+  };
+
+  const addCustomNode = () => {
+    const label = (customLabel || '').trim();
+    if (!label) return;
+    const w = svgRef.current?.clientWidth || 800;
+    setNodes((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        label,
         x: w / 2 + (Math.random() - 0.5) * 120,
         y: height / 2 + (Math.random() - 0.5) * 120,
         color: PALETTE[prev.length % PALETTE.length]
       }
     ]);
+    setCustomLabel('');
   };
 
   const onCanvasClick = (e) => {
@@ -108,9 +133,29 @@ export default function ManualNetworkCanvas({ height = 540 }) {
           <Pencil className="w-4 h-4" /> لوحة رسم حرّة
         </h3>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={addNode} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus className="w-3.5 h-3.5" /> عقدة جديدة
-          </button>
+          <div className="relative">
+            <button onClick={() => setShowPicker((v) => !v)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+              <Plus className="w-3.5 h-3.5" /> عقدة جديدة
+            </button>
+            {showPicker && (
+              <div className="absolute z-20 mt-1 left-0 w-64 rounded-lg border border-border bg-popover shadow-lg max-h-72 overflow-auto">
+                {availableEntities.length === 0 ? (
+                  <div className="p-3 text-xs text-muted-foreground">لا توجد كيانات متاحة في مساحة العمل.</div>
+                ) : (
+                  availableEntities.map((e) => (
+                    <button key={e.id} onClick={() => { addEntityNode(e); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/50 text-right">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TYPE_COLORS[e.type] || TYPE_COLORS.other }} />
+                      <span className="truncate">{e.name}</span>
+                    </button>
+                  ))
+                )}
+                <div className="p-2 border-t border-border flex gap-1.5">
+                  <input value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="عقدة مخصصة" className="flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                  <button onClick={addCustomNode} disabled={!customLabel.trim()} className="shrink-0 rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs disabled:opacity-50">إضافة</button>
+                </div>
+              </div>
+            )}
+          </div>
           {modeBtn('select', Pencil, 'تحريك')}
           {modeBtn('connect', Link2, 'ربط')}
           {modeBtn('delete', Trash2, 'حذف')}

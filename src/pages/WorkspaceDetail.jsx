@@ -85,7 +85,7 @@ export default function WorkspaceDetail() {
 
       <WorkspaceNetwork workspace={workspace} />
 
-      <ManualNetworkCanvas />
+      <ManualNetworkCanvas entities={entities} />
 
       <WorkspaceTimelineExplorer entities={entities} connections={connections} documents={documents} />
 
