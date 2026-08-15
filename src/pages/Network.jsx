@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { Share2, Users } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import NetworkGraph from '@/components/NetworkGraph';
+import TimelineAnalysis from '@/components/TimelineAnalysis';
 
 export default function Network() {
   const [entities, setEntities] = useState([]);
   const [connections, setConnections] = useState([]);
   const [mentions, setMentions] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [minRisk, setMinRisk] = useState(0);
@@ -19,16 +21,18 @@ export default function Network() {
     (async () => {
       setLoading(true);
       try {
-        const [ents, conns, ment, wss] = await Promise.all([
+        const [ents, conns, ment, wss, docs] = await Promise.all([
           base44.entities.Entity.list('-mention_count', 200),
           base44.entities.Connection.list('-created_date', 300),
           base44.entities.Mention.list('-created_date', 500),
-          base44.entities.Workspace.list('-created_date', 100)
+          base44.entities.Workspace.list('-created_date', 100),
+          base44.entities.Document.list('-created_date', 500)
         ]);
         setEntities(ents);
         setConnections(conns);
         setMentions(ment);
         setWorkspaces(wss);
+        setDocuments(docs);
       } catch (e) {} finally { setLoading(false); }
     })();
   }, []);
@@ -148,6 +152,10 @@ export default function Network() {
         </div>
       ) : (
         <NetworkGraph entities={filteredEntities} connections={visibleConnections} height={580} />
+      )}
+
+      {!loading && filteredEntities.length > 0 && (
+        <TimelineAnalysis entities={filteredEntities} connections={visibleConnections} documents={documents} />
       )}
 
       {!loading && filteredEntities.length > 0 && (
