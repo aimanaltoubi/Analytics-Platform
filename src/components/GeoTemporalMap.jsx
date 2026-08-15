@@ -42,7 +42,6 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
   const [linkEntityId, setLinkEntityId] = useState('');
   const [linkLocId, setLinkLocId] = useState('');
   const [linking, setLinking] = useState(false);
-  const [focusEntity, setFocusEntity] = useState('');
   const [movementPerson, setMovementPerson] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -124,6 +123,18 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     });
   }, [incidents, movementPerson, dateFrom, dateTo, entities]);
 
+  const entityColorMap = useMemo(() => {
+    const names = new Set();
+    displayIncidents.forEach((inc) => {
+      if (inc.sourceName) names.add(inc.sourceName);
+      if (inc.targetName) names.add(inc.targetName);
+    });
+    const sorted = [...names].sort();
+    const m = {};
+    sorted.forEach((n, i) => { m[n] = TRACK_COLORS[i % TRACK_COLORS.length]; });
+    return m;
+  }, [displayIncidents]);
+
   // مسارات الحركة لكل كيان (نقاط مرتبة زمنياً)
   const tracks = useMemo(() => {
     const byEnt = {};
@@ -138,10 +149,10 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
       });
     });
     return Object.entries(byEnt)
-      .map(([name, pts], i) => ({ name, points: pts, color: TRACK_COLORS[i % TRACK_COLORS.length] }))
+      .map(([name, pts]) => ({ name, points: pts, color: entityColorMap[name] || TRACK_COLORS[0] }))
       .filter((t) => t.points.length >= 2)
       .sort((a, b) => b.points.length - a.points.length);
-  }, [displayIncidents]);
+  }, [displayIncidents, entityColorMap]);
 
   useEffect(() => { setIdx(0); setPlaying(false); }, [displayIncidents.length]);
 
@@ -189,14 +200,14 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
     return m;
   }, [connections]);
   const linkedLocIds = useMemo(() => {
-    if (!focusEntity) return null;
+    if (!movementPerson) return null;
     const ids = new Set();
     connections.forEach((c) => {
-      if (c.source_entity_id === focusEntity && locEntityIds.has(c.target_entity_id)) ids.add(c.target_entity_id);
-      if (c.target_entity_id === focusEntity && locEntityIds.has(c.source_entity_id)) ids.add(c.source_entity_id);
+      if (c.source_entity_id === movementPerson && locEntityIds.has(c.target_entity_id)) ids.add(c.target_entity_id);
+      if (c.target_entity_id === movementPerson && locEntityIds.has(c.source_entity_id)) ids.add(c.source_entity_id);
     });
     return ids;
-  }, [focusEntity, connections, locEntityIds]);
+  }, [movementPerson, connections, locEntityIds]);
 
   const createLink = async () => {
     if (!linkEntityId || !linkLocId) { toast({ variant: 'destructive', title: 'اختر كياناً وموقعاً' }); return; }
@@ -243,7 +254,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
 
   const clearMap = () => {
     setMovementPerson(''); setDateFrom(''); setDateTo('');
-    setFocusEntity(''); setTrackEntity('all');
+    setTrackEntity('all');
     setIdx(0); setPlaying(false);
   };
 
@@ -391,27 +402,10 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
           </button>
         </div>
 
-        {/* إبراز مواقع كيان */}
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
-          <MapPin className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground shrink-0">إبراز مواقع كيان:</span>
-          <select className={sel} value={focusEntity} onChange={(e) => setFocusEntity(e.target.value)}>
-            <option value="">— كل المواقع —</option>
-            {linkableEntities.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </select>
-          {focusEntity && (
-            <button onClick={() => setFocusEntity('')} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1">
-              <X className="w-3.5 h-3.5" /> مسح
-            </button>
-          )}
-        </div>
-
-        {/* تتبع حركة شخص ضمن نطاق زمني */}
+        {/* استكشاف حركة كيان ضمن نطاق زمني */}
         <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
           <Route className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground shrink-0">عرض الحركات ضمن نطاق زمني:</span>
+          <span className="text-xs font-medium text-muted-foreground shrink-0">استكشاف حركة كيان ضمن نطاق زمني:</span>
           <select className={sel} value={movementPerson} onChange={(e) => setMovementPerson(e.target.value)}>
             <option value="">كل الكيانات</option>
             {linkableEntities.map((e) => (
@@ -449,7 +443,7 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             {locations.map((l) => {
               const linked = !linkedLocIds || linkedLocIds.has(l.id);
               return (
-                <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={linked ? 7 : 4} pathOptions={{ color: linked ? '#dc2626' : '#94a3b8', fillColor: linked ? '#dc2626' : '#94a3b8', fillOpacity: linked ? 0.7 : 0.2 }}>
+                <CircleMarker key={'loc' + l.id} center={[l.latitude, l.longitude]} radius={linked ? 6 : 4} pathOptions={{ color: linked ? '#2563eb' : '#94a3b8', weight: linked ? 2 : 1, fillColor: linked ? '#2563eb' : '#94a3b8', fillOpacity: linked ? 0.55 : 0.15 }}>
                   <Popup>
                     <div className="text-xs space-y-1 min-w-[170px]">
                       <div className="font-semibold text-sm">{l.name}</div>
@@ -484,13 +478,17 @@ export default function GeoTemporalMap({ entities, connections, documents, onLoc
             {/* الحوادث حتى اللحظة الحالية */}
             {visibleIncidents.map((ev) => {
               const isLatest = ev.id === latestId;
+              const color = entityColorMap[ev.sourceName] || '#dc2626';
               return (
                 <CircleMarker
                   key={ev.id}
                   center={[ev.lat, ev.lng]}
-                  radius={isLatest ? 12 : 7}
-                  pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: isLatest ? 0.9 : 0.5 }}
+                  radius={isLatest ? 10 : 6}
+                  pathOptions={{ color: '#ffffff', weight: isLatest ? 3 : 2, fillColor: color, fillOpacity: isLatest ? 1 : 0.9 }}
                 >
+                  <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+                    <span className="font-semibold">{ev.sourceName || ev.label}</span> · {fmt(ev.date)} · {ev.locName}
+                  </Tooltip>
                   <Popup>
                     <div className="text-xs space-y-1 min-w-[190px]">
                       <div className="font-semibold text-sm">{ev.sourceName || ev.label}</div>
