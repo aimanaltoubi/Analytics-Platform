@@ -1,0 +1,73 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "\u0627\u0644\u0639\u0646\u0648\u0627\u0646"
+    },
+    "message": {
+      "type": "string",
+      "title": "\u0627\u0644\u0631\u0633\u0627\u0644\u0629"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "high_risk_entity",
+        "watchlist_match",
+        "info"
+      ],
+      "title": "\u0646\u0648\u0639 \u0627\u0644\u062a\u0646\u0628\u064a\u0647",
+      "default": "info"
+    },
+    "entity_id": {
+      "type": "string",
+      "title": "\u0627\u0644\u0643\u064a\u0627\u0646"
+    },
+    "entity_name": {
+      "type": "string",
+      "title": "\u0627\u0633\u0645 \u0627\u0644\u0643\u064a\u0627\u0646"
+    },
+    "document_id": {
+      "type": "string",
+      "title": "\u0627\u0644\u0645\u0633\u062a\u0646\u062f"
+    },
+    "document_title": {
+      "type": "string",
+      "title": "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0633\u062a\u0646\u062f"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "\u0627\u0644\u062e\u0637\u0648\u0631\u0629",
+      "default": "medium"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "title": "\u0645\u0642\u0631\u0648\u0621"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

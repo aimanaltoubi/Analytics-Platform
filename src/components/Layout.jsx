@@ -3,6 +3,7 @@ import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, BarCh
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import SystemStatus from '@/components/SystemStatus';
+import NotificationsBell from '@/components/NotificationsBell';
 
 const navGroups = [
   {
@@ -133,7 +134,10 @@ export default function Layout() {
             <span className="truncate">بحث شامل في الكيانات والمستندات والروابط...</span>
             <kbd className="mr-auto text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground font-mono">/</kbd>
           </Link>
-          <SystemStatus />
+          <div className="flex items-center gap-2 shrink-0">
+            <NotificationsBell />
+            <SystemStatus />
+          </div>
         </header>
 
         <div className="flex-1 min-w-0 overflow-auto">

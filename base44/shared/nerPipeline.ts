@@ -213,5 +213,29 @@ export async function runNer(base44, doc, document_id, fullText) {
     // لا تفشل المعالجة بسبب التنبيه
   }
 
+  // تنبيه داخل التطبيق للكيانات عالية الخطورة المكتشفة في هذا المستند
+  try {
+    const highAlerts = (alertsResult.alerts || []).filter(
+      (a) => a.severity === 'high' || a.severity === 'critical'
+    );
+    if (highAlerts.length > 0) {
+      await base44.entities.Notification.bulkCreate(
+        highAlerts.map((a) => ({
+          title: a.title,
+          message: a.description || '',
+          type: a.rule_type === 'watchlist' ? 'watchlist_match' : 'high_risk_entity',
+          entity_id: (a.entity_ids || [])[0] || '',
+          entity_name: (a.entity_names || [])[0] || '',
+          document_id: (a.details && a.details.document_id) || document_id,
+          document_title: (a.details && a.details.document_title) || doc.title,
+          severity: a.severity,
+          read: false
+        }))
+      );
+    }
+  } catch (e) {
+    // لا تفشل المعالجة بسبب التنبيه الداخلي
+  }
+
   return { status: 'processed', entity_count: entities.length, connection_count: connectionCount, summary, alerts: alertsResult };
 }
