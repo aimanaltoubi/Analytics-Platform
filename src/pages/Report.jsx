@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileDown, Loader2, Users, Share2, FileText, Flag, AlertTriangle, Network as NetworkIcon } from 'lucide-react';
+import { FileDown, Loader2, Users, Share2, FileText, Flag, AlertTriangle, Network as NetworkIcon, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -49,40 +49,109 @@ export default function Report() {
     deg[c.source_entity_id] = (deg[c.source_entity_id] || 0) + 1;
     deg[c.target_entity_id] = (deg[c.target_entity_id] || 0) + 1;
   });
-  const topNet = entities.map((e) => ({ ...e, deg: deg[e.id] || 0 })).sort((a, b) => b.deg - a.deg).slice(0, 40);
-  const topIds = new Set(topNet.map((e) => e.id));
-  const pos = {};
-  const N = topNet.length;
-  const cx = 300, cy = 300, R = 225;
-  topNet.forEach((e, i) => {
-    const ang = (i / Math.max(N, 1)) * 2 * Math.PI - Math.PI / 2;
-    pos[e.id] = { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang) };
+  // أعلى 40 كياناً مركزية + كل جيرانها المباشرين = عقد الشبكة الفعلية
+  const topIds = new Set(
+    entities.map((e) => ({ id: e.id, deg: deg[e.id] || 0 }))
+      .sort((a, b) => b.deg - a.deg)
+      .slice(0, 40)
+      .map((e) => e.id)
+  );
+  const nodeIds = new Set(topIds);
+  connections.forEach((c) => {
+    if (topIds.has(c.source_entity_id)) nodeIds.add(c.target_entity_id);
+    if (topIds.has(c.target_entity_id)) nodeIds.add(c.source_entity_id);
   });
-  const netEdges = connections.filter((c) => topIds.has(c.source_entity_id) && topIds.has(c.target_entity_id));
+  const netNodes = entities.filter((e) => nodeIds.has(e.id)).map((e) => ({ ...e, deg: deg[e.id] || 0 }));
+  const netEdges = connections.filter((c) => nodeIds.has(c.source_entity_id) && nodeIds.has(c.target_entity_id));
 
   const nodeColor = (e) => (e.risk_score || 0) >= 70 ? '#dc2626' : (e.risk_score || 0) >= 40 ? '#f59e0b' : '#2563eb';
   const nodeR = (e) => 6 + Math.min(14, (e.mention_count || 0) / 2);
 
-  const renderNetwork = (size = 600) => (
-    <svg width={size} height={size} style={{ display: 'block', margin: '0 auto' }}>
-      {netEdges.map((c) => {
-        const a = pos[c.source_entity_id], b = pos[c.target_entity_id];
-        if (!a || !b) return null;
-        return <line key={c.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#cbd5e1" strokeWidth={1} />;
-      })}
-      {topNet.map((e) => {
-        const p = pos[e.id];
-        return (
-          <g key={e.id}>
-            <circle cx={p.x} cy={p.y} r={nodeR(e)} fill={nodeColor(e)} stroke="#fff" strokeWidth={1.5} />
-            <text x={p.x} y={p.y - nodeR(e) - 3} fontSize={9} textAnchor="middle" fill="#334155">
-              {e.name.length > 18 ? e.name.slice(0, 18) + '…' : e.name}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
+  // محاكاة قوى ديناميكية (غير حتمية): المواقع تُشتق من طوبولوجيا الروابط الفعلية
+  const [positions, setPositions] = useState({});
+  const [runId, setRunId] = useState(0);
+  useEffect(() => {
+    if (netNodes.length === 0) return;
+    const W = 600, H = 600, cx = W / 2, cy = H / 2;
+    const nodes = netNodes.map((e) => ({
+      id: e.id,
+      x: cx + (Math.random() - 0.5) * 300,
+      y: cy + (Math.random() - 0.5) * 300,
+      vx: 0, vy: 0
+    }));
+    const idToNode = {};
+    nodes.forEach((n) => { idToNode[n.id] = n; });
+    const edges = netEdges
+      .map((c) => ({ s: c.source_entity_id, t: c.target_entity_id }))
+      .filter((e) => idToNode[e.s] && idToNode[e.t]);
+    let raf, still = 0;
+    const tick = () => {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i], b = nodes[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d2 = dx * dx + dy * dy + 0.01;
+          const d = Math.sqrt(d2);
+          const f = 1400 / d2;
+          const fx = (dx / d) * f, fy = (dy / d) * f;
+          a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+        }
+      }
+      edges.forEach((e) => {
+        const a = idToNode[e.s], b = idToNode[e.t];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const f = (d - 70) * 0.03;
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+      });
+      let energy = 0;
+      nodes.forEach((n) => {
+        n.vx = (n.vx + (cx - n.x) * 0.01) * 0.82;
+        n.vy = (n.vy + (cy - n.y) * 0.01) * 0.82;
+        n.x += n.vx; n.y += n.vy;
+        n.x = Math.max(24, Math.min(W - 24, n.x));
+        n.y = Math.max(24, Math.min(H - 24, n.y));
+        energy += Math.abs(n.vx) + Math.abs(n.vy);
+      });
+      const pos = {};
+      nodes.forEach((n) => { pos[n.id] = { x: n.x, y: n.y }; });
+      setPositions(pos);
+      if (energy < 0.6) { still++; if (still > 25) { cancelAnimationFrame(raf); return; } } else still = 0;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [runId, netNodes.length, netEdges.length]);
+
+  const renderNetwork = (size = 600) => {
+    const scale = size / 600;
+    return (
+      <svg width={size} height={size} style={{ display: 'block', margin: '0 auto' }}>
+        {netEdges.map((c) => {
+          const a = positions[c.source_entity_id], b = positions[c.target_entity_id];
+          if (!a || !b) return null;
+          return <line key={c.id} x1={a.x * scale} y1={a.y * scale} x2={b.x * scale} y2={b.y * scale} stroke="#cbd5e1" strokeWidth={1} />;
+        })}
+        {netNodes.map((e) => {
+          const p = positions[e.id];
+          if (!p) return null;
+          const isTop = topIds.has(e.id);
+          const r = isTop ? nodeR(e) : 4;
+          return (
+            <g key={e.id}>
+              <circle cx={p.x * scale} cy={p.y * scale} r={r} fill={nodeColor(e)} opacity={isTop ? 1 : 0.45} stroke="#fff" strokeWidth={1.5} />
+              {isTop && (
+                <text x={p.x * scale} y={p.y * scale - r - 3} fontSize={9} textAnchor="middle" fill="#334155">
+                  {e.name.length > 16 ? e.name.slice(0, 16) + '…' : e.name}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
 
   const generate = async () => {
     setBusy(true);
@@ -155,15 +224,25 @@ export default function Report() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-heading font-semibold mb-3 flex items-center gap-2">
-            <NetworkIcon className="w-4 h-4 text-primary" /> الشبكة المرتبطة (أعلى 40 كياناً مركزية)
-          </h3>
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+            <h3 className="font-heading font-semibold flex items-center gap-2">
+              <NetworkIcon className="w-4 h-4 text-primary" /> الشبكة الفعلية ({netNodes.length} كيان • {netEdges.length} رابط)
+            </h3>
+            <button
+              onClick={() => setRunId((r) => r + 1)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-border bg-card hover:bg-accent transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> إعادة ترتيب
+            </button>
+          </div>
           <div className="flex justify-center">{renderNetwork(520)}</div>
-          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
             <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600" /> خطورة عالية</span>
             <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> متوسطة</span>
             <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600" /> منخفضة</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 opacity-45" /> جار مباشر</span>
           </div>
+          <p className="text-[11px] text-muted-foreground text-center mt-2">تُشتق مواقع العقد ديناميكياً من طوبولوجيا الروابط الفعلية (محاكاة قوى) — كل ترتيب مختلف.</p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
@@ -238,7 +317,7 @@ export default function Report() {
           ))}
         </div>
 
-        <div style={{ fontSize: '16px', fontWeight: 700, margin: '14px 0 10px' }}>الشبكة المرتبطة</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, margin: '14px 0 10px' }}>الشبكة الفعلية ({netNodes.length} كيان • {netEdges.length} رابط)</div>
         {renderNetwork(560)}
 
         <div style={{ fontSize: '16px', fontWeight: 700, margin: '20px 0 10px' }}>أبرز الكيانات</div>
@@ -261,7 +340,7 @@ export default function Report() {
           </tbody>
         </table>
 
-        <div style={{ fontSize: '16px', fontWeight: 700, margin: '14px 0 10px' }}>أبرز الروابط ({Math.min(netEdges.length, 150)} من {connections.length})</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, margin: '14px 0 10px' }}>أبرز الروابط في الشبكة ({netEdges.length})</div>
         <div style={{ fontSize: '11px', lineHeight: 1.9 }}>
           {netEdges.slice(0, 150).map((c) => (
             <div key={c.id}>• {c.source_entity_name || '—'} <span style={{ color: '#1d4ed8', fontWeight: 600 }}>[{c.relationship_type}]</span> {c.target_entity_name || '—'}</div>
