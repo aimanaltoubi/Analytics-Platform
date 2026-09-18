@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DocumentUploader from '@/components/DocumentUploader';
+import DashboardAnalytics from '@/components/DashboardAnalytics';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -238,6 +239,9 @@ export default function Home() {
             <DocumentUploader onUploaded={() => load()} />
           </div>
         </div>
+
+        {/* التحليلات */}
+        <DashboardAnalytics />
       </div>
     </div>
   );

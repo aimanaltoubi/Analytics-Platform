@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Legend, CartesianGrid
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { Users, Share2, FileText, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
@@ -14,30 +13,21 @@ import NationalityOverview from '@/components/NationalityOverview';
 import GeoTemporalMap from '@/components/GeoTemporalMap';
 
 const TYPE_LABELS = {
-  person: 'شخص',
-  organization: 'منظمة',
-  phone: 'هاتف',
-  email: 'بريد',
-  location: 'موقع',
-  account: 'حساب',
-  date: 'تاريخ',
-  event: 'حدث',
-  other: 'أخرى'
+  person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
 
 const TYPE_COLORS = {
-  person: '#3b82f6',
-  organization: '#8b5cf6',
-  phone: '#f59e0b',
-  email: '#10b981',
-  location: '#ef4444',
-  account: '#06b6d4',
-  date: '#64748b',
-  event: '#ec4899',
-  other: '#94a3b8'
+  person: '#3b82f6', organization: '#8b5cf6', phone: '#f59e0b', email: '#10b981',
+  location: '#ef4444', account: '#06b6d4', date: '#64748b', event: '#ec4899', other: '#94a3b8'
 };
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#64748b', '#ec4899', '#94a3b8'];
+
+const TYPE_LABELS_DOC = {
+  phone_log: 'سجل مكالمات', financial_transaction: 'معاملة مالية',
+  police_report: 'تقرير شرطة', intelligence_report: 'تقرير تحليلي', other: 'أخرى'
+};
 
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -55,14 +45,13 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function Analytics() {
+export default function DashboardAnalytics() {
   const [entities, setEntities] = useState([]);
   const [connections, setConnections] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadAll = async () => {
-    setLoading(true);
     try {
       const [ents, conns, docs] = await Promise.all([
         base44.entities.Entity.list('-mention_count', 500),
@@ -77,61 +66,30 @@ export default function Analytics() {
 
   useEffect(() => { loadAll(); }, []);
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
+  if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">جارٍ تحميل التحليلات...</div>;
 
-  // عدد الروابط لكل كيان
   const connCountByEntity = {};
   connections.forEach((c) => {
     connCountByEntity[c.source_entity_id] = (connCountByEntity[c.source_entity_id] || 0) + 1;
     connCountByEntity[c.target_entity_id] = (connCountByEntity[c.target_entity_id] || 0) + 1;
   });
 
-  // توزيع الكيانات حسب النوع
   const typeDistribution = Object.entries(
-    entities.reduce((acc, e) => {
-      const t = e.type || 'other';
-      acc[t] = (acc[t] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([k, v]) => ({ name: TYPE_LABELS[k] || k, value: v, key: k }))
-    .sort((a, b) => b.value - a.value);
+    entities.reduce((acc, e) => { const t = e.type || 'other'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
+  ).map(([k, v]) => ({ name: TYPE_LABELS[k] || k, value: v, key: k })).sort((a, b) => b.value - a.value);
 
-  // أعلى الكيانات ذكراً وارتباطاً
   const topEntities = [...entities]
     .sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0))
     .slice(0, 10)
-    .map((e) => ({
-      id: e.id,
-      name: e.name,
-      ذكر: e.mention_count || 0,
-      روابط: connCountByEntity[e.id] || 0
-    }));
+    .map((e) => ({ id: e.id, name: e.name, ذكر: e.mention_count || 0, روابط: connCountByEntity[e.id] || 0 }));
 
-  // توزيع الروابط حسب النوع
   const relDistribution = Object.entries(
-    connections.reduce((acc, c) => {
-      const t = c.relationship_type || 'غير محدد';
-      acc[t] = (acc[t] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([k, v]) => ({ name: k, value: v }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+    connections.reduce((acc, c) => { const t = c.relationship_type || 'غير محدد'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
+  ).map(([k, v]) => ({ name: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 8);
 
-  // المستندات حسب النوع
   const docDistribution = Object.entries(
-    documents.reduce((acc, d) => {
-      const t = d.document_type || 'other';
-      acc[t] = (acc[t] || 0) + 1;
-      return acc;
-    }, {})
+    documents.reduce((acc, d) => { const t = d.document_type || 'other'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
   ).map(([k, v]) => ({ name: TYPE_LABELS_DOC[k] || k, value: v }));
-
-  // الكيانات ذات أعلى خطورة
-  const topRisk = [...entities]
-    .filter((e) => (e.risk_score || 0) > 0)
-    .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))
-    .slice(0, 5);
 
   const summaryCards = [
     { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500' },
@@ -140,13 +98,13 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">التحليلات</h1>
-        <p className="text-sm text-muted-foreground mt-1">إحصاءات ورسوم بيانية عن الكيانات والروابط والمستندات</p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 pt-2">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">التحليلات</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
 
-      {/* بطاقات ملخصة */}
       <div className="grid grid-cols-3 gap-4">
         {summaryCards.map((c) => {
           const Icon = c.icon;
@@ -167,7 +125,6 @@ export default function Analytics() {
       <FusionInsights />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* توزيع الكيانات حسب النوع */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
           <h3 className="font-heading font-semibold mb-4">توزيع الكيانات حسب النوع</h3>
           {typeDistribution.length === 0 ? (
@@ -189,7 +146,6 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* أعلى الكيانات ذكراً */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
           <h3 className="font-heading font-semibold mb-4">أعلى الكيانات ذكراً وارتباطاً</h3>
           {topEntities.length === 0 ? (
@@ -214,7 +170,6 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* توزيع الروابط حسب النوع */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
           <h3 className="font-heading font-semibold mb-4">توزيع الروابط حسب النوع</h3>
           {relDistribution.length === 0 ? (
@@ -222,15 +177,11 @@ export default function Analytics() {
           ) : (
             <BarList
               max={Math.max(...relDistribution.map((r) => r.value), 1)}
-              items={relDistribution.map((r) => ({
-                name: r.name,
-                values: [{ label: '', value: r.value, color: '#8b5cf6' }]
-              }))}
+              items={relDistribution.map((r) => ({ name: r.name, values: [{ label: '', value: r.value, color: '#8b5cf6' }] }))}
             />
           )}
         </div>
 
-        {/* المستندات حسب النوع */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
           <h3 className="font-heading font-semibold mb-4">المستندات حسب النوع</h3>
           {docDistribution.length === 0 ? (
@@ -257,14 +208,12 @@ export default function Analytics() {
 
       <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
 
-      {/* الخريطة الجغرافية الزمنية — مسارات حركة الكيانات */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الجغرافية الزمنية</h3>
-        <p className="text-xs text-muted-foreground">تتبّع مسارات حركة الكيانات وتطوّر تحركاتهم عبر الزمن بناءً على البيانات المستخرجة. استخدم شريط الزمن لتشغيل تطوّر الأحداث، وفعّل «رسم المواقع» لترميز إحداثيات المواقع بالنقر على الخريطة.</p>
+        <p className="text-xs text-muted-foreground">تتبّع مسارات حركة الكيانات وتطوّر تحركاتهم عبر الزمن بناءً على البيانات المستخرجة.</p>
         <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
       </div>
 
-      {/* جدول أكثر الكيانات ذكراً */}
       <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
         <h3 className="font-heading font-semibold mb-3">أكثر الكيانات تكراراً</h3>
         <div className="space-y-1">
@@ -292,11 +241,3 @@ export default function Analytics() {
     </div>
   );
 }
-
-const TYPE_LABELS_DOC = {
-  phone_log: 'سجل مكالمات',
-  financial_transaction: 'معاملة مالية',
-  police_report: 'تقرير شرطة',
-  intelligence_report: 'تقرير تحليلي',
-  other: 'أخرى'
-};
