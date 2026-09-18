@@ -40,19 +40,5 @@
     "source_entity_id",
     "target_entity_id",
     "relationship_type"
-  ],
-  "rls": {
-    "read": {
-      "created_by_id": "{{user.id}}"
-    },
-    "create": {
-      "created_by_id": "{{user.id}}"
-    },
-    "update": {
-      "created_by_id": "{{user.id}}"
-    },
-    "delete": {
-      "created_by_id": "{{user.id}}"
-    }
-  }
+  ]
 }
