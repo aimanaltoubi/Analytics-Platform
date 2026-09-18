@@ -4,6 +4,7 @@ import { ArrowRight, Plus, X, Users, FileText, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import WorkspaceDocumentPicker from '@/components/WorkspaceDocumentPicker';
+import WorkspaceSelectionAnalyzer from '@/components/WorkspaceSelectionAnalyzer';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
@@ -89,6 +90,8 @@ export default function WorkspaceDetail() {
       </div>
 
       <WorkspaceNetwork workspace={workspace} />
+
+      <WorkspaceSelectionAnalyzer entities={entities} documents={documents} connections={connections} />
 
       <ManualNetworkCanvas entities={entities} />
 
