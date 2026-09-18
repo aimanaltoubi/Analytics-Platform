@@ -56,26 +56,24 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/documents/:id" element={<DocumentDetail />} />
-          <Route path="/entities" element={<Entities />} />
-          <Route path="/entities/:id" element={<EntityDetail />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/report" element={<Report />} />
-          <Route path="/geo" element={<GeoTemporal />} />
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/transit" element={<TransitSecurity />} />
-          <Route path="/graph" element={<GraphIndex />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/clir" element={<CrossLingualSearch />} />
-          <Route path="/import" element={<Import />} />
-          <Route path="/workspaces" element={<Workspaces />} />
-          <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
-          <Route path="/nationalities/:nationality" element={<NationalityDetail />} />
-        </Route>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/documents" element={<Documents />} />
+        <Route path="/documents/:id" element={<DocumentDetail />} />
+        <Route path="/entities" element={<Entities />} />
+        <Route path="/entities/:id" element={<EntityDetail />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/report" element={<Report />} />
+        <Route path="/geo" element={<GeoTemporal />} />
+        <Route path="/alerts" element={<Alerts />} />
+        <Route path="/transit" element={<TransitSecurity />} />
+        <Route path="/graph" element={<GraphIndex />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/clir" element={<CrossLingualSearch />} />
+        <Route path="/import" element={<Import />} />
+        <Route path="/workspaces" element={<Workspaces />} />
+        <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
+        <Route path="/nationalities/:nationality" element={<NationalityDetail />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
