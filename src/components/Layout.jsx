@@ -24,15 +24,13 @@ const navGroups = [
       { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen },
       { to: '/graph', label: 'فهرس العلاقات', icon: GitFork },
       { to: '/analytics', label: 'التحليلات', icon: BarChart3 },
-      { to: '/report', label: 'تقرير تحليلي', icon: FileDown },
-      { to: '/geo', label: 'الخريطة الزمنية', icon: MapPin }
+      { to: '/report', label: 'تقرير تحليلي', icon: FileDown }
     ]
   },
   {
     section: 'العمليات',
     items: [
-      { to: '/alerts', label: 'التنبيهات', icon: Bell },
-      { to: '/transit', label: 'أمن العبور', icon: ShieldCheck }
+      { to: '/alerts', label: 'التنبيهات', icon: Bell }
     ]
   },
   {
