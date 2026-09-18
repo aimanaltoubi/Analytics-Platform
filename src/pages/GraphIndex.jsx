@@ -94,7 +94,7 @@ export default function GraphIndex() {
   const stats = data.stats || {};
   const statCards = [
     { label: 'العقد (الكيانات)', value: stats.nodes ?? 0, icon: Users, color: 'bg-violet-500' },
-    { label: 'الحواف (الروابط)', value: stats.edges ?? 0, icon: Share2, color: 'bg-emerald-500' },
+    { label: 'الروابط', value: stats.edges ?? 0, icon: Share2, color: 'bg-emerald-500' },
     { label: 'كيانات متصلة', value: stats.connected ?? 0, icon: GitFork, color: 'bg-blue-500' },
     { label: 'كيانات معزولة', value: stats.isolated ?? 0, icon: Unlink, color: 'bg-amber-500' }
   ];
