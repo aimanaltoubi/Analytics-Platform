@@ -219,74 +219,220 @@ H. REALTIME NOTIFICATIONS (offline)
   Alternative: add ws on the Express server, emit on DB writes.
 
 ================================================================================
-I. DESIGN SYSTEM — "Strategic Command Center" (must be preserved)
+I. DESIGN SYSTEM — "Strategic Command Center" (must be preserved EXACTLY)
 ================================================================================
+  This section is the complete visual contract. Port it verbatim and the offline
+  UI is pixel-identical to the current app. No external doc reference needed.
+
   I.1 Principles (do not deviate):
       - Mode: LIGHT ONLY. Dark mode was explicitly rejected.
-      - Base tone: light gray (hsl(220 14% 96%) bg, white cards).
+      - Base tone: light gray (hsl(220 14% 96%) bg, white cards) — calm, readable,
+        not stark white.
       - Accent: DARK RED (hsl(0 68% 38%)) — primary actions, active nav, badges,
         high-risk framing.
-      - Direction: RTL (html { direction: rtl }). All layout/arrows right-to-left.
+      - Direction: RTL (html { direction: rtl }). All layout, arrows, and reading
+        flow are right-to-left. Arrows follow natural reading direction.
       - Typography: Cairo (Arabic + Latin), single family for heading/body/display.
-      - Density: high information density — compact spacing, small labels.
-      - Voice: "مركز قيادة استراتيجي" — not a consumer app. No playful colors.
+      - Density: high information density — compact spacing, small labels, many
+        data points per screen.
+      - Voice: "مركز قيادة استراتيجي" (Strategic Command Center) — not a consumer
+        app. No playful colors, no large illustrations.
       - Terminology: NEVER "استخباراتي" — use "تحليلي" / "تحليل روابط".
         App name in UI: "محلّل الكيانات".
 
-  I.2 Color tokens (port verbatim into client/src/index.css):
-      --background 220 14% 96%   --foreground 222 30% 12%
-      --card 0 0% 100%           --primary 0 68% 38% (dark red)
-      --secondary 220 12% 93%    --muted 220 12% 93%
-      --accent 220 12% 92%       --border 220 10% 88%
-      --destructive 0 72% 45%    --radius 0.5rem
-      --sidebar-background 220 12% 95%  --sidebar-primary 0 68% 38%
-      chart.1–5: red-dominant palette.
-      Full token block in OFFLINE_DESIGN_SYSTEM.md §2.
+  I.2 Color tokens — paste VERBATIM into client/src/index.css:
 
-  I.3 Offline fonts: download Cairo-Regular/SemiBold/Bold .woff2 while online,
-      serve locally from client/public/fonts/ via @font-face (Google @import
-      won't work air-gapped).
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+      @tailwind base;
+      @tailwind components;
+      @tailwind utilities;
 
-  I.4 Tailwind config: copy tailwind.config.js as-is (maps tokens to utilities).
+      @layer base {
+        :root {
+          --background: 220 14% 96%;
+          --foreground: 222 30% 12%;
+          --card: 0 0% 100%;
+          --card-foreground: 222 30% 12%;
+          --popover: 0 0% 100%;
+          --popover-foreground: 222 30% 12%;
+          --primary: 0 68% 38%;             /* DARK RED — signature accent */
+          --primary-foreground: 0 0% 100%;
+          --secondary: 220 12% 93%;
+          --secondary-foreground: 222 30% 12%;
+          --muted: 220 12% 93%;
+          --muted-foreground: 222 12% 42%;
+          --accent: 220 12% 92%;
+          --accent-foreground: 222 30% 12%;
+          --destructive: 0 72% 45%;
+          --destructive-foreground: 0 0% 98%;
+          --border: 220 10% 88%;
+          --input: 220 10% 88%;
+          --ring: 0 68% 38%;
+          --chart-1: 0 68% 48%;
+          --chart-2: 220 12% 45%;
+          --chart-3: 12 70% 55%;
+          --chart-4: 35 75% 55%;
+          --chart-5: 280 40% 55%;
+          --radius: 0.5rem;
+          --font-heading: 'Cairo', ui-sans-serif, system-ui, sans-serif;
+          --font-body: 'Cairo', ui-sans-serif, system-ui, sans-serif;
+          --font-display: 'Cairo', ui-sans-serif, system-ui, sans-serif;
+          --font-mono: ui-monospace, SFMono-Regular, Menaco, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+          --sidebar-background: 220 12% 95%;
+          --sidebar-foreground: 222 30% 18%;
+          --sidebar-primary: 0 68% 38%;
+          --sidebar-primary-foreground: 0 0% 100%;
+          --sidebar-accent: 220 12% 90%;
+          --sidebar-accent-foreground: 222 30% 12%;
+          --sidebar-border: 220 10% 86%;
+          --sidebar-ring: 0 68% 38%;
+        }
+      }
 
-  I.5 Layout anatomy:
-      - Right-side sidebar (w-60, RTL) + top command bar (h-14) + content area.
-      - Sidebar: grouped nav (الرئيسية / الاستيعاب / التحليل / العمليات / البحث),
-        active item = thin red bar on right edge + muted accent bg.
-      - Top bar: full-width search input, NotificationsBell, SystemStatus
-        (live counts of pending docs + active alerts).
-      - Content: rounded border border-border bg-card cards, p-5.
+      @layer base {
+        * { @apply border-border outline-ring/50; }
+        body { @apply bg-background text-foreground font-body; }
+        html { direction: rtl; }   /* RTL is global */
+      }
 
-  I.6 High-risk entity framing (signature rule):
-      risk_score >= 70 → border-2 border-red-800 bg-red-50
-      risk_score >= 40 → border border-amber-300 bg-amber-50
-      else             → border border-border bg-card
+  I.3 Offline fonts (CRITICAL — Google @import won't work air-gapped):
+      Download these while ONLINE and serve locally from client/public/fonts/:
+        Cairo-Regular.woff2   (weight 400)
+        Cairo-SemiBold.woff2  (weight 600)
+        Cairo-Bold.woff2       (weight 700)
+        Cairo-ExtraBold.woff2  (weight 800)
+      Replace the Google @import with local @font-face:
+        @font-face { font-family: 'Cairo'; src: url('/fonts/Cairo-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+        @font-face { font-family: 'Cairo'; src: url('/fonts/Cairo-SemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+        @font-face { font-family: 'Cairo'; src: url('/fonts/Cairo-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+        @font-face { font-family: 'Cairo'; src: url('/fonts/Cairo-ExtraBold.woff2') format('woff2'); font-weight: 800; font-display: swap; }
+
+  I.4 Tailwind config — copy tailwind.config.js VERBATIM (maps tokens to utilities):
+      darkMode: ["class"]
+      content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"]
+      theme.extend:
+        borderRadius: lg/md/sm from --radius
+        colors: background, foreground, card(+foreground), popover(+foreground),
+                primary(+foreground), secondary(+foreground), muted(+foreground),
+                accent(+foreground), destructive(+foreground), border, input, ring,
+                chart.1–5, sidebar.{DEFAULT,foreground,primary,primary-foreground,
+                accent,accent-foreground,border,ring}
+        fontFamily: heading/body/display/mono from --font-* tokens
+        keyframes + animation: accordion-down / accordion-up
+      plugins: [require("tailwindcss-animate")]
+      All token classes (bg-primary, font-heading, border-border, text-muted-foreground,
+      bg-sidebar, etc.) are generated from this config — no hardcoded hex values
+      anywhere in JSX.
+
+  I.5 Layout anatomy (the command-center shell — port src/components/Layout.jsx):
+      Fixed structure: right-side sidebar (w-60, RTL) + top command bar (h-14) +
+      scrollable content area.
+
+      Sidebar (right edge in RTL):
+        - Header (h-14): red rounded square with Network icon + app title
+          "Strategic Data Fusion" / subtitle "نظام التحليلات الاستراتيجية".
+        - Grouped nav with section labels (uppercase, 10px, muted):
+            الرئيسية:  لوحة العمليات (/)
+            الاستيعاب: المستندات (/documents), استيراد البيانات (/import)
+            التحليل:   الكيانات (/entities), مساحات العمل (/workspaces),
+                       فهرس العلاقات (/graph), التحليلات (/analytics),
+                       تقرير تحليلي (/report), الخريطة الزمنية (/geo)
+            العمليات:  التنبيهات (/alerts), أمن العبور (/transit)
+            البحث:     البحث (/search), بحث عبر اللغات (/clir)
+        - Active item: thin red bar (w-0.5, bg-primary) on the right edge +
+          muted accent background (bg-sidebar-accent) + medium font weight.
+        - Inactive: text-sidebar-foreground/75, hover bg-sidebar-accent/50.
+        - Item icon 16px, label 13px.
+        - Footer: user avatar (initial in bg-primary/10 circle), name + email,
+          logout button (LogOut icon).
+
+      Top command bar (h-14, border-b, bg-card/60 backdrop-blur):
+        - Full-width search input (max-w-md) linking to /search:
+          "بحث شامل في الكيانات والمستندات والروابط..." + Search icon + "/" kbd hint.
+        - Right side: NotificationsBell + SystemStatus (live pending-docs +
+          active-alerts chips).
+
+      Content area: each page renders inside rounded cards:
+        border border-border bg-card, p-5, rounded-lg (radius 0.5rem).
+
+  I.6 High-risk entity framing (SIGNATURE rule — apply in cards, tables, watch panel):
+      const riskClass = entity.risk_score >= 70
+        ? 'border-2 border-red-800 bg-red-50'
+        : entity.risk_score >= 40
+          ? 'border border-amber-300 bg-amber-50'
+          : 'border border-border bg-card';
       Sort high-risk entities to the top of lists by default.
+      Risk chip colors: critical=red-600, high=orange-500, medium=amber-400, low=blue-500.
 
-  I.7 Pages to preserve (visual only — no logic change):
-      Home.jsx (operations dashboard), Analytics.jsx (analytics dashboard),
-      Report.jsx (analytical report + PDF export), GeoTemporal.jsx (map+timeline),
-      Documents, Entities, EntityDetail, Workspaces, WorkspaceDetail, GraphIndex,
-      Alerts, TransitSecurity, Search, CrossLingualSearch, Import.
+  I.7 Pages to preserve (visual only — no logic change), with routes:
+      /            Home.jsx          — operations dashboard (KPI cards, recent docs
+                                     table, top entities, inline uploader)
+      /documents   Documents.jsx     — document list + uploader
+      /documents/:id DocumentDetail — single doc, entities, connections, mentions
+      /entities    Entities.jsx       — filterable entity grid (type/risk/attrs/date)
+      /entities/:id EntityDetail      — entity profile, risk/watchlist/notes, graph,
+                                     timeline, mentions, merge dialog, report
+      /analytics   Analytics.jsx      — stat cards, BarList distributions, charts
+      /report      Report.jsx         — force-directed network + PDF export
+      /geo         GeoTemporal.jsx    — Leaflet map + timeline playback + info cards
+      /alerts      Alerts.jsx         — alert list + ack/resolve
+      /transit     TransitSecurity    — manifest screening, transit monitoring
+      /graph       GraphIndex.jsx      — relationship index
+      /search      Search.jsx         — global search
+      /clir        CrossLingualSearch  — cross-lingual entity search
+      /import      Import.jsx         — CSV/watchlist import
+      /workspaces  Workspaces.jsx     — workspace list
+      /workspaces/:id WorkspaceDetail — workspace entities, network, timeline,
+                                     CSV/PDF export
+      /nationalities/:nationality NationalityDetail
 
-  I.8 Components to port as-is (swap base44 → api imports only):
+  I.8 Components to port AS-IS (swap base44 → api imports only):
       Layout, SystemStatus, NotificationsBell, SecurityWatchPanel, BarList,
-      NetworkGraph/GraphCanvas, GeoTemporalMap, InvestigationReport,
-      EntityMergeDialog, EntityTimeline, EntityCorrector, DocumentUploader,
-      RiskProfileManager, PathAnalysis, WatchlistImporter, WorkspaceNetwork,
-      ManualNetworkCanvas, TransitAnalytics, TransitMonitoring, ManifestForm,
-      ManifestList, ManifestTextUploader, NationalityOverview, FusionInsights,
-      TimelineAnalysis, WorkspaceTimelineExplorer, WorkspaceEntitiesTable,
-      WorkspacePdfLoader, WorkspaceCsvExport, AlertsList.
+      NetworkGraph, GraphCanvas, ManualNetworkCanvas, GeoTemporalMap,
+      InvestigationReport, EntityMergeDialog, EntityTimeline, EntityCorrector,
+      DocumentUploader, RiskProfileManager, PathAnalysis, WatchlistImporter,
+      WorkspaceNetwork, WorkspaceTimelineExplorer, WorkspaceEntitiesTable,
+      WorkspacePdfLoader, WorkspaceCsvExport, TransitAnalytics, TransitMonitoring,
+      ManifestForm, ManifestList, ManifestTextUploader, NationalityOverview,
+      FusionInsights, TimelineAnalysis, AlertsList, NotificationsBell.
 
-  I.9 Iconography: lucide-react (already a dependency, works offline).
-      16px in nav, 18–20px in cards, 24px in empty states. Stroke weight 2.
-      Sidebar logo = Network icon in a red rounded square.
+  I.9 Dashboard specifics to preserve:
+      Home (operations): KPI row (documents/entities/connections/alerts — icon +
+        number + label, compact); recent documents table (title, type badge,
+        status, entity count, time); top-mentioned entities list (name, type,
+        mention count, risk chip); inline DocumentUploader.
+      Analytics: summary stat cards; entity distribution by type (BarList, RTL-safe);
+        risk distribution; relationship-type breakdown; top entities by centrality;
+        all charts use chart.1–5 tokens (red-dominant palette).
+      Report: force-directed network (primary + neighbors); summary stats;
+        distribution charts; ranked entity lists; PDF export (html2canvas + jsPDF,
+        both work offline).
+      GeoTemporal: Leaflet map (retiled to local server); timeline playback;
+        entity info-card on tap (photo, type, attributes); color-coded points PER
+        entity (not uniform red circles); clear-map + restore controls.
 
-  I.10 Anti-patterns (avoid):
-      ❌ Dark mode  ❌ neon/candy colors  ❌ large hero illustrations
-      ❌ "استخباراتي"  ❌ generous whitespace  ❌ LTR layout / left-pointing arrows
-      ❌ non-Cairo fonts
+  I.10 Iconography: lucide-react (already a dependency, works offline).
+      16px in nav, 18–20px in cards, 24px in empty states. Stroke weight 2 (default).
+      Sidebar logo = Network icon in a red (bg-primary) rounded square.
+      Key icons used: LayoutDashboard, FileText, Users, Network, BarChart3, Search,
+      Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, FileDown,
+      LogOut, AlertTriangle, Flag, CheckCheck, Loader2.
+
+  I.11 Toast/notification styling (useToast from @/components/ui/use-toast):
+      destructive variant (red) for critical/high severity; default for medium/low.
+      Toast appears top-of-screen, auto-dismisses. NotificationsBell dropdown lists
+      all notifications with severity dot, time-ago, entity/doc links, mark-read.
+
+  I.12 Anti-patterns (AVOID — these break the aesthetic):
+      ❌ Dark mode / dark themes
+      ❌ Bright/saturated colors (neon, candy) — only dark-red accent + muted grays
+      ❌ Large hero illustrations or marketing-style sections
+      ❌ The word "استخباراتي" anywhere in the UI
+      ❌ Generous whitespace / low density — this is a data-dense tool
+      ❌ LTR layout or left-pointing arrows in RTL context
+      ❌ Replacing Cairo with a non-Arabic-optimized font
+      ❌ Hardcoded hex values in JSX (bg-[#fff], style={{color:'#...'}}) — use tokens
+      ❌ Dynamic Tailwind class names (bg-${color}-500) — they get purged at build
 
 ================================================================================
 J. BUILD & DEPLOY
