@@ -1,0 +1,373 @@
+================================================================================
+FULL SYSTEM REQUIREMENTS — "محلّل الكيانات" / Strategic Data Fusion (Offline)
+================================================================================
+A complete, buildable specification for a fully offline, air-gapped port of the
+link-analysis platform. Nothing requires internet at runtime.
+
+This document consolidates: (A) Hardware, (B) Software Stack, (C) Data Model,
+(D) Core Logic Ports, (E) Offline Maps, (F) Local Auth, (G) Frontend Port,
+(H) Realtime Notifications, (I) Design System, (J) Build & Deploy phases,
+(K) Maintenance, (L) Security, and (M) Final Checklist.
+
+Companion files: OFFLINE_BLUEPRINT.md (architecture + code), OFFLINE_DESIGN_SYSTEM.md (visual spec).
+
+================================================================================
+A. HARDWARE
+================================================================================
+
+A.1 — Recommended workstation: NVIDIA DGX Spark
+--------------------------------------------------------------------------------
+  Architecture ............ NVIDIA Grace Blackwell (GB10 Superchip)
+  GPU ..................... Blackwell, 6,144 CUDA cores, 5th-gen Tensor, 4th-gen RT
+  CPU ..................... 20-core Arm (10 Cortex-X925 + 10 Cortex-A725)
+  System memory .......... 128 GB LPDDR5x unified (GPU + CPU share it)
+  Memory bandwidth ....... 273 GB/s, 256-bit interface
+  Storage ................. 4 TB self-encrypting NVMe M.2
+  Compute ................. up to 1 PFLOP FP4 (sparsity), ~1,000 TOPS INT8
+  Network ................. 10 GbE + WiFi 7 (leave disconnected — air-gapped)
+  Power ................... 240 W (140 W GB10 TDP)
+  OS ...................... NVIDIA DGX OS (Ubuntu-based, ARM64/aarch64)
+  Form factor ............. 150×150×50.5 mm, 1.2 kg (desk-side)
+  Price ................... ~$4,499 (Micro Center) – $4,699 (NVIDIA direct)
+
+  Why it fits this system:
+    - 128 GB unified memory comfortably runs llama3.1:70b (q3, ~40 GB; or q5/q6, ~80 GB).
+    - Exceeds every spec below. Built for local-LLM workstations.
+    - Air-gapped by design: just don't connect the network.
+
+  Caveats to verify before buying:
+    1. ARM64 architecture — confirm PDF-extraction (pdf-parse / pdfjs-dist) and
+       tileserver-gl have pre-built ARM64 binaries, or plan to compile from source.
+    2. 273 GB/s bandwidth is far below a data-center GPU's HBM (A100 ≈ 2 TB/s);
+       token generation is slower per token. Fine for single-user, one-doc-at-a-time.
+    3. Ollama, Node.js, SQLite all support ARM64 — core stack runs.
+
+A.2 — Spec table (match any candidate machine against this)
+--------------------------------------------------------------------------------
+  Component          Minimum            Recommended
+  ---------------------------------------------------------------
+  GPU VRAM           24 GB              80 GB+ (DGX Spark = 128 GB unified)
+  System RAM         32 GB              128 GB+
+  CPU                8-core             16-core
+  Storage            512 GB SSD         2 TB NVMe
+  GPU compute        CUDA 12+           Any modern NVIDIA
+  OS                 Ubuntu 22.04       Ubuntu 22.04 (DGX OS = Ubuntu-based)
+  Network (runtime)  None required      — (air-gapped by design)
+
+A.3 — Model tier → VRAM (decides which model you can run)
+--------------------------------------------------------------------------------
+  Tier            Model                  VRAM needed
+  -------------------------------------------------------
+  Standard        llama3.1:8b q4         6 GB
+  Better          qwen2.5:14b q4         12–16 GB
+  Excellent       llama3.1:70b q3        ~40 GB      ← target on DGX Spark
+  Best            llama3.1:70b q5/q6     ~80 GB
+  Frontier        llama3.1:405b          4× 80 GB
+
+A.4 — Fallback hardware tiers (if not buying DGX Spark)
+--------------------------------------------------------------------------------
+  Minimum (CPU-only, slow):
+    CPU i5/Ryzen5 8 threads | RAM 16 GB | no GPU | 256 GB SSD
+    → 30–90 s per document. Usable, painful for batch.
+
+  Recommended (GPU, production):
+    CPU i7/Ryzen7 8+ cores | RAM 32 GB | RTX 3060/4060 12 GB | 512 GB NVMe
+    → 3–8 s per document.
+
+  High-volume (batch):
+    CPU i9/Ryzen9 | RAM 64 GB | RTX 4090 24 GB (or 2×3090) | 1 TB NVMe
+    → runs 70b, or parallel processing.
+
+================================================================================
+B. SOFTWARE STACK
+================================================================================
+  Runtime ............... Node.js 20 LTS
+  Web framework ......... Express 4
+  Database .............. SQLite via better-sqlite3 (single file, zero-admin)
+  ORM .................. none — better-sqlite3 direct (synchronous, simple)
+  Local LLM runtime ..... Ollama (localhost:11434, OpenAI-compatible API)
+  Default LLM model ..... llama3.1:8b-instruct-q4_K_M (~5 GB disk, ~6 GB VRAM)
+  Alt LLM model ......... qwen2.5:7b-instruct-q4_K_M (stronger Arabic, same size)
+  PDF text extraction ... pdf-parse (pure-JS, no native deps) — fallback pdfjs-dist
+  File storage .......... Local filesystem ./data/uploads/
+  Maps .................. tileserver-gl + pre-downloaded OpenStreetMap .mbtiles
+  Frontend .............. React 18 + Vite + Tailwind CSS (reused from current app)
+  Map UI ................ react-leaflet (pointed at local tile server)
+  Auth .................. bcrypt + JWT in localStorage (no external IdP)
+  Process manager ....... pm2 (keeps API + tile server running)
+  OS .................... Ubuntu 22.04 LTS (or DGX OS / Windows 11 + WSL2)
+
+  NPM dependencies (install on the ONLINE build machine):
+    express better-sqlite3 bcrypt jsonwebtoken pdf-parse cors dotenv
+    + dev: nodemon
+    + global: tileserver-gl, tilemaker (for OSM → .mbtiles)
+    + frontend: react react-dom react-router-dom react-leaflet tailwindcss
+                 recharts lucide-react html2canvas jspdf (all already in use)
+
+================================================================================
+C. DATA MODEL (SQLite schema — ported 1:1 from current Base44 entities)
+================================================================================
+  Tables (built-in columns id, created_date, updated_date, created_by_id added):
+    users            — local auth (replaces Base44 User entity)
+    documents        — title, type, file_url, raw_text, summary, status, counts
+    entities         — name, type, aliases(JSON), attributes(JSON), risk_score,
+                       watchlist, lat/long, mention_count, document_ids(JSON)
+    connections      — source/target entity, relationship_type, evidence, strength
+    mentions         — entity ↔ document, context, role
+    alerts           — title, severity, rule_id, entity_ids, status, triggered_at
+    risk_profiles    — name, rule_type, conditions(JSON), severity, enabled
+    notifications    — title, message, type, entity_id, severity, read
+    workspaces       — name, entity_ids, document_ids
+    manifests        — passenger/cargo, carrier, voyage, screening_summary
+
+  JSON columns (aliases, attributes, entity_ids, conditions, details, passengers,
+  cargo) stored as TEXT, parsed with JSON.parse() in the service layer.
+
+  Indexes: entities(name), connections(source/target/document), mentions(entity/doc),
+           notifications(read, created_date).
+
+  Full SQL DDL lives in OFFLINE_BLUEPRINT.md §5 (schema.sql).
+
+================================================================================
+D. CORE LOGIC PORTS (shared TypeScript → Node.js)
+================================================================================
+  D.1 entityResolution.js — copy base44/shared/entityResolution.ts VERBATIM
+      (norm, arabicToLatin, isArabic, jaroWinkler, soundex, nameSimilarity)
+      Pure functions, zero platform deps, no changes needed.
+
+  D.2 nerPipeline.js — port of base44/shared/nerPipeline.ts
+      Only change: LLM call swaps from cloud InvokeLLM → local Ollama HTTP.
+      - ANALYSIS_SCHEMA and ANALYSIS_PROMPT preserved exactly (Arabic prompt,
+        entity/relationship extraction, dialect handling, org unification,
+        Latin transliteration, particle stripping).
+      - Ollama returns JSON shape (not schema-validated) — validate returned
+        JSON and retry once if a required field is missing.
+      - Pipeline: get text → clean old mentions/connections → run LLM → resolve
+        entities → create mentions → create connections → update document →
+        evaluate immediate alerts → create in-app notifications.
+
+  D.3 alertEngine.js — port of base44/shared/alertEngine.ts
+      Changes: DB calls → SQLite; created_by_id passed explicitly.
+      - Default profiles: risk_threshold, watchlist, hub, co_occurrence, cluster_size.
+      - evaluateImmediateAlerts() runs after each document; dedupes by signature.
+
+  D.4 pdfExtract.js — new, local: fs.readFileSync + pdf-parse → text.
+
+  D.5 ollama.js — new, local LLM client:
+      POST http://localhost:11434/v1/chat/completions
+      { model, messages, format:"json", temperature:0.1, stream:false }
+      Retry-once logic if JSON parse fails.
+
+  Full code for all of the above is in OFFLINE_BLUEPRINT.md §6–9.
+
+================================================================================
+E. OFFLINE MAPS
+================================================================================
+  E.1 Download (ONLINE build machine):
+      - OSM extract from Geofabrik (free): e.g. middle-east-latest.osm.pbf
+      - Convert with tilemaker → .mbtiles (zoom 0–14 recommended)
+      - Or use OpenMapTiles pre-built .mbtiles.
+
+  E.2 Serve (air-gapped machine):
+      tileserver-gl --port 8080 --mbtiles data/tiles/region.mbtiles
+
+  E.3 Frontend: change TileLayer URLs in GeoTemporalMap.jsx to
+      http://localhost:8080/data/region/{z}/{x}/{y}.png
+      Satellite imagery offline requires a pre-staged imagery .mbtiles;
+      street/OSM layer is the realistic offline option.
+
+================================================================================
+F. LOCAL AUTH
+================================================================================
+  - bcrypt password hashing (10 rounds).
+  - JWT signed with a local secret (30-day expiry), stored in localStorage.
+  - First user registered becomes admin.
+  - First-run bootstrap: CLI script (node server/cli/create-user.js) or
+    auto-create admin if users table empty.
+  - No Google OAuth, no OTP, no external identity provider.
+
+  Auth SDK surface (mirrors current app):
+    api.auth.me() / login(email,pw) / register(email,pw,name) / logout()
+
+================================================================================
+G. FRONTEND PORT (React + Tailwind — ~90% reused)
+================================================================================
+  G.1 Replace @/api/base44Client with a local fetch wrapper (client/src/api/client.js):
+      - request() helper: GET/POST/PUT/DELETE to http://localhost:3001/api
+      - makeEntity(name): list/get/filter/create/update/delete/bulkCreate/
+        bulkUpdate/updateMany/deleteMany/subscribe
+      - api.entities.{Document,Entity,Connection,Mention,Alert,RiskProfile,
+        Notification,Workspace,Manifest}
+      - api.functions.invoke(name, payload)
+
+  G.2 Find-and-replace across frontend:
+      @/api/base44Client → @/api/client
+      base44.entities.X  → api.entities.X
+      base44.auth.me()   → api.auth.me()
+      base44.auth.logout() → api.auth.logout()
+      base44.integrations.Core.UploadFile → POST /api/upload (returns local path)
+      Remove ProtectedRoute/AuthProvider cloud wrappers → local JWT check.
+
+  G.3 Uploads: POST /api/upload saves to ./data/uploads/ and returns { file_url }.
+
+================================================================================
+H. REALTIME NOTIFICATIONS (offline)
+================================================================================
+  No cloud websocket. Use polling (simplest, reliable):
+    - NotificationsBell.jsx: setInterval every 5s on the notifications list.
+    - Detect new IDs not in seenIds → fire a toast (destructive for high/critical).
+  Alternative: add ws on the Express server, emit on DB writes.
+
+================================================================================
+I. DESIGN SYSTEM — "Strategic Command Center" (must be preserved)
+================================================================================
+  I.1 Principles (do not deviate):
+      - Mode: LIGHT ONLY. Dark mode was explicitly rejected.
+      - Base tone: light gray (hsl(220 14% 96%) bg, white cards).
+      - Accent: DARK RED (hsl(0 68% 38%)) — primary actions, active nav, badges,
+        high-risk framing.
+      - Direction: RTL (html { direction: rtl }). All layout/arrows right-to-left.
+      - Typography: Cairo (Arabic + Latin), single family for heading/body/display.
+      - Density: high information density — compact spacing, small labels.
+      - Voice: "مركز قيادة استراتيجي" — not a consumer app. No playful colors.
+      - Terminology: NEVER "استخباراتي" — use "تحليلي" / "تحليل روابط".
+        App name in UI: "محلّل الكيانات".
+
+  I.2 Color tokens (port verbatim into client/src/index.css):
+      --background 220 14% 96%   --foreground 222 30% 12%
+      --card 0 0% 100%           --primary 0 68% 38% (dark red)
+      --secondary 220 12% 93%    --muted 220 12% 93%
+      --accent 220 12% 92%       --border 220 10% 88%
+      --destructive 0 72% 45%    --radius 0.5rem
+      --sidebar-background 220 12% 95%  --sidebar-primary 0 68% 38%
+      chart.1–5: red-dominant palette.
+      Full token block in OFFLINE_DESIGN_SYSTEM.md §2.
+
+  I.3 Offline fonts: download Cairo-Regular/SemiBold/Bold .woff2 while online,
+      serve locally from client/public/fonts/ via @font-face (Google @import
+      won't work air-gapped).
+
+  I.4 Tailwind config: copy tailwind.config.js as-is (maps tokens to utilities).
+
+  I.5 Layout anatomy:
+      - Right-side sidebar (w-60, RTL) + top command bar (h-14) + content area.
+      - Sidebar: grouped nav (الرئيسية / الاستيعاب / التحليل / العمليات / البحث),
+        active item = thin red bar on right edge + muted accent bg.
+      - Top bar: full-width search input, NotificationsBell, SystemStatus
+        (live counts of pending docs + active alerts).
+      - Content: rounded border border-border bg-card cards, p-5.
+
+  I.6 High-risk entity framing (signature rule):
+      risk_score >= 70 → border-2 border-red-800 bg-red-50
+      risk_score >= 40 → border border-amber-300 bg-amber-50
+      else             → border border-border bg-card
+      Sort high-risk entities to the top of lists by default.
+
+  I.7 Pages to preserve (visual only — no logic change):
+      Home.jsx (operations dashboard), Analytics.jsx (analytics dashboard),
+      Report.jsx (analytical report + PDF export), GeoTemporal.jsx (map+timeline),
+      Documents, Entities, EntityDetail, Workspaces, WorkspaceDetail, GraphIndex,
+      Alerts, TransitSecurity, Search, CrossLingualSearch, Import.
+
+  I.8 Components to port as-is (swap base44 → api imports only):
+      Layout, SystemStatus, NotificationsBell, SecurityWatchPanel, BarList,
+      NetworkGraph/GraphCanvas, GeoTemporalMap, InvestigationReport,
+      EntityMergeDialog, EntityTimeline, EntityCorrector, DocumentUploader,
+      RiskProfileManager, PathAnalysis, WatchlistImporter, WorkspaceNetwork,
+      ManualNetworkCanvas, TransitAnalytics, TransitMonitoring, ManifestForm,
+      ManifestList, ManifestTextUploader, NationalityOverview, FusionInsights,
+      TimelineAnalysis, WorkspaceTimelineExplorer, WorkspaceEntitiesTable,
+      WorkspacePdfLoader, WorkspaceCsvExport, AlertsList.
+
+  I.9 Iconography: lucide-react (already a dependency, works offline).
+      16px in nav, 18–20px in cards, 24px in empty states. Stroke weight 2.
+      Sidebar logo = Network icon in a red rounded square.
+
+  I.10 Anti-patterns (avoid):
+      ❌ Dark mode  ❌ neon/candy colors  ❌ large hero illustrations
+      ❌ "استخباراتي"  ❌ generous whitespace  ❌ LTR layout / left-pointing arrows
+      ❌ non-Cairo fonts
+
+================================================================================
+J. BUILD & DEPLOY
+================================================================================
+  Phase A — Build machine (ONLINE):
+    1. Install Node 20, Ollama, tileserver-gl, tilemaker.
+    2. ollama pull llama3.1:8b-instruct-q4_K_M  (and optionally qwen2.5:7b)
+    3. Download OSM .osm.pbf from Geofabrik → tilemaker → .mbtiles.
+    4. Scaffold project per folder structure (OFFLINE_BLUEPRINT.md §4).
+    5. npm install express better-sqlite3 bcrypt jsonwebtoken pdf-parse cors dotenv
+    6. Copy shared logic: entityResolution.js (verbatim), nerPipeline.js (port),
+       alertEngine.js (port), pdfExtract.js, ollama.js.
+    7. Copy frontend from current src/ → client/src/, apply §G changes.
+    8. Test end-to-end while online:
+       ollama serve (LLM :11434) | node server (API :3001) |
+       tileserver-gl (maps :8080) | npm run dev (UI :5173)
+
+  Phase B — Transfer to air-gapped machine:
+    tar czf analyzer-bundle.tar.gz entity-analyzer-offline/
+    tar czf ollama-models.tar.gz ~/.ollama/models/
+    Copy both to USB → air-gapped machine.
+
+  Phase C — Air-gapped machine (OFFLINE):
+    1. Install Node + Ollama from USB installers (dpkg -i).
+    2. Restore model: tar xzf ollama-models.tar.gz -C ~/.ollama/
+    3. Restore app: tar xzf analyzer-bundle.tar.gz; npm install --offline
+    4. Start services:
+       ollama serve &
+       node server/cli/create-user.js admin@local <pw>
+       node server/index.js &
+       tileserver-gl --port 8080 --mbtiles data/tiles/region.mbtiles &
+       cd client && npm run build && npx serve dist &
+    5. Open browser → http://localhost:5173
+
+  Phase D — Migrate existing cloud data (optional):
+    Export current entities as JSON → convert to SQL INSERTs →
+    sqlite3 data/analyzer.db < migrations/import.sql
+
+================================================================================
+K. MAINTENANCE (offline)
+================================================================================
+  - Update LLM model: download new .gguf online → USB → ollama create from file.
+  - Update OSM tiles: re-run Geofabrik download + tilemaker online → USB →
+    replace .mbtiles.
+  - Update app code: develop online → transfer changed files via USB.
+  - Backups: data/analyzer.db is a single file — copy to USB regularly.
+
+================================================================================
+L. SECURITY (air-gapped)
+================================================================================
+  - No network egress → JWT secret can be a simple random string (rotate if the
+    machine is ever briefly online).
+  - Store SQLite DB on an encrypted volume (LUKS on Linux, BitLocker on Windows).
+  - Local LLM processes text in-process — no data leaves the machine. This is
+    the primary security benefit of the air-gapped design.
+  - Physical security is now the only perimeter: disk encryption + screen lock +
+    BIOS password matter.
+
+================================================================================
+M. FINAL CHECKLIST
+================================================================================
+  [ ] DGX Spark (or equivalent: 128 GB unified memory, 4 TB NVMe, Ubuntu/DGX OS)
+  [ ] Ollama + llama3.1:8b-instruct-q4_K_M installed (optionally qwen2.5:7b)
+  [ ] Node 20 + project scaffolded per folder structure
+  [ ] SQLite schema applied (schema.sql)
+  [ ] entityResolution.js copied verbatim
+  [ ] nerPipeline.js ported (LLM call → Ollama)
+  [ ] alertEngine.js ported (DB → SQLite)
+  [ ] pdfExtract.js working on sample PDFs
+  [ ] Express routes wired for all entities
+  [ ] Local auth (bcrypt + JWT) + admin user created
+  [ ] Frontend ported (base44 → api client)
+  [ ] Leaflet pointed at local tile server
+  [ ] OSM .mbtiles downloaded + tileserver-gl running
+  [ ] Notifications polling working
+  [ ] Cairo .woff2 fonts served locally (no Google @import)
+  [ ] Design tokens + tailwind.config.js ported verbatim
+  [ ] RTL + light mode + dark-red accents verified in UI
+  [ ] End-to-end test: upload PDF → entities extracted → alert fires → toast
+  [ ] Machine air-gapped; all services start on boot (pm2 or systemd)
+
+================================================================================
+END OF REQUIREMENTS
+================================================================================
