@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Plus, X, Users, FileText, MapPin } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import WorkspaceDocumentPicker from '@/components/WorkspaceDocumentPicker';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import WorkspaceNetwork from '@/components/WorkspaceNetwork';
@@ -18,6 +19,7 @@ export default function WorkspaceDetail() {
   const [workspace, setWorkspace] = useState(null);
   const [entities, setEntities] = useState([]);
   const [allEntities, setAllEntities] = useState([]);
+  const [allDocuments, setAllDocuments] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [connections, setConnections] = useState([]);
   const [search, setSearch] = useState('');
@@ -35,6 +37,7 @@ export default function WorkspaceDetail() {
         base44.entities.Connection.list('-created_date', 500)
       ]);
       setAllEntities(allEnts);
+      setAllDocuments(allDocs);
       setEntities(allEnts.filter((e) => (ws.entity_ids || []).includes(e.id)));
       setDocuments(allDocs.filter((d) => (ws.document_ids || []).includes(d.id)));
       const entIds = new Set(ws.entity_ids || []);
@@ -127,24 +130,7 @@ export default function WorkspaceDetail() {
           )}
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><FileText className="w-4 h-4" /> المستندات المحمّلة ({documents.length})</h3>
-          {documents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لا توجد مستندات بعد. استخدم أداة التحميل أدناه.</p>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-auto">
-              {documents.map((d) => (
-                <Link key={d.id} to={`/documents/${d.id}`} className="flex items-center justify-between rounded-lg bg-accent/40 p-2.5 hover:bg-accent/60">
-                  <div>
-                    <div className="text-sm font-medium">{d.title}</div>
-                    <div className="text-xs text-muted-foreground">{d.entity_count || 0} كيان • {d.connection_count || 0} رابط</div>
-                  </div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${d.status === 'processed' ? 'bg-emerald-100 text-emerald-700' : d.status === 'processing' ? 'bg-amber-100 text-amber-700' : d.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{d.status}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        <WorkspaceDocumentPicker workspace={workspace} allDocuments={allDocuments} selectedDocuments={documents} onChange={loadAll} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5">
