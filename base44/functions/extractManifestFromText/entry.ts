@@ -57,8 +57,6 @@ const PROMPT = `أنت محلل روابط خبير في أمن الحدود و�
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'غير مصرّح' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const text = (body.text || '').toString().trim();
@@ -109,7 +107,7 @@ export default async function(req) {
       status: 'submitted',
       passengers: manifestType === 'passenger' ? passengers : [],
       cargo: manifestType === 'cargo' ? cargo : [],
-      submitted_by: user.email || user.id,
+      submitted_by: 'system',
       screening_summary: { source: 'text_import', notes: llm.notes || '', source_filename: body.filename || '' }
     });
 

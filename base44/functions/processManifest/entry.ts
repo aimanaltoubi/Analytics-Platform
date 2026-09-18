@@ -55,15 +55,13 @@ function buildNarrative(m) {
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'غير مصرّح' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const { manifest_id } = body;
     if (!manifest_id) return Response.json({ error: 'manifest_id مطلوب' }, { status: 400 });
 
     const manifest = await base44.entities.Manifest.get(manifest_id);
-    if (!manifest || manifest.created_by_id !== user.id) {
+    if (!manifest) {
       return Response.json({ error: 'البيان غير موجود' }, { status: 404 });
     }
 

@@ -3,8 +3,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
     const primaryId = body.primary_id;
@@ -15,9 +13,6 @@ export default async function(req) {
     const primary = await base44.entities.Entity.get(primaryId);
     const duplicate = await base44.entities.Entity.get(duplicateId);
     if (!primary || !duplicate) return Response.json({ error: 'entity not found' }, { status: 404 });
-    if (primary.created_by_id !== user.id || duplicate.created_by_id !== user.id) {
-      return Response.json({ error: 'not allowed' }, { status: 403 });
-    }
 
     // 1) إعادة توجيه الروابط التي تشير إلى الكيان المكرر
     const [srcConns, tgtConns] = await Promise.all([

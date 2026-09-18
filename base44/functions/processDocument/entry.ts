@@ -13,15 +13,13 @@ const EXTRACTION_SCHEMA = {
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'غير مصرّح' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const { document_id } = body;
     if (!document_id) return Response.json({ error: 'document_id مطلوب' }, { status: 400 });
 
     const doc = await base44.entities.Document.get(document_id);
-    if (!doc || doc.created_by_id !== user.id) {
+    if (!doc) {
       return Response.json({ error: 'المستند غير موجود' }, { status: 404 });
     }
 

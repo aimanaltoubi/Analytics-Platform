@@ -28,8 +28,6 @@ function fuzzyScore(query, text) {
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json().catch(() => ({}));
     const query = String(body.query || '').trim();
     const limit = Math.min(Number(body.limit) || 30, 100);

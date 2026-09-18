@@ -25,8 +25,6 @@ const REL_KEYS = ['relationship', 'العلاقة', 'relation', 'rel'];
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'غير مصرّح' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const { file_url, title, document_type } = body;
