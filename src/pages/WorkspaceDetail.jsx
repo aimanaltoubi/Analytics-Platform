@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, Plus, X, Users, FileText, MapPin } from 'lucide-react';
+import { ArrowRight, Plus, X, Users, FileText, Network as NetworkIcon, Clock, MapPin, Table2, Share2, FileBarChart2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import WorkspaceDocumentPicker from '@/components/WorkspaceDocumentPicker';
 import WorkspaceSelectionAnalyzer from '@/components/WorkspaceSelectionAnalyzer';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
-import WorkspaceNetwork from '@/components/WorkspaceNetwork';
 import ManualNetworkCanvas from '@/components/ManualNetworkCanvas';
 import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import GeoTemporalMap from '@/components/GeoTemporalMap';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import InvestigationReport from '@/components/InvestigationReport';
+
+const TYPE_LABELS = { person: 'فرد', company: 'شركة', organization: 'منظمة', phone: 'هاتف', email: 'بريد', location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى' };
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
@@ -24,6 +26,7 @@ export default function WorkspaceDetail() {
   const [documents, setDocuments] = useState([]);
   const [connections, setConnections] = useState([]);
   const [search, setSearch] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -71,8 +74,7 @@ export default function WorkspaceDetail() {
     setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };
 
-  const [showPicker, setShowPicker] = useState(false);
-  const availableEntities = allEntities.filter((e) => !(workspace.entity_ids || []).includes(e.id));
+  const availableEntities = allEntities.filter((e) => !(workspace?.entity_ids || []).includes(e.id));
   const searchResults = search
     ? availableEntities.filter((e) => matchesEntityQuery(e, search)).slice(0, 50)
     : availableEntities.slice(0, 50);
@@ -80,89 +82,120 @@ export default function WorkspaceDetail() {
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!workspace) return <div className="p-6 text-sm text-muted-foreground">مساحة العمل غير موجودة.</div>;
 
+  const Tab = ({ value, icon: Icon, label }) => (
+    <TabsTrigger value={value} className="gap-1.5">
+      <Icon className="w-3.5 h-3.5" /> {label}
+    </TabsTrigger>
+  );
+
   return (
-    <div className="p-6 space-y-6">
-      <Link to="/workspaces" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowRight className="w-4 h-4" /> العودة لمساحات العمل
-      </Link>
-
-      <div>
-        <h1 className="font-heading text-2xl font-bold">{workspace.name}</h1>
-        {workspace.description && <p className="text-sm text-muted-foreground mt-1">{workspace.description}</p>}
+    <div className="p-6 space-y-5">
+      {/* الرأس */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <Link to="/workspaces" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-2">
+            <ArrowRight className="w-3.5 h-3.5" /> مساحات العمل
+          </Link>
+          <h1 className="font-heading text-2xl font-bold flex items-center gap-2">
+            <NetworkIcon className="w-6 h-6 text-primary" /> {workspace.name}
+          </h1>
+          {workspace.description && <p className="text-sm text-muted-foreground mt-1">{workspace.description}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs font-medium"><Users className="w-3.5 h-3.5 text-primary" /> {entities.length} كيان</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs font-medium"><FileText className="w-3.5 h-3.5 text-primary" /> {documents.length} مستند</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs font-medium"><NetworkIcon className="w-3.5 h-3.5 text-primary" /> {connections.length} رابط</span>
+        </div>
       </div>
 
-      <WorkspaceNetwork workspace={workspace} />
-
-      <WorkspaceSelectionAnalyzer entities={entities} documents={documents} connections={connections} />
-
-      <ManualNetworkCanvas entities={entities} allEntities={allEntities} onAddToWorkspace={addEntity} />
-
-      <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الزمنية الجغرافية</h3>
-        <p className="text-xs text-muted-foreground">اعرض مواقع الكيانات ومسارات الحركة عبر الزمن داخل مساحة العمل. فعّل «رسم المواقع» لإنشاء مواقع جديدة أو تحديد إحداثياتها بالنقر على الخريطة.</p>
-        <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> الكيانات المختارة ({entities.length})</h3>
-          <div className="relative mb-3">
-            <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setShowPicker(true); }}
-              onFocus={() => setShowPicker(true)}
-              onBlur={() => setTimeout(() => setShowPicker(false), 150)}
-              placeholder="ابحث عن كيان أو اضغط لاستعراض كل الكيانات المسجّلة..."
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            {showPicker && searchResults.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg max-h-72 overflow-auto">
-                {searchResults.map((e) => (
+      {/* لوحة الكيانات السريعة */}
+      <div className="rounded-xl border border-border bg-card p-3 flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setShowPicker(true); }}
+            onFocus={() => setShowPicker(true)}
+            onBlur={() => setTimeout(() => setShowPicker(false), 150)}
+            placeholder="أضف كياناً من السجل إلى مساحة العمل..."
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {showPicker && (
+            <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg max-h-72 overflow-auto">
+              {searchResults.length > 0 ? (
+                searchResults.map((e) => (
                   <button key={e.id} onMouseDown={(ev) => { ev.preventDefault(); addEntity(e.id); setSearch(''); }} className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/50 text-right border-b border-border/40 last:border-0">
                     <div className="min-w-0">
                       <div className="font-medium truncate">{e.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{e.type === 'person' ? 'فرد' : e.type === 'company' ? 'شركة' : e.type === 'organization' ? 'منظمة' : e.type}</div>
+                      <div className="text-[10px] text-muted-foreground">{TYPE_LABELS[e.type] || e.type}</div>
                     </div>
                     <Plus className="w-4 h-4 text-primary shrink-0" />
                   </button>
-                ))}
-              </div>
-            )}
-            {showPicker && searchResults.length === 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-sm text-muted-foreground">
-                {search ? 'لا توجد نتائج مطابقة' : 'لا توجد كيانات أخرى متاحة للإضافة'}
-              </div>
-            )}
-          </div>
-          {entities.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لم تُختر كيانات بعد. ابحث وأضف كيانات لتحليلها.</p>
-          ) : (
-            <div className="space-y-2 max-h-72 overflow-auto">
-              {entities.map((e) => (
-                <div key={e.id} className="flex items-center justify-between rounded-lg bg-accent/40 p-2.5">
-                  <Link to={`/entities/${e.id}`} className="text-sm font-medium hover:underline">{e.name}</Link>
-                  <button onClick={() => removeEntity(e.id)} className="text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></button>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-muted-foreground">{search ? 'لا توجد نتائج مطابقة' : 'لا توجد كيانات أخرى متاحة'}</div>
+              )}
             </div>
           )}
         </div>
-
-        <WorkspaceDocumentPicker workspace={workspace} allDocuments={allDocuments} selectedDocuments={documents} onChange={loadAll} />
+        <div className="flex items-center gap-1.5 flex-wrap max-h-20 overflow-auto">
+          {entities.length === 0 ? (
+            <span className="text-xs text-muted-foreground">لم تُختر كيانات بعد — أضف من السجل أو اسحبها في شبكة التحليل.</span>
+          ) : (
+            entities.map((e) => (
+              <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent/50 border border-border px-2.5 py-1 text-xs">
+                <Link to={`/entities/${e.id}`} className="font-medium hover:underline">{e.name}</Link>
+                <button onClick={() => removeEntity(e.id)} className="text-muted-foreground hover:text-destructive"><X className="w-3 h-3" /></button>
+              </span>
+            ))
+          )}
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> جدول الكيانات والسمات</h3>
-        <WorkspaceEntitiesTable entities={entities} />
-      </div>
+      {/* التبويبات */}
+      <Tabs defaultValue="network" className="w-full">
+        <TabsList className="w-full justify-start flex-wrap h-auto">
+          <Tab value="network" icon={NetworkIcon} label="شبكة التحليل" />
+          <Tab value="timeline" icon={Clock} label="الجدول الزمني" />
+          <Tab value="geo" icon={MapPin} label="الخريطة الجغرافية" />
+          <Tab value="selection" icon={Share2} label="تحليل التحديد" />
+          <Tab value="data" icon={Table2} label="البيانات والمستندات" />
+          <Tab value="reports" icon={FileBarChart2} label="التقارير والتصدير" />
+        </TabsList>
 
-      <WorkspaceCsvExport workspace={workspace} entities={entities} />
+        <TabsContent value="network" className="mt-4">
+          <ManualNetworkCanvas entities={entities} allEntities={allEntities} onAddToWorkspace={addEntity} height={620} />
+        </TabsContent>
 
-      <InvestigationReport title={workspace.name} entities={entities} connections={connections} documents={documents} />
+        <TabsContent value="timeline" className="mt-4">
+          <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
+        </TabsContent>
 
-      <WorkspacePdfLoader workspace={workspace} onLoaded={loadAll} />
+        <TabsContent value="geo" className="mt-4">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الزمنية الجغرافية</h3>
+            <p className="text-xs text-muted-foreground">اعرض مواقع الكيانات ومسارات الحركة عبر الزمن داخل مساحة العمل.</p>
+            <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="selection" className="mt-4">
+          <WorkspaceSelectionAnalyzer entities={entities} documents={documents} connections={connections} />
+        </TabsContent>
+
+        <TabsContent value="data" className="mt-4 space-y-6">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Table2 className="w-4 h-4" /> جدول الكيانات والسمات</h3>
+            <WorkspaceEntitiesTable entities={entities} />
+          </div>
+          <WorkspaceDocumentPicker workspace={workspace} allDocuments={allDocuments} selectedDocuments={documents} onChange={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4 space-y-6">
+          <InvestigationReport title={workspace.name} entities={entities} connections={connections} documents={documents} />
+          <WorkspaceCsvExport workspace={workspace} entities={entities} />
+          <WorkspacePdfLoader workspace={workspace} onLoaded={loadAll} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
