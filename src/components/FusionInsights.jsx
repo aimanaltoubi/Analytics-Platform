@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Brain, RefreshCw, Network, GitBranch, Link2, ShieldAlert, Users, Layers, AlertTriangle, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
 const DOC_LABELS = {
@@ -151,10 +152,18 @@ export default function FusionInsights() {
               <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/40">
                 <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs flex items-center justify-center font-medium shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0 flex items-center gap-1.5 text-sm">
-                  <span className="font-medium truncate">{p.a}</span>
-                  <span className="text-muted-foreground shrink-0">↔</span>
-                  <span className="font-medium truncate">{p.b}</span>
-                </div>
+                   {p.a_id ? (
+                     <Link to={`/entities/${p.a_id}`} className="font-medium truncate hover:text-primary hover:underline">{p.a}</Link>
+                   ) : (
+                     <span className="font-medium truncate">{p.a}</span>
+                   )}
+                   <span className="text-muted-foreground shrink-0">↔</span>
+                   {p.b_id ? (
+                     <Link to={`/entities/${p.b_id}`} className="font-medium truncate hover:text-primary hover:underline">{p.b}</Link>
+                   ) : (
+                     <span className="font-medium truncate">{p.b}</span>
+                   )}
+                 </div>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0">{p.shared_docs} مستند</span>
               </div>
             ))}

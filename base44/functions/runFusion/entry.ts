@@ -350,7 +350,7 @@ export default async function(req) {
     const topCooc = Object.entries(pairDocs)
       .map(([key, docs]) => {
         const [a, b] = key.split('|');
-        return { a: entById[a]?.name || '—', b: entById[b]?.name || '—', shared_docs: docs.size };
+        return { a_id: a, b_id: b, a: entById[a]?.name || '—', b: entById[b]?.name || '—', shared_docs: docs.size };
       })
       .sort((x, y) => y.shared_docs - x.shared_docs)
       .slice(0, 6);
