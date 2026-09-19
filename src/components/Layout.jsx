@@ -22,14 +22,8 @@ const navGroups = [
     items: [
       { to: '/entities', label: 'الكيانات', icon: Users },
       { to: '/database', label: 'قاعدة البيانات', icon: DatabaseIcon },
-      { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen },
-      { to: '/graph', label: 'فهرس العلاقات', icon: GitFork }
-    ]
-  },
-  {
-    section: 'العمليات',
-    items: [
-      { to: '/alerts', label: 'التنبيهات', icon: Bell }
+      { to: '/graph', label: 'فهرس العلاقات', icon: GitFork },
+      { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen }
     ]
   },
   {
@@ -37,6 +31,12 @@ const navGroups = [
     items: [
       { to: '/search', label: 'البحث', icon: Search },
       { to: '/clir', label: 'بحث عبر اللغات', icon: Languages }
+    ]
+  },
+  {
+    section: 'العمليات',
+    items: [
+      { to: '/alerts', label: 'التنبيهات', icon: Bell }
     ]
   }
 ];
