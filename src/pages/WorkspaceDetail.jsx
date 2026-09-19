@@ -71,9 +71,11 @@ export default function WorkspaceDetail() {
     setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };
 
+  const [showPicker, setShowPicker] = useState(false);
+  const availableEntities = allEntities.filter((e) => !(workspace.entity_ids || []).includes(e.id));
   const searchResults = search
-    ? allEntities.filter((e) => !(workspace.entity_ids || []).includes(e.id) && matchesEntityQuery(e, search)).slice(0, 8)
-    : [];
+    ? availableEntities.filter((e) => matchesEntityQuery(e, search)).slice(0, 50)
+    : availableEntities.slice(0, 50);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!workspace) return <div className="p-6 text-sm text-muted-foreground">مساحة العمل غير موجودة.</div>;
@@ -107,15 +109,30 @@ export default function WorkspaceDetail() {
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> الكيانات المختارة ({entities.length})</h3>
           <div className="relative mb-3">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث عن كيان لإضافته..." className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-            {searchResults.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-auto">
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShowPicker(true); }}
+              onFocus={() => setShowPicker(true)}
+              onBlur={() => setTimeout(() => setShowPicker(false), 150)}
+              placeholder="ابحث عن كيان أو اضغط لاستعراض كل الكيانات المسجّلة..."
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {showPicker && searchResults.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg max-h-72 overflow-auto">
                 {searchResults.map((e) => (
-                  <button key={e.id} onClick={() => { addEntity(e.id); setSearch(''); }} className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/50 text-right">
-                    <span>{e.name}</span>
-                    <Plus className="w-4 h-4 text-primary" />
+                  <button key={e.id} onMouseDown={(ev) => { ev.preventDefault(); addEntity(e.id); setSearch(''); }} className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/50 text-right border-b border-border/40 last:border-0">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{e.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{e.type === 'person' ? 'فرد' : e.type === 'company' ? 'شركة' : e.type === 'organization' ? 'منظمة' : e.type}</div>
+                    </div>
+                    <Plus className="w-4 h-4 text-primary shrink-0" />
                   </button>
                 ))}
+              </div>
+            )}
+            {showPicker && searchResults.length === 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-sm text-muted-foreground">
+                {search ? 'لا توجد نتائج مطابقة' : 'لا توجد كيانات أخرى متاحة للإضافة'}
               </div>
             )}
           </div>
