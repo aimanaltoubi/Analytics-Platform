@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import DocumentUploader from '@/components/DocumentUploader';
 import DashboardAnalytics from '@/components/DashboardAnalytics';
 import DemographicsOverview from '@/components/DemographicsOverview';
 
@@ -228,19 +227,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* الاستيعاب السريع */}
-        <div className="rounded-lg border border-border bg-card">
-          <div className="px-4 py-2.5 border-b border-border bg-muted/30">
-            <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" />
-              الاستيعاب السريع
-            </h3>
-          </div>
-          <div className="p-4">
-            <DocumentUploader onUploaded={() => load()} />
           </div>
         </div>
 
