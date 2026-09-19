@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Image as UIImage } from '@/components/ui/image';
 
 const PERSON_FIELDS = [
+  { key: 'الاسم بالإنجليزية', label: 'الاسم بالإنجليزية', type: 'text' },
   { key: 'تاريخ الميلاد', label: 'تاريخ الميلاد', type: 'date' },
   { key: 'مكان الميلاد', label: 'مكان الميلاد', type: 'text' },
   { key: 'الجنسية', label: 'الجنسية', type: 'text' },
@@ -50,6 +51,7 @@ export default function PiiEditor({ entity, onSaved }) {
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [photoUrl, setPhotoUrl] = useState(entity.photo_url || '');
+  const [notes, setNotes] = useState(entity.notes || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -86,7 +88,8 @@ export default function PiiEditor({ entity, onSaved }) {
         type: etype,
         aliases: aliasArr,
         attributes: attrs,
-        photo_url: photoUrl
+        photo_url: photoUrl,
+        notes: notes
       });
       toast({ title: 'تم حفظ بيانات الكيان' });
       onSaved && onSaved(updated);
@@ -191,6 +194,21 @@ export default function PiiEditor({ entity, onSaved }) {
             <Plus className="w-3.5 h-3.5" /> إضافة
           </button>
         </div>
+      </div>
+
+      {/* ملاحظات وتعليقات */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ملاحظات وتعليقات</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={4}
+          placeholder="أضف أي ملاحظات أو تعليقات حول هذا الكيان..."
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+        />
       </div>
 
       <div className="flex justify-end pt-2 border-t border-border">
