@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, X, FileText, Users } from 'lucide-react';
+import { Plus, X, FileText, Users, Network as NetworkIcon } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -19,6 +19,34 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
     await base44.entities.Workspace.update(workspace.id, { document_ids: updated });
     setSearch('');
     onChange();
+    // تشغيل التعرف على الكيانات والروابط تلقائياً إن لم يُعالَج المستند بعد
+    const doc = allDocuments.find((d) => d.id === docId);
+    if (doc && doc.status !== 'processed' && (doc.entity_count || 0) === 0) {
+      runLinkRecognition(docId, doc.title);
+    }
+  };
+
+  const runLinkRecognition = async (docId, title) => {
+    setBusy(docId);
+    toast({ title: `جارٍ التعرف على الكيانات والروابط: ${title || ''}`, description: 'قد يستغرق هذا لحظات...' });
+    try {
+      await base44.functions.invoke('processDocument', { document_id: docId });
+      // استيراد الكيانات المُتعرَّف عليها تلقائياً إلى مساحة العمل
+      const mentions = await base44.entities.Mention.filter({ document_id: docId }, '-created_date', 500);
+      const entityIds = [...new Set(mentions.map((m) => m.entity_id).filter(Boolean))];
+      const current = new Set(workspace.entity_ids || []);
+      const toAdd = entityIds.filter((id) => !current.has(id));
+      if (toAdd.length > 0) {
+        const updated = [...(workspace.entity_ids || []), ...toAdd];
+        await base44.entities.Workspace.update(workspace.id, { entity_ids: updated });
+      }
+      toast({ title: 'اكتمل التعرف على الكيانات والروابط', description: `تمت إضافة ${toAdd.length} كيان وتحديث شبكة التحليل.` });
+      onChange();
+    } catch (e) {
+      toast({ title: 'تعذّر التعرف على الروابط', description: e.message, variant: 'destructive' });
+    } finally {
+      setBusy(null);
+    }
   };
 
   const removeDocument = async (docId) => {
@@ -76,11 +104,25 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
                 <button onClick={() => removeDocument(d.id)} className="text-muted-foreground hover:text-destructive shrink-0"><X className="w-4 h-4" /></button>
               </div>
               <div className="flex items-center justify-between mt-1.5 gap-2">
-                <span className="text-xs text-muted-foreground">{d.entity_count || 0} كيان • {d.connection_count || 0} رابط</span>
-                <button onClick={() => addEntitiesFromDoc(d.id)} disabled={busy === d.id} className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50 shrink-0">
-                  <Users className="w-3.5 h-3.5" />
-                  {busy === d.id ? 'جارٍ...' : 'إضافة كل كيانات المستند'}
-                </button>
+                <span className="text-xs text-muted-foreground">
+                  {d.status === 'processed'
+                    ? `${d.entity_count || 0} كيان • ${d.connection_count || 0} رابط`
+                    : d.status === 'processing'
+                      ? 'جارٍ التعرف على الروابط...'
+                      : `${d.entity_count || 0} كيان • ${d.connection_count || 0} رابط`}
+                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  {d.status !== 'processed' && (
+                    <button onClick={() => runLinkRecognition(d.id, d.title)} disabled={busy === d.id} className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50">
+                      <NetworkIcon className="w-3.5 h-3.5" />
+                      {busy === d.id ? 'جارٍ...' : 'التعرف على الروابط'}
+                    </button>
+                  )}
+                  <button onClick={() => addEntitiesFromDoc(d.id)} disabled={busy === d.id} className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50">
+                    <Users className="w-3.5 h-3.5" />
+                    إضافة الكيانات
+                  </button>
+                </div>
               </div>
             </div>
           ))}
