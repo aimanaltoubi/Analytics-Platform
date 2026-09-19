@@ -95,7 +95,7 @@ export default function WorkspaceDetail() {
 
       <WorkspaceSelectionAnalyzer entities={entities} documents={documents} connections={connections} />
 
-      <ManualNetworkCanvas entities={entities} />
+      <ManualNetworkCanvas entities={entities} allEntities={allEntities} onAddToWorkspace={addEntity} />
 
       <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
 
