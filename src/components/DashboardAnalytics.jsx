@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { Users, Share2, FileText, MapPin } from 'lucide-react';
+import { Users, Share2, FileText } from 'lucide-react';
 import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
 import BarList from '@/components/BarList';
 import NationalityOverview from '@/components/NationalityOverview';
-import GeoTemporalMap from '@/components/GeoTemporalMap';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -207,12 +206,6 @@ export default function DashboardAnalytics() {
       <NationalityOverview entities={entities} />
 
       <TimelineAnalysis entities={entities} connections={connections} documents={documents} />
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الجغرافية الزمنية</h3>
-        <p className="text-xs text-muted-foreground">تتبّع مسارات حركة الكيانات وتطوّر تحركاتهم عبر الزمن بناءً على البيانات المستخرجة.</p>
-        <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
-      </div>
 
       <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
         <h3 className="font-heading font-semibold mb-3">أكثر الكيانات تكراراً</h3>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, Plus, X, Users, FileText, Network as NetworkIcon, Clock, MapPin, Table2, Share2, FileBarChart2 } from 'lucide-react';
+import { ArrowRight, Plus, X, Users, FileText, Network as NetworkIcon, Clock, Table2, Share2, FileBarChart2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -11,7 +11,6 @@ import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
 import NetworkTab from '@/components/NetworkTab';
 import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
-import GeoTemporalMap from '@/components/GeoTemporalMap';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import InvestigationReport from '@/components/InvestigationReport';
 
@@ -156,7 +155,6 @@ export default function WorkspaceDetail() {
         <TabsList className="w-full justify-start flex-wrap h-auto">
           <Tab value="network" icon={NetworkIcon} label="شبكة التحليل" />
           <Tab value="timeline" icon={Clock} label="الجدول الزمني" />
-          <Tab value="geo" icon={MapPin} label="الخريطة الجغرافية" />
           <Tab value="selection" icon={Share2} label="تحليل التحديد" />
           <Tab value="data" icon={Table2} label="البيانات والمستندات" />
           <Tab value="reports" icon={FileBarChart2} label="التقارير والتصدير" />
@@ -175,14 +173,6 @@ export default function WorkspaceDetail() {
 
         <TabsContent value="timeline" className="mt-4">
           <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
-        </TabsContent>
-
-        <TabsContent value="geo" className="mt-4">
-          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-            <h3 className="font-heading font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> الخريطة الزمنية الجغرافية</h3>
-            <p className="text-xs text-muted-foreground">اعرض مواقع الكيانات ومسارات الحركة عبر الزمن داخل مساحة العمل.</p>
-            <GeoTemporalMap entities={entities} connections={connections} documents={documents} onLocationsChanged={loadAll} />
-          </div>
         </TabsContent>
 
         <TabsContent value="selection" className="mt-4">
