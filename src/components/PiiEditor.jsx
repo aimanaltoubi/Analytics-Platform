@@ -40,12 +40,12 @@ const COMPANY_FIELDS = [
 ];
 
 export default function PiiEditor({ entity, onSaved }) {
-  const isPerson = etype === 'person';
-  const isCompany = etype === 'company';
-  const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : ORG_FIELDS;
   const [name, setName] = useState(entity.name || '');
   const [etype, setEtype] = useState(entity.type || 'person');
   const [aliases, setAliases] = useState((entity.aliases || []).join('، '));
+  const isPerson = etype === 'person';
+  const isCompany = etype === 'company';
+  const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : ORG_FIELDS;
   const [attrs, setAttrs] = useState({ ...(entity.attributes || {}) });
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
