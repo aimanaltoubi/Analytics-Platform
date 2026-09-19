@@ -28,6 +28,7 @@ import Workspaces from '@/pages/Workspaces';
 import WorkspaceDetail from '@/pages/WorkspaceDetail';
 import NationalityDetail from '@/pages/NationalityDetail';
 import CrossLingualSearch from '@/pages/CrossLingualSearch';
+import Database from '@/pages/Database';
 
 
 const AuthenticatedApp = () => {
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
         <Route path="/graph" element={<GraphIndex />} />
         <Route path="/search" element={<Search />} />
         <Route path="/clir" element={<CrossLingualSearch />} />
+        <Route path="/database" element={<Database />} />
         <Route path="/import" element={<Import />} />
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
