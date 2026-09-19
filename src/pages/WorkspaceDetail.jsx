@@ -8,7 +8,7 @@ import WorkspaceDocumentPicker from '@/components/WorkspaceDocumentPicker';
 import WorkspaceSelectionAnalyzer from '@/components/WorkspaceSelectionAnalyzer';
 import WorkspacePdfLoader from '@/components/WorkspacePdfLoader';
 import WorkspaceCsvExport from '@/components/WorkspaceCsvExport';
-import ManualNetworkCanvas from '@/components/ManualNetworkCanvas';
+import NetworkTab from '@/components/NetworkTab';
 import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import GeoTemporalMap from '@/components/GeoTemporalMap';
@@ -163,7 +163,14 @@ export default function WorkspaceDetail() {
         </TabsList>
 
         <TabsContent value="network" className="mt-4">
-          <ManualNetworkCanvas entities={entities} allEntities={allEntities} onAddToWorkspace={addEntity} height={620} />
+          <NetworkTab
+            entities={entities}
+            connections={connections}
+            documents={documents}
+            allEntities={allEntities}
+            onAddToWorkspace={addEntity}
+            onEntityUpdated={loadAll}
+          />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
