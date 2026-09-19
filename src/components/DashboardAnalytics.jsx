@@ -98,9 +98,9 @@ export default function DashboardAnalytics({ year }) {
   ).map(([k, v]) => ({ name: TYPE_LABELS_DOC[k] || k, value: v }));
 
   const summaryCards = [
-    { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500' },
-    { label: 'إجمالي الروابط', value: connections.length, icon: Share2, color: 'bg-emerald-500' },
-    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500' }
+    { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500', to: '/entities' },
+    { label: 'إجمالي الروابط', value: connections.length, icon: Share2, color: 'bg-emerald-500', to: '/graph' },
+    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500', to: '/documents' }
   ];
 
   return (
@@ -115,7 +115,7 @@ export default function DashboardAnalytics({ year }) {
         {summaryCards.map((c) => {
           const Icon = c.icon;
           return (
-            <div key={c.label} className="rounded-xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all">
+            <Link key={c.label} to={c.to} className="block rounded-xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all">
               <div className="flex items-center justify-between">
                 <div className={`w-10 h-10 rounded-lg ${c.color} text-white flex items-center justify-center shadow-sm`}>
                   <Icon className="w-5 h-5" />
@@ -123,7 +123,7 @@ export default function DashboardAnalytics({ year }) {
                 <span className="text-2xl font-bold font-heading">{c.value}</span>
               </div>
               <div className="text-sm text-muted-foreground mt-2">{c.label}</div>
-            </div>
+            </Link>
           );
         })}
       </div>

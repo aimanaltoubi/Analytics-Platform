@@ -195,6 +195,7 @@ export default async function(req) {
       if (canonical.name) aliases.delete(canonical.name);
 
       mergedGroups.push({
+        canonical_id: canonical.id,
         canonical: canonical.name,
         type: TYPE_LABELS[canonical.type] || canonical.type,
         merged_count: dups.length,
@@ -316,7 +317,7 @@ export default async function(req) {
     const clusterList = Object.values(clusters).sort((a, b) => b.length - a.length);
     const largestClusters = clusterList.slice(0, 3).map((c) => ({
       size: c.length,
-      members: c.slice(0, 5).map((e) => e.name)
+      members: c.slice(0, 5).map((e) => ({ id: e.id, name: e.name }))
     }));
 
     // الجسور (أعلى الكيانات درجةً)
@@ -327,13 +328,13 @@ export default async function(req) {
       degree[c.target_entity_id] = (degree[c.target_entity_id] || 0) + 1;
     });
     const bridgeEntities = liveEntities
-      .map((e) => ({ name: e.name, type: TYPE_LABELS[e.type] || e.type, degree: degree[e.id] || 0, mentions: e.mention_count || 0 }))
+      .map((e) => ({ id: e.id, name: e.name, type: TYPE_LABELS[e.type] || e.type, degree: degree[e.id] || 0, mentions: e.mention_count || 0 }))
       .filter((e) => e.degree > 0)
       .sort((a, b) => (b.degree + b.mentions * 0.5) - (a.degree + a.mentions * 0.5))
       .slice(0, 6);
 
     // الكيانات المعزولة
-    const orphans = liveEntities.filter((e) => !degree[e.id]).slice(0, 8).map((e) => ({ name: e.name, type: TYPE_LABELS[e.type] || e.type }));
+    const orphans = liveEntities.filter((e) => !degree[e.id]).slice(0, 8).map((e) => ({ id: e.id, name: e.name, type: TYPE_LABELS[e.type] || e.type }));
     const orphanCount = liveEntities.filter((e) => !degree[e.id]).length;
 
     // أعلى التشاركات (أزواج تتشارك في أكثر مستندات)
@@ -364,6 +365,7 @@ export default async function(req) {
       (neighborMap[c.target_entity_id] = neighborMap[c.target_entity_id] || new Set()).add(c.source_entity_id);
     });
     const riskNetwork = highRisk.map((e) => ({
+      id: e.id,
       name: e.name,
       risk_score: e.risk_score,
       neighbors: (neighborMap[e.id] || new Set()).size

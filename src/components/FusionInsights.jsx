@@ -113,7 +113,7 @@ export default function FusionInsights() {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {cl.members.map((m, j) => (
-                    <span key={j} className="text-xs px-2 py-1 rounded-md bg-card border border-border">{m}</span>
+                    <Link key={j} to={`/entities/${m.id}`} className="text-xs px-2 py-1 rounded-md bg-card border border-border hover:border-primary/40 hover:text-primary transition-colors">{m.name}</Link>
                   ))}
                   {cl.size > cl.members.length && <span className="text-xs text-muted-foreground px-2 py-1">+{cl.size - cl.members.length}</span>}
                 </div>
@@ -125,20 +125,20 @@ export default function FusionInsights() {
 
         {/* الكيانات الجسرية */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
-          <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><GitBranch className="w-4 h-4 text-amber-500" /> الكيانات الجسرية (أكثر ارتباطاً)</h4>
+          <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><GitBranch className="w-4 h-4 text-amber-500" /> الكيانات المحورية (أكثر ارتباطاً)</h4>
           <div className="space-y-2">
             {(insights.bridge_entities || []).map((b, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/40">
+              <Link key={i} to={`/entities/${b.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/40 transition-colors group">
                 <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs flex items-center justify-center font-medium shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{b.name}</div>
+                  <div className="text-sm font-medium truncate group-hover:text-primary transition-colors">{b.name}</div>
                   <div className="text-[11px] text-muted-foreground">{b.type}</div>
                 </div>
                 <div className="text-left shrink-0">
                   <div className="text-sm font-semibold">{b.degree}</div>
                   <div className="text-[10px] text-muted-foreground">رابط</div>
                 </div>
-              </div>
+              </Link>
             ))}
             {(insights.bridge_entities || []).length === 0 && <p className="text-sm text-muted-foreground">لا توجد كيانات جسرية.</p>}
           </div>
@@ -176,14 +176,14 @@ export default function FusionInsights() {
           <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-red-500" /> شبكة الخطورة</h4>
           <div className="space-y-2">
             {(insights.risk_network || []).map((r, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-red-50/50 hover:bg-red-50">
+              <Link key={i} to={`/entities/${r.id}`} className="flex items-center gap-3 p-2 rounded-lg bg-red-50/50 hover:bg-red-50 transition-colors group">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{r.name}</div>
+                  <div className="text-sm font-medium truncate group-hover:text-primary transition-colors">{r.name}</div>
                   <div className="text-[11px] text-muted-foreground">مرتبط بـ {r.neighbors} كيان</div>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">{r.risk_score}</span>
-              </div>
+              </Link>
             ))}
             {(insights.risk_network || []).length === 0 && <p className="text-sm text-muted-foreground">لا توجد كيانات عالية الخطورة.</p>}
           </div>
@@ -196,7 +196,7 @@ export default function FusionInsights() {
           <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" /> كيانات معزولة ({insights.orphans.count})</h4>
           <div className="flex flex-wrap gap-1.5">
             {(insights.orphans.sample || []).map((o, i) => (
-              <span key={i} className="text-xs px-2.5 py-1.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">{o.name}</span>
+              <Link key={i} to={`/entities/${o.id}`} className="text-xs px-2.5 py-1.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 hover:border-amber-400 transition-colors">{o.name}</Link>
             ))}
             {insights.orphans.count > (insights.orphans.sample || []).length && (
               <span className="text-xs text-muted-foreground px-2 py-1.5">+{insights.orphans.count - insights.orphans.sample.length}</span>
@@ -257,7 +257,7 @@ export default function FusionInsights() {
               <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-accent/40">
                 <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 shrink-0">{g.merged_count} مدمج</span>
                 <div className="text-sm">
-                  <span className="font-medium">{g.canonical}</span>
+                  <Link to={`/entities/${g.canonical_id}`} className="font-medium hover:text-primary hover:underline">{g.canonical}</Link>
                   <span className="text-muted-foreground"> ({g.type}) دُمج مع: {g.duplicates.join('، ')}</span>
                 </div>
               </div>
