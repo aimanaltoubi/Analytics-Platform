@@ -65,13 +65,16 @@ export default function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
           {navGroups.map((group) => (
             <div key={group.section}>
-              <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {group.section}
+              <div className="flex items-center gap-2 px-2 mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                  {group.section}
+                </span>
+                <div className="h-px flex-1 bg-sidebar-border/60" />
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -80,17 +83,17 @@ export default function Layout() {
                       to={item.to}
                       end={item.end}
                       className={({ isActive }) =>
-                        `relative flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${
+                        `group relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
                           isActive
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                            : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
                         }`
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive && <span className="absolute right-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" />}
-                          <Icon className="shrink-0" style={{ width: 16, height: 16 }} />
+                          {isActive && <span className="absolute right-0 top-2 bottom-2 w-1 rounded-full bg-primary" />}
+                          <Icon className={`shrink-0 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground'}`} style={{ width: 17, height: 17 }} />
                           {item.label}
                         </>
                       )}
