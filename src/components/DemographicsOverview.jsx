@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, Users, MapPin, Flag } from 'lucide-react';
+import { Globe, MapPin, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 // يستخرج القيمة الأولى غير الفارغة من مجموعة مفاتيح سمات محتملة
@@ -15,7 +15,6 @@ const firstAttr = (attrs, keys) => {
 
 const NAT_KEYS = ['الجنسية', 'الجنسية ', 'nationality', 'Nationality'];
 const ORIGIN_KEYS = ['مكان الميلاد', 'محل الميلاد', 'المنشأ', 'الأصل', 'place_of_birth', 'birthplace', 'origin'];
-const ETHNIC_KEYS = ['العرق', 'المجموعة الإثنية', 'الإثنية', 'ethnicity', 'ethnic_group'];
 
 export default function DemographicsOverview() {
   const [entities, setEntities] = useState([]);
@@ -42,15 +41,6 @@ export default function DemographicsOverview() {
     });
     const nationalities = Object.entries(natMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 
-    // المجموعات الإثنية / أصول الأشخاص
-    const ethnicMap = {};
-    persons.forEach((e) => {
-      let grp = firstAttr(e.attributes, ETHNIC_KEYS);
-      if (!grp) grp = firstAttr(e.attributes, ORIGIN_KEYS); // fallback إلى المنشأ/مكان الميلاد
-      if (grp) ethnicMap[grp] = (ethnicMap[grp] || 0) + 1;
-    });
-    const ethnicGroups = Object.entries(ethnicMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-
     // المناطق الجغرافية للأحداث: من كيانات المواقع + أماكن ذكرت في الروابط/المستندات
     const areaMap = {};
     // من كيانات المواقع المسماة
@@ -72,14 +62,13 @@ export default function DemographicsOverview() {
     });
     const areas = Object.entries(areaMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
-    return { nationalities, ethnicGroups, areas, totalPersons: persons.length };
+    return { nationalities, areas, totalPersons: persons.length };
   }, [entities]);
 
   if (loading) return <div className="text-sm text-muted-foreground py-6 text-center">جارٍ تحميل التركيبة السكانية...</div>;
 
   const kpis = [
     { label: 'الجنسيات', value: stats.nationalities.length, icon: Flag, tint: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'المجموعات الإثنية', value: stats.ethnicGroups.length, icon: Users, tint: 'text-violet-600', bg: 'bg-violet-50' },
     { label: 'المناطق الجغرافية', value: stats.areas.length, icon: MapPin, tint: 'text-emerald-600', bg: 'bg-emerald-50' }
   ];
 
@@ -95,7 +84,7 @@ export default function DemographicsOverview() {
       </div>
 
       {/* مؤشرات سريعة */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
@@ -112,7 +101,7 @@ export default function DemographicsOverview() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* الجنسيات */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="font-heading font-semibold text-sm mb-3 flex items-center gap-2">
@@ -132,30 +121,6 @@ export default function DemographicsOverview() {
                     <div className="h-full rounded-full bg-blue-500/70 group-hover:bg-blue-500 transition-colors" style={{ width: `${(n.count / maxNat) * 100}%` }} />
                   </div>
                 </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* المجموعات الإثنية */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="font-heading font-semibold text-sm mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-violet-500" /> المجموعات الإثنية والأصول
-          </h3>
-          {stats.ethnicGroups.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-6 text-center">لا توجد بيانات إثنية. تُشتق من سمات «المنشأ» و«مكان الميلاد».</p>
-          ) : (
-            <div className="space-y-2 max-h-64 overflow-auto">
-              {stats.ethnicGroups.slice(0, 15).map((g) => (
-                <div key={g.name}>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-xs font-medium truncate">{g.name}</span>
-                    <span className="text-[11px] text-muted-foreground shrink-0">{g.count}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-accent overflow-hidden">
-                    <div className="h-full rounded-full bg-violet-500/70" style={{ width: `${(g.count / Math.max(...stats.ethnicGroups.map((x) => x.count), 1)) * 100}%` }} />
-                  </div>
-                </div>
               ))}
             </div>
           )}
