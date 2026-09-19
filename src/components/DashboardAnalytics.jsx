@@ -10,6 +10,7 @@ import { docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
 import BarList from '@/components/BarList';
+import TopEntitiesChart from '@/components/TopEntitiesChart';
 import NationalityOverview from '@/components/NationalityOverview';
 
 const TYPE_LABELS = {
@@ -156,22 +157,9 @@ export default function DashboardAnalytics({ year }) {
           {topEntities.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">لا توجد بيانات</p>
           ) : (
-            <>
-              <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> ذكر</span>
-                <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> روابط</span>
-              </div>
-              <BarList
-                max={Math.max(...topEntities.flatMap((e) => [e.ذكر, e.روابط]), 1)}
-                items={topEntities.map((e) => ({
-                  name: e.name,
-                  values: [
-                    { label: 'ذكر', value: e.ذكر, color: '#3b82f6' },
-                    { label: 'روابط', value: e.روابط, color: '#10b981' }
-                  ]
-                }))}
-              />
-            </>
+            <TopEntitiesChart
+              items={topEntities.map((e) => ({ id: e.id, name: e.name, mention: e.ذكر, connections: e.روابط }))}
+            />
           )}
         </div>
 
