@@ -64,25 +64,26 @@ export default function Database() {
         {/* قائمة الكيانات */}
         <div className="border-l border-border bg-card flex flex-col min-h-0">
           <div className="p-3 border-b border-border space-y-3">
-            <div className="flex rounded-lg border border-border p-0.5 bg-background">
-              <button
-                onClick={() => { setTab('person'); setSelectedId(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'person' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Users className="w-4 h-4" /> الأفراد ({counts.person})
-              </button>
-              <button
-                onClick={() => { setTab('company'); setSelectedId(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'company' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Building className="w-4 h-4" /> الشركات ({counts.company})
-              </button>
-              <button
-                onClick={() => { setTab('organization'); setSelectedId(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'organization' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Building2 className="w-4 h-4" /> المنظمات ({counts.organization})
-              </button>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { key: 'person', label: 'الأفراد', icon: Users, count: counts.person, activeCls: 'bg-blue-50 text-blue-700 border-blue-200' },
+                { key: 'company', label: 'الشركات', icon: Building, count: counts.company, activeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                { key: 'organization', label: 'المنظمات', icon: Building2, count: counts.organization, activeCls: 'bg-violet-50 text-violet-700 border-violet-200' }
+              ].map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => { setTab(t.key); setSelectedId(''); }}
+                    className={`flex flex-col items-center gap-1 px-1 py-2 rounded-lg border text-xs font-medium transition-colors ${active ? t.activeCls : 'border-border bg-background text-muted-foreground hover:bg-accent/50'}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{t.label}</span>
+                    <span className={`text-[10px] px-1.5 rounded-full ${active ? 'bg-white/70' : 'bg-accent'}`}>{t.count}</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -96,6 +97,12 @@ export default function Database() {
           </div>
 
           <div className="flex-1 overflow-auto">
+            {!loading && (
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 bg-muted/30">
+                <span className="text-[11px] font-medium text-muted-foreground">{filtered.length} نتيجة</span>
+                <span className="text-[10px] text-muted-foreground/70">مرتبة حسب الذكر</span>
+              </div>
+            )}
             {loading ? (
               <div className="text-sm text-muted-foreground py-10 text-center">جارٍ التحميل...</div>
             ) : filtered.length === 0 ? (
@@ -107,11 +114,12 @@ export default function Database() {
                 {filtered.map((e) => {
                   const active = e.id === selectedId;
                   const pii = summaryPii(e);
+                  const typeLabel = e.type === 'person' ? 'فرد' : e.type === 'company' ? 'شركة' : 'منظمة';
                   return (
                     <button
                       key={e.id}
                       onClick={() => setSelectedId(e.id)}
-                      className={`w-full text-right flex items-center gap-3 px-3 py-2.5 transition-colors ${active ? 'bg-primary/10' : 'hover:bg-accent/50'}`}
+                      className={`w-full text-right flex items-center gap-3 px-3 py-2.5 transition-colors border-r-2 ${active ? 'bg-primary/10 border-primary' : 'border-transparent hover:bg-accent/50'}`}
                     >
                       {e.photo_url ? (
                         <UIImage src={e.photo_url} alt={e.name} className="w-10 h-10 rounded-lg shrink-0 border border-border" fittingType="fill" />
@@ -121,12 +129,18 @@ export default function Database() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{e.name}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium truncate">{e.name}</span>
+                          {e.watchlist && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="مراقَب" />}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate mt-0.5">
                           {pii.length > 0 ? pii.join(' · ') : 'لا توجد بيانات مسجلة'}
                         </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent text-muted-foreground">{typeLabel}</span>
+                          <span className="text-[9px] text-muted-foreground">{e.mention_count || 0} ذكر</span>
+                        </div>
                       </div>
-                      {e.watchlist && <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />}
                     </button>
                   );
                 })}
