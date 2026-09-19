@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Globe, MapPin, Flag } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { entitiesForDocs, yearDocIdSet } from '@/lib/yearFilter';
 
 // يستخرج القيمة الأولى غير الفارغة من مجموعة مفاتيح سمات محتملة
 const firstAttr = (attrs, keys) => {
@@ -16,22 +17,29 @@ const firstAttr = (attrs, keys) => {
 const NAT_KEYS = ['الجنسية', 'الجنسية ', 'nationality', 'Nationality'];
 const ORIGIN_KEYS = ['مكان الميلاد', 'محل الميلاد', 'المنشأ', 'الأصل', 'place_of_birth', 'birthplace', 'origin'];
 
-export default function DemographicsOverview() {
+export default function DemographicsOverview({ year }) {
   const [entities, setEntities] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const ents = await base44.entities.Entity.list('-mention_count', 500);
+        const [ents, docs] = await Promise.all([
+          base44.entities.Entity.list('-mention_count', 500),
+          base44.entities.Document.list('-created_date', 500)
+        ]);
         setEntities(ents);
+        setDocuments(docs);
       } catch (e) {} finally { setLoading(false); }
     })();
   }, []);
 
+  const scoped = useMemo(() => entitiesForDocs(entities, yearDocIdSet(documents, year)), [entities, documents, year]);
+
   const stats = useMemo(() => {
-    const persons = entities.filter((e) => e.type === 'person');
-    const locations = entities.filter((e) => e.type === 'location' || (e.latitude && e.longitude));
+    const persons = scoped.filter((e) => e.type === 'person');
+    const locations = scoped.filter((e) => e.type === 'location' || (e.latitude && e.longitude));
 
     // الجنسيات
     const natMap = {};
@@ -56,14 +64,14 @@ export default function DemographicsOverview() {
       if (origin) areaMap[origin] = (areaMap[origin] || 0) + 1;
     });
     // من سمة العنوان إن وُجدت
-    entities.forEach((e) => {
+    scoped.forEach((e) => {
       const addr = firstAttr(e.attributes, ['العنوان', 'address', 'location']);
       if (addr) areaMap[addr] = (areaMap[addr] || 0) + 1;
     });
     const areas = Object.entries(areaMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
     return { nationalities, areas, totalPersons: persons.length };
-  }, [entities]);
+  }, [scoped]);
 
   if (loading) return <div className="text-sm text-muted-foreground py-6 text-center">جارٍ تحميل التركيبة السكانية...</div>;
 

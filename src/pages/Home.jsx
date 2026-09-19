@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft } from 'lucide-react';
+import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft, Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DashboardAnalytics from '@/components/DashboardAnalytics';
 import DemographicsOverview from '@/components/DemographicsOverview';
+import { availableYears, docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -52,29 +53,26 @@ function timeAgo(dateStr) {
 }
 
 export default function Home() {
-  const [stats, setStats] = useState({ documents: 0, entities: 0, connections: 0, processing: 0, newAlerts: 0 });
-  const [recent, setRecent] = useState([]);
-  const [topEntities, setTopEntities] = useState([]);
+  const [allDocs, setAllDocs] = useState([]);
+  const [allEntities, setAllEntities] = useState([]);
+  const [allConns, setAllConns] = useState([]);
+  const [allAlerts, setAllAlerts] = useState([]);
+  const [year, setYear] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     try {
       const [docs, ents, conns, alerts] = await Promise.all([
-        base44.entities.Document.list('-created_date', 50),
-        base44.entities.Entity.list('-mention_count', 10),
+        base44.entities.Document.list('-created_date', 500),
+        base44.entities.Entity.list('-mention_count', 500),
         base44.entities.Connection.list('-created_date', 500),
         base44.entities.Alert.filter({ status: 'new' }, '-created_date', 50)
       ]);
-      setStats({
-        documents: docs.length,
-        entities: ents.length,
-        connections: conns.length,
-        processing: docs.filter((d) => d.status === 'processing' || d.status === 'pending').length,
-        newAlerts: alerts.length
-      });
-      setRecent(docs.slice(0, 7));
-      setTopEntities(ents.slice(0, 8));
+      setAllDocs(docs);
+      setAllEntities(ents);
+      setAllConns(conns);
+      setAllAlerts(alerts);
     } catch (e) {
       // ignore
     } finally {
@@ -89,6 +87,28 @@ export default function Home() {
     setRefreshing(true);
     load();
   };
+
+  const years = useMemo(() => availableYears(allDocs), [allDocs]);
+
+  const yearDocIds = useMemo(() => yearDocIdSet(allDocs, year), [allDocs, year]);
+  const yearDocs = useMemo(() => docsInYear(allDocs, year), [allDocs, year]);
+  const yearConns = useMemo(() => connectionsForDocs(allConns, yearDocIds), [allConns, yearDocIds]);
+  const yearEntities = useMemo(() => entitiesForDocs(allEntities, yearDocIds), [allEntities, yearDocIds]);
+  const yearAlerts = useMemo(
+    () => (year ? allAlerts.filter((a) => a.triggered_at && String(a.triggered_at).slice(0, 4) === year) : allAlerts),
+    [allAlerts, year]
+  );
+
+  const stats = useMemo(() => ({
+    documents: yearDocs.length,
+    entities: yearEntities.length,
+    connections: yearConns.length,
+    processing: yearDocs.filter((d) => d.status === 'processing' || d.status === 'pending').length,
+    newAlerts: yearAlerts.length
+  }), [yearDocs, yearEntities, yearConns, yearAlerts]);
+
+  const recent = yearDocs.slice(0, 7);
+  const topEntities = [...yearEntities].sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0)).slice(0, 8);
 
   const kpis = [
     { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents', tint: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
@@ -108,15 +128,36 @@ export default function Home() {
             <h1 className="font-heading text-2xl font-bold leading-tight">التحليلات الاستراتيجية</h1>
             <p className="text-sm text-muted-foreground mt-1">استيعاب المستندات · استخراج الكيانات · كشف الروابط الخفية · التنبيهات اللحظية</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            تحديث
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 pointer-events-none" />
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="appearance-none rounded-md border border-border bg-background pl-3 pr-8 py-1.5 text-xs hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">كل السنوات</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              تحديث
+            </button>
+          </div>
         </div>
+        {year && (
+          <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary bg-primary/5 border border-primary/20 rounded-full px-2.5 py-0.5">
+            <Calendar className="w-3 h-3" />
+            عرض بيانات عام {year}
+          </div>
+        )}
       </div>
 
       <div className="p-6 space-y-5">
@@ -141,7 +182,7 @@ export default function Home() {
         </div>
 
         {/* التركيبة السكانية والجغرافية */}
-        <DemographicsOverview />
+        <DemographicsOverview year={year} />
 
         {/* الصف الرئيسي */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -157,7 +198,7 @@ export default function Home() {
             {loading ? (
               <div className="text-sm text-muted-foreground py-12 text-center">جارٍ التحميل...</div>
             ) : recent.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">لا توجد مستندات بعد. ارفع أول مستند للبدء.</div>
+              <div className="text-sm text-muted-foreground py-12 text-center">{year ? `لا توجد مستندات في عام ${year}.` : 'لا توجد مستندات بعد. ارفع أول مستند للبدء.'}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -206,7 +247,7 @@ export default function Home() {
             {loading ? (
               <div className="text-sm text-muted-foreground py-12 text-center">جارٍ التحميل...</div>
             ) : topEntities.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">لا توجد كيانات بعد.</div>
+              <div className="text-sm text-muted-foreground py-12 text-center">{year ? `لا توجد كيانات في عام ${year}.` : 'لا توجد كيانات بعد.'}</div>
             ) : (
               <div className="divide-y divide-border/50">
                 {topEntities.map((e, i) => (
@@ -231,7 +272,7 @@ export default function Home() {
         </div>
 
         {/* التحليلات */}
-        <DashboardAnalytics />
+        <DashboardAnalytics year={year} />
       </div>
     </div>
   );

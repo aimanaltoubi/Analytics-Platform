@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend
@@ -6,6 +6,7 @@ import {
 import { Users, Share2, FileText } from 'lucide-react';
 import { Image } from '@/components/ui/image';
 import { base44 } from '@/api/base44Client';
+import { docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
 import BarList from '@/components/BarList';
@@ -44,10 +45,10 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function DashboardAnalytics() {
-  const [entities, setEntities] = useState([]);
-  const [connections, setConnections] = useState([]);
-  const [documents, setDocuments] = useState([]);
+export default function DashboardAnalytics({ year }) {
+  const [allEntities, setAllEntities] = useState([]);
+  const [allConnections, setAllConnections] = useState([]);
+  const [allDocuments, setAllDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadAll = async () => {
@@ -57,13 +58,18 @@ export default function DashboardAnalytics() {
         base44.entities.Connection.list('-created_date', 500),
         base44.entities.Document.list('-created_date', 500)
       ]);
-      setEntities(ents);
-      setConnections(conns);
-      setDocuments(docs);
+      setAllEntities(ents);
+      setAllConnections(conns);
+      setAllDocuments(docs);
     } catch (e) {} finally { setLoading(false); }
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  const yearDocIds = useMemo(() => yearDocIdSet(allDocuments, year), [allDocuments, year]);
+  const documents = useMemo(() => docsInYear(allDocuments, year), [allDocuments, year]);
+  const connections = useMemo(() => connectionsForDocs(allConnections, yearDocIds), [allConnections, yearDocIds]);
+  const entities = useMemo(() => entitiesForDocs(allEntities, yearDocIds), [allEntities, yearDocIds]);
 
   if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">جارٍ تحميل التحليلات...</div>;
 
