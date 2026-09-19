@@ -17,8 +17,7 @@ const PERSON_FIELDS = [
 
 const ORG_FIELDS = [
   { key: 'الاسم القانوني', label: 'الاسم القانوني الكامل', type: 'text' },
-  { key: 'رقم التسجيل', label: 'رقم التسجيل التجاري', type: 'text' },
-  { key: 'السجل التجاري', label: 'السجل التجاري', type: 'text' },
+  { key: 'رقم التسجيل', label: 'رقم التسجيل', type: 'text' },
   { key: 'الدولة', label: 'الدولة', type: 'text' },
   { key: 'العنوان', label: 'العنوان', type: 'text' },
   { key: 'رقم الهاتف', label: 'رقم الهاتف', type: 'text' },
@@ -26,9 +25,24 @@ const ORG_FIELDS = [
   { key: 'الممثل القانوني', label: 'الممثل القانوني', type: 'text' }
 ];
 
+const COMPANY_FIELDS = [
+  { key: 'الاسم القانوني', label: 'الاسم القانوني للشركة', type: 'text' },
+  { key: 'رقم التسجيل', label: 'رقم التسجيل التجاري', type: 'text' },
+  { key: 'السجل التجاري', label: 'السجل التجاري', type: 'text' },
+  { key: 'الشكل القانوني', label: 'الشكل القانوني (ذ.م.م، مساهمة...)', type: 'text' },
+  { key: 'رأس المال', label: 'رأس المال', type: 'text' },
+  { key: 'النشاط', label: 'النشاط التجاري', type: 'text' },
+  { key: 'الدولة', label: 'الدولة', type: 'text' },
+  { key: 'العنوان', label: 'العنوان', type: 'text' },
+  { key: 'رقم الهاتف', label: 'رقم الهاتف', type: 'text' },
+  { key: 'البريد الإلكتروني', label: 'البريد الإلكتروني', type: 'email' },
+  { key: 'المدير المسؤول', label: 'المدير المسؤول', type: 'text' }
+];
+
 export default function PiiEditor({ entity, onSaved }) {
   const isPerson = entity.type === 'person';
-  const fields = isPerson ? PERSON_FIELDS : ORG_FIELDS;
+  const isCompany = entity.type === 'company';
+  const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : ORG_FIELDS;
   const [name, setName] = useState(entity.name || '');
   const [aliases, setAliases] = useState((entity.aliases || []).join('، '));
   const [attrs, setAttrs] = useState({ ...(entity.attributes || {}) });
@@ -110,7 +124,7 @@ export default function PiiEditor({ entity, onSaved }) {
         </div>
         <div className="flex-1 space-y-3">
           <div>
-            <div className={labelCls}>{isPerson ? 'الاسم الكامل' : 'اسم المنظمة'}</div>
+            <div className={labelCls}>{isPerson ? 'الاسم الكامل' : isCompany ? 'اسم الشركة' : 'اسم المنظمة'}</div>
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
           </div>
           <div>

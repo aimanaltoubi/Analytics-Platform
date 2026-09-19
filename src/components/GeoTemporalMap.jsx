@@ -28,7 +28,7 @@ function fmt(d) {
 const TRACK_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
 
 const TYPE_LABELS = {
-  person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  person: 'شخص', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
   location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
 

@@ -7,7 +7,7 @@ import GraphCanvas from '@/components/GraphCanvas';
 import PathAnalysis from '@/components/PathAnalysis';
 
 const TYPE_LABELS = {
-  person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  person: 'شخص', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
   location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
 

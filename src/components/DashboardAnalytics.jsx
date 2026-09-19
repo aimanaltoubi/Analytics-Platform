@@ -13,12 +13,12 @@ import NationalityOverview from '@/components/NationalityOverview';
 import GeoTemporalMap from '@/components/GeoTemporalMap';
 
 const TYPE_LABELS = {
-  person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  person: 'شخص', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
   location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
 
 const TYPE_COLORS = {
-  person: '#3b82f6', organization: '#8b5cf6', phone: '#f59e0b', email: '#10b981',
+  person: '#3b82f6', organization: '#8b5cf6', company: '#10b981', phone: '#f59e0b', email: '#10b981',
   location: '#ef4444', account: '#06b6d4', date: '#64748b', event: '#ec4899', other: '#94a3b8'
 };
 

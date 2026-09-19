@@ -11,6 +11,7 @@
       "enum": [
         "person",
         "organization",
+        "company",
         "phone",
         "email",
         "location",

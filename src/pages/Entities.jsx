@@ -8,6 +8,7 @@ import { getNationality, hasPassport, hasPhone, hasEmail, hasCoordinates, riskTi
 const TYPE_LABELS = {
   person: 'شخص',
   organization: 'منظمة',
+  company: 'شركة',
   phone: 'هاتف',
   email: 'بريد',
   location: 'موقع',
@@ -20,6 +21,7 @@ const TYPE_LABELS = {
 const TYPE_COLORS = {
   person: 'bg-blue-100 text-blue-700',
   organization: 'bg-violet-100 text-violet-700',
+  company: 'bg-emerald-100 text-emerald-700',
   phone: 'bg-amber-100 text-amber-700',
   email: 'bg-emerald-100 text-emerald-700',
   location: 'bg-red-100 text-red-700',

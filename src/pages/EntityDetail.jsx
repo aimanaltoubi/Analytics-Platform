@@ -10,6 +10,7 @@ import EntityMergeDialog from '@/components/EntityMergeDialog';
 const TYPE_LABELS = {
   person: 'شخص',
   organization: 'منظمة',
+  company: 'شركة',
   phone: 'هاتف',
   email: 'بريد',
   location: 'موقع',

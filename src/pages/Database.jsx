@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Database as DatabaseIcon, Users, Building2, Search, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Database as DatabaseIcon, Users, Building2, Building, Search, ArrowLeft, RefreshCw } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import PiiEditor from '@/components/PiiEditor';
 import { Image as UIImage } from '@/components/ui/image';
@@ -16,7 +16,7 @@ export default function Database() {
   const load = async () => {
     try {
       const all = await base44.entities.Entity.list('-mention_count', 1000);
-      setEntities(all.filter((e) => e.type === 'person' || e.type === 'organization'));
+      setEntities(all.filter((e) => e.type === 'person' || e.type === 'company' || e.type === 'organization'));
     } catch (e) {} finally { setLoading(false); setRefreshing(false); }
   };
 
@@ -34,12 +34,14 @@ export default function Database() {
 
   const counts = {
     person: entities.filter((e) => e.type === 'person').length,
+    company: entities.filter((e) => e.type === 'company').length,
     organization: entities.filter((e) => e.type === 'organization').length
   };
 
   const summaryPii = (e) => {
     const a = e.attributes || {};
     if (e.type === 'person') return [a['تاريخ الميلاد'], a['الجنسية'], a['رقم الجواز'], a['رقم الهاتف']].filter(Boolean);
+    if (e.type === 'company') return [a['رقم التسجيل'], a['السجل التجاري'], a['الدولة'], a['رقم الهاتف']].filter(Boolean);
     return [a['رقم التسجيل'], a['الدولة'], a['رقم الهاتف']].filter(Boolean);
   };
 
@@ -50,7 +52,7 @@ export default function Database() {
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Data Registry</div>
             <h1 className="font-heading text-2xl font-bold leading-tight">قاعدة بيانات الكيانات</h1>
-            <p className="text-sm text-muted-foreground mt-1">سجل منظّم لجميع الأفراد والمنظمات المستخرجة من المستندات — أضف وأكمل البيانات الشخصية والتعريفية لكل كيان.</p>
+            <p className="text-sm text-muted-foreground mt-1">سجل منظّم لجميع الأفراد والشركات والمنظمات المستخرجة من المستندات — أضف وأكمل البيانات الشخصية والتعريفية لكل كيان.</p>
           </div>
           <button onClick={() => { setRefreshing(true); load(); }} disabled={refreshing} className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} /> تحديث
@@ -65,13 +67,19 @@ export default function Database() {
             <div className="flex rounded-lg border border-border p-0.5 bg-background">
               <button
                 onClick={() => { setTab('person'); setSelectedId(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'person' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'person' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Users className="w-4 h-4" /> الأفراد ({counts.person})
               </button>
               <button
+                onClick={() => { setTab('company'); setSelectedId(''); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'company' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Building className="w-4 h-4" /> الشركات ({counts.company})
+              </button>
+              <button
                 onClick={() => { setTab('organization'); setSelectedId(''); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'organization' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'organization' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Building2 className="w-4 h-4" /> المنظمات ({counts.organization})
               </button>
@@ -92,7 +100,7 @@ export default function Database() {
               <div className="text-sm text-muted-foreground py-10 text-center">جارٍ التحميل...</div>
             ) : filtered.length === 0 ? (
               <div className="text-sm text-muted-foreground py-10 text-center px-4">
-                {entities.length === 0 ? 'لا توجد كيانات مستخرجة بعد. عالج المستندات لاستخراج الأفراد والمنظمات.' : 'لا توجد نتائج مطابقة.'}
+                {entities.length === 0 ? 'لا توجد كيانات مستخرجة بعد. عالج المستندات لاستخراج الأفراد والشركات والمنظمات.' : 'لا توجد نتائج مطابقة.'}
               </div>
             ) : (
               <div className="divide-y divide-border/50">
@@ -108,8 +116,8 @@ export default function Database() {
                       {e.photo_url ? (
                         <UIImage src={e.photo_url} alt={e.name} className="w-10 h-10 rounded-lg shrink-0 border border-border" fittingType="fill" />
                       ) : (
-                        <div className={`w-10 h-10 rounded-lg shrink-0 flex items-center justify-center ${e.type === 'person' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'}`}>
-                          {e.type === 'person' ? <Users className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
+                        <div className={`w-10 h-10 rounded-lg shrink-0 flex items-center justify-center ${e.type === 'person' ? 'bg-blue-50 text-blue-600' : e.type === 'company' ? 'bg-emerald-50 text-emerald-600' : 'bg-violet-50 text-violet-600'}`}>
+                          {e.type === 'person' ? <Users className="w-5 h-5" /> : e.type === 'company' ? <Building className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -141,7 +149,7 @@ export default function Database() {
                 <Link to={`/entities/${selected.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                   <ArrowLeft className="w-4 h-4" /> صفحة الكيان الكاملة
                 </Link>
-                <span className="text-xs text-muted-foreground">{selected.type === 'person' ? 'فرد' : 'منظمة'} · {selected.mention_count || 0} ذكر</span>
+                <span className="text-xs text-muted-foreground">{selected.type === 'person' ? 'فرد' : selected.type === 'company' ? 'شركة' : 'منظمة'} · {selected.mention_count || 0} ذكر</span>
               </div>
               <div className="rounded-xl border border-border bg-card p-5">
                 <PiiEditor
