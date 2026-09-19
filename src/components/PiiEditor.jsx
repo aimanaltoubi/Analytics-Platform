@@ -40,10 +40,11 @@ const COMPANY_FIELDS = [
 ];
 
 export default function PiiEditor({ entity, onSaved }) {
-  const isPerson = entity.type === 'person';
-  const isCompany = entity.type === 'company';
+  const isPerson = etype === 'person';
+  const isCompany = etype === 'company';
   const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : ORG_FIELDS;
   const [name, setName] = useState(entity.name || '');
+  const [etype, setEtype] = useState(entity.type || 'person');
   const [aliases, setAliases] = useState((entity.aliases || []).join('، '));
   const [attrs, setAttrs] = useState({ ...(entity.attributes || {}) });
   const [newKey, setNewKey] = useState('');
@@ -82,6 +83,7 @@ export default function PiiEditor({ entity, onSaved }) {
       const aliasArr = aliases.split('،').map((a) => a.trim()).filter(Boolean);
       const updated = await base44.entities.Entity.update(entity.id, {
         name: name.trim() || entity.name,
+        type: etype,
         aliases: aliasArr,
         attributes: attrs,
         photo_url: photoUrl
@@ -126,6 +128,14 @@ export default function PiiEditor({ entity, onSaved }) {
           <div>
             <div className={labelCls}>{isPerson ? 'الاسم الكامل' : isCompany ? 'اسم الشركة' : 'اسم المنظمة'}</div>
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <div className={labelCls}>تصنيف الكيان</div>
+            <select value={etype} onChange={(e) => setEtype(e.target.value)} className={inputCls}>
+              <option value="person">فرد</option>
+              <option value="company">شركة</option>
+              <option value="organization">منظمة</option>
+            </select>
           </div>
           <div>
             <div className={labelCls}>الأسماء البديلة (افصل بفاصلة ،)</div>
