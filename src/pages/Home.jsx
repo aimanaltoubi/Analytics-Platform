@@ -4,6 +4,7 @@ import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Fl
 import { base44 } from '@/api/base44Client';
 import DocumentUploader from '@/components/DocumentUploader';
 import DashboardAnalytics from '@/components/DashboardAnalytics';
+import DemographicsOverview from '@/components/DemographicsOverview';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -139,6 +140,9 @@ export default function Home() {
             );
           })}
         </div>
+
+        {/* التركيبة السكانية والجغرافية */}
+        <DemographicsOverview />
 
         {/* الصف الرئيسي */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
