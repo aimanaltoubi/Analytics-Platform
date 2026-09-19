@@ -80,6 +80,62 @@ const ANALYSIS_PROMPT = `أنت محلل روابط خبير. سيعرض علي�
 نص المستند:
 """${'__TEXT__'}"""`;
 
+// يستخرج التاريخ المرجعي للمستند من كيانات التاريخ التي استخرجها النموذج،
+// مع التراجع إلى التاريخ المهيمن في النص. يُرجع سلسلة ISO (YYYY-MM-DD) أو فارغ.
+function extractReferenceDate(entities, fullText) {
+  const dateEntities = (entities || []).filter((e) => e.type === 'date' && e.name);
+  // 1) تاريخ ISO كامل من كيان تاريخ صريح
+  for (const d of dateEntities) {
+    const m = String(d.name).match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  // 2) العام المهيمن من كيانات التاريخ، ثم من النص كردي أخير
+  const yearCounts = {};
+  const addYears = (s) => {
+    const ms = String(s || '').match(/\b(19|20)\d{2}\b/g);
+    if (ms) for (const y of ms) yearCounts[y] = (yearCounts[y] || 0) + 1;
+  };
+  dateEntities.forEach((d) => addYears(d.name));
+  if (Object.keys(yearCounts).length === 0) addYears((fullText || '').slice(0, 4000));
+  let bestYear = null, bestCount = 0;
+  for (const [y, c] of Object.entries(yearCounts)) {
+    if (c > bestCount) { bestYear = y; bestCount = c; }
+  }
+  return bestYear ? `${bestYear}-01-01` : '';
+}
+
+// يُودع المستند تلقائياً في ملف تحليلات العام المرجعي (Workspace)،
+// ويُنشئ الملف إن لم يكن موجوداً. يُضيف المستند والكيانات المستخرجة إليه.
+async function fileIntoYearDossier(base44, document_id, referenceDate, resolvedEntities) {
+  if (!referenceDate) return;
+  const year = referenceDate.slice(0, 4);
+  const wsName = `تحليلات ${year}`;
+  try {
+    const existing = await base44.entities.Workspace.filter({ name: wsName });
+    let ws = existing[0];
+    const entityIds = (resolvedEntities || []).map((e) => e.id).filter(Boolean);
+    if (!ws) {
+      ws = await base44.entities.Workspace.create({
+        name: wsName,
+        description: `ملف تحليلات عام ${year} — يُجمّع تلقائياً المستندات والكيانات المستخرجة من ذلك العام.`,
+        document_ids: [document_id],
+        entity_ids: entityIds
+      });
+    } else {
+      const docIds = new Set(ws.document_ids || []);
+      docIds.add(document_id);
+      const entIds = new Set(ws.entity_ids || []);
+      entityIds.forEach((id) => entIds.add(id));
+      await base44.entities.Workspace.update(ws.id, {
+        document_ids: Array.from(docIds),
+        entity_ids: Array.from(entIds)
+      });
+    }
+  } catch (e) {
+    // لا تفشل المعالجة بسبب التصنيف الزمني
+  }
+}
+
 /**
  * يشغّل تحليل NER على نص كامل ويُنشئ/يُحدّث الكيانات والروابط والذكر للمستند المعطى.
  * @param base44 عميل base44 (مع صلاحية asServiceRole للعمليات الداخلية)
@@ -196,13 +252,18 @@ export async function runNer(base44, doc, document_id, fullText) {
     connectionCount++;
   }
 
+  const referenceDate = doc.reference_date || extractReferenceDate(entities, fullText);
   await base44.entities.Document.update(document_id, {
     status: 'processed',
     raw_text: fullText,
     summary,
+    reference_date: referenceDate,
     entity_count: entities.length,
     connection_count: connectionCount
   });
+
+  // التصنيف الزمني: إيداع المستند في ملف تحليلات العام المرجعي
+  await fileIntoYearDossier(base44, document_id, referenceDate, Object.values(resolved));
 
   // تنبيه فوري: مطابقة الكيانات المستخرجة مقابل قوائم المراقبة وملفات الخطر
   const resolvedEntities = Object.values(resolved);

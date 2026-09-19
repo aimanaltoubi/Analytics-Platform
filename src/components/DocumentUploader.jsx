@@ -15,6 +15,7 @@ export default function DocumentUploader({ onUploaded }) {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState('');
   const [docType, setDocType] = useState('intelligence_report');
+  const [referenceDate, setReferenceDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState('');
   const inputRef = useRef(null);
@@ -24,6 +25,7 @@ export default function DocumentUploader({ onUploaded }) {
     setFile(null);
     setTitle('');
     setDocType('intelligence_report');
+    setReferenceDate('');
     setStage('');
   };
 
@@ -49,6 +51,7 @@ export default function DocumentUploader({ onUploaded }) {
         title: title || file.name,
         document_type: docType,
         file_url,
+        reference_date: referenceDate || undefined,
         status: 'pending'
       });
 
@@ -140,6 +143,17 @@ export default function DocumentUploader({ onUploaded }) {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">التاريخ المرجعي (اختياري — يُستخرج تلقائياً إن تُرك فارغاً)</label>
+            <input
+              type="date"
+              value={referenceDate}
+              onChange={(e) => setReferenceDate(e.target.value)}
+              disabled={busy}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
 
           {busy && stage && (
