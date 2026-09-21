@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, RefreshCw, Network, GitBranch, Link2, ShieldAlert, Users, Layers, AlertTriangle, Sparkles } from 'lucide-react';
+import { Brain, RefreshCw, Network, GitBranch, Link2, ShieldAlert, Users, Layers, AlertTriangle, Sparkles, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
@@ -13,14 +13,20 @@ const DOC_LABELS = {
 
 export default function FusionInsights() {
   const [insights, setInsights] = useState(null);
+  const [connections, setConnections] = useState([]);
+  const [expandedCluster, setExpandedCluster] = useState(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
 
   const run = async () => {
     setRunning(true);
     try {
-      const res = await base44.functions.invoke('runFusion', {});
+      const [res, conns] = await Promise.all([
+        base44.functions.invoke('runFusion', {}),
+        base44.entities.Connection.list('-created_date', 500)
+      ]);
       setInsights(res.data);
+      setConnections(conns);
     } catch (e) {
       setInsights(null);
     } finally {
@@ -104,21 +110,50 @@ export default function FusionInsights() {
         {/* أكبر العناقيد */}
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
           <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><Network className="w-4 h-4 text-blue-500" /> أكبر العناقيد الشبكية</h4>
+          <p className="text-[11px] text-muted-foreground mb-3">انقر على أي عنقود لعرض روابطه الداخلية ووثائق المصدر.</p>
           <div className="space-y-3">
-            {(insights.largest_clusters || []).map((cl, i) => (
-              <div key={i} className="rounded-lg bg-accent/40 p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">عنقود {i + 1}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{cl.size} كيان</span>
+            {(insights.largest_clusters || []).map((cl, i) => {
+              const memberIds = new Set((cl.members || []).map((m) => m.id));
+              const intra = connections.filter((c) => memberIds.has(c.source_entity_id) && memberIds.has(c.target_entity_id));
+              const open = expandedCluster === i;
+              return (
+                <div key={i} className="rounded-lg bg-accent/40 p-3">
+                  <button
+                    onClick={() => setExpandedCluster(open ? null : i)}
+                    className="w-full flex items-center justify-between mb-2 group"
+                  >
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">عنقود {i + 1}</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{cl.size} كيان</span>
+                      {intra.length > 0 && <span className="text-[10px] text-muted-foreground">{intra.length} رابط داخلي</span>}
+                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+                    </span>
+                  </button>
+                  <div className="flex flex-wrap gap-1.5">
+                    {cl.members.map((m, j) => (
+                      <Link key={j} to={`/entities/${m.id}`} className="text-xs px-2 py-1 rounded-md bg-card border border-border hover:border-primary/40 hover:text-primary transition-colors">{m.name}</Link>
+                    ))}
+                    {cl.size > cl.members.length && <span className="text-xs text-muted-foreground px-2 py-1">+{cl.size - cl.members.length}</span>}
+                  </div>
+                  {open && intra.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+                      {intra.map((c, k) => (
+                        <div key={k} className="flex items-center gap-1.5 text-xs p-1.5 rounded-md bg-card/60">
+                          <Link to={`/entities/${c.source_entity_id}`} className="font-medium truncate hover:text-primary hover:underline">{c.source_entity_name}</Link>
+                          <span className="text-muted-foreground shrink-0">↔</span>
+                          <Link to={`/entities/${c.target_entity_id}`} className="font-medium truncate hover:text-primary hover:underline">{c.target_entity_name}</Link>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 ms-auto">{c.relationship_type}</span>
+                          {c.document_id && <Link to={`/documents/${c.document_id}`} className="text-[10px] text-muted-foreground hover:text-primary hover:underline shrink-0">المصدر</Link>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {open && intra.length === 0 && (
+                    <p className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">لا توجد روابط داخلية مسجّلة بين أعضاء هذا العنقود.</p>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {cl.members.map((m, j) => (
-                    <Link key={j} to={`/entities/${m.id}`} className="text-xs px-2 py-1 rounded-md bg-card border border-border hover:border-primary/40 hover:text-primary transition-colors">{m.name}</Link>
-                  ))}
-                  {cl.size > cl.members.length && <span className="text-xs text-muted-foreground px-2 py-1">+{cl.size - cl.members.length}</span>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {(insights.largest_clusters || []).length === 0 && <p className="text-sm text-muted-foreground">لا توجد عناقيد.</p>}
           </div>
         </div>
