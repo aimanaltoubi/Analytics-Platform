@@ -4,15 +4,26 @@
 export async function notifyWatchlistMatches(base44, manifest, flags, cargoFlags) {
   if (!flags.length && !cargoFlags.length) return { sent: 0 };
 
-  // جلب المستخدمين المسؤولين لإرسال الإشعار لهم
-  let admins = [];
+  // قراءة وجهة الإشعار المُعدّة في صفحة الإعدادات؛ إن لم تُضف فنعود للمسؤولين
+  let recipients = [];
   try {
-    const users = await base44.asServiceRole.entities.User.list('-created_date', 50);
-    admins = (users || []).filter((u) => u.email && (u.role === 'admin' || !u.role));
+    const rows = await base44.asServiceRole.entities.Setting.filter({ key: 'notification_emails' });
+    const row = (rows || [])[0];
+    const configured = (row && row.value || '').split(',').map((e) => e.trim()).filter(Boolean);
+    if (configured.length) recipients = configured.map((email) => ({ email }));
   } catch (e) {
-    return { sent: 0, error: e.message };
+    // تعذّر قراءة الإعداد — نعود للمسؤولين
   }
-  if (!admins.length) return { sent: 0 };
+
+  if (!recipients.length) {
+    try {
+      const users = await base44.asServiceRole.entities.User.list('-created_date', 50);
+      recipients = (users || []).filter((u) => u.email && (u.role === 'admin' || !u.role));
+    } catch (e) {
+      return { sent: 0, error: e.message };
+    }
+  }
+  if (!recipients.length) return { sent: 0 };
 
   const route = (manifest.departure_location || '—') + ' → ' + (manifest.destination_location || '—');
   const subject = '🚨 تنبيه مطابقة قائمة مراقبة — ' + manifest.carrier + ' ' + (manifest.voyage_number || '');
@@ -44,12 +55,12 @@ export async function notifyWatchlistMatches(base44, manifest, flags, cargoFlags
   const body = lines.join('\n');
 
   let sent = 0;
-  for (const a of admins) {
+  for (const a of recipients) {
     try {
       await base44.asServiceRole.integrations.Core.SendEmail({ to: a.email, subject, body });
       sent++;
     } catch (e) {
-      // متابعة لبقية المسؤولين
+      // متابعة لبقية المستلمين
     }
   }
   return { sent };

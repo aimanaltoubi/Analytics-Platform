@@ -35,6 +35,7 @@ import EntityDossier from '@/pages/EntityDossier';
 import ChangeTracking from '@/pages/ChangeTracking';
 import IntelligenceGaps from '@/pages/IntelligenceGaps';
 import PeriodComparison from '@/pages/PeriodComparison';
+import Settings from '@/pages/Settings';
 
 
 const AuthenticatedApp = () => {
@@ -80,6 +81,7 @@ const AuthenticatedApp = () => {
         <Route path="/changes" element={<ChangeTracking />} />
         <Route path="/gaps" element={<IntelligenceGaps />} />
         <Route path="/compare" element={<PeriodComparison />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/import" element={<Import />} />
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
