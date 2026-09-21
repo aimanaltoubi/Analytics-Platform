@@ -172,14 +172,45 @@ export default function Import() {
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-accent/30 p-4 text-xs text-muted-foreground leading-relaxed">
-        <div className="font-medium text-foreground mb-1">تنسيق الأعمدة المتوقع:</div>
-        <ul className="list-disc pr-4 space-y-1">
-          <li>عمود <span className="font-medium">الاسم / name</span> — مطلوب لإنشاء الكيان</li>
-          <li>عمود <span className="font-medium">النوع / type</span> — اختياري (شخص، منظمة، هاتف...)</li>
-          <li>أعمدة <span className="font-medium">مصدر / source</span> و<span className="font-medium">هدف / target</span> — لإنشاء روابط</li>
-          <li>باقي الأعمدة تُخزّن تلقائياً كسمات للكيان</li>
-        </ul>
+      <div className="rounded-xl border border-border bg-accent/30 p-4 text-xs text-muted-foreground leading-relaxed space-y-3">
+        <div>
+          <div className="font-medium text-foreground mb-1.5">تنسيق ملف CSV المطلوب</div>
+          <p className="mb-2">ارفع ملف CSV يحتوي صفوفاً لكل كيان (شخص أو شركة). يُكتشف عمود الاسم تلقائياً (عربي/إنجليزي)، وباقي الأعمدة تُخزّن كسمات للكيان.</p>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 text-foreground">
+                <tr>
+                  <th className="text-right font-medium px-3 py-1.5">العمود</th>
+                  <th className="text-right font-medium px-3 py-1.5">مطلوب</th>
+                  <th className="text-right font-medium px-3 py-1.5">الوصف</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                <tr><td className="px-3 py-1.5 font-mono">name / الاسم</td><td className="px-3 py-1.5">نعم</td><td className="px-3 py-1.5">اسم الكيان</td></tr>
+                <tr><td className="px-3 py-1.5 font-mono">type / النوع</td><td className="px-3 py-1.5">اختياري</td><td className="px-3 py-1.5">person · company · organization · phone · email · location</td></tr>
+                <tr><td className="px-3 py-1.5 font-mono">source / مصدر</td><td className="px-3 py-1.5">اختياري</td><td className="px-3 py-1.5">اسم الكيان المصدر لإنشاء رابط</td></tr>
+                <tr><td className="px-3 py-1.5 font-mono">target / هدف</td><td className="px-3 py-1.5">اختياري</td><td className="px-3 py-1.5">اسم الكيان الهدف لإنشاء رابط</td></tr>
+                <tr><td className="px-3 py-1.5 font-mono">relationship / العلاقة</td><td className="px-3 py-1.5">اختياري</td><td className="px-3 py-1.5">نوع العلاقة (يعمل لدى، يملك...)</td></tr>
+                <tr><td className="px-3 py-1.5 font-mono">أي أعمدة أخرى</td><td className="px-3 py-1.5">اختياري</td><td className="px-3 py-1.5">تُخزّن كسمات (passport, phone, nationality, dob...)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div className="font-medium text-foreground mb-1.5">أمثلة</div>
+          <div className="font-mono text-[11px] bg-card border border-border rounded-md p-2.5 overflow-x-auto" dir="ltr">
+            <div className="text-muted-foreground"># أشخاص محل اهتمام</div>
+            <div>name,type,passport,nationality,phone</div>
+            <div>Ahmad Abdullah,person,A1234567,Syrian,+963991234567</div>
+            <div className="mt-2 text-muted-foreground"># شركات</div>
+            <div>name,type,registration,phone</div>
+            <div>United Transport Co,company,REG-991,+963114445566</div>
+            <div className="mt-2 text-muted-foreground"># روابط بين الكيانات</div>
+            <div>source,target,relationship</div>
+            <div>Ahmad Abdullah,United Transport Co,works at</div>
+          </div>
+        </div>
+        <p className="text-muted-foreground">الكيانات المكررة تُوحَّد تلقائياً مع الموجود بالاسم أو الأسماء البديلة.</p>
       </div>
 
       <WatchlistImporter />
