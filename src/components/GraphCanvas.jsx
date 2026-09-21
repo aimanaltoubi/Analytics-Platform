@@ -4,9 +4,13 @@ const TYPE_COLORS = {
   person: '#8b5cf6', organization: '#3b82f6', phone: '#10b981', email: '#06b6d4',
   location: '#f59e0b', account: '#f43f5e', date: '#64748b', event: '#f97316', other: '#94a3b8'
 };
+const CLUSTER_PALETTE = ['#8b5cf6','#3b82f6','#10b981','#f59e0b','#f43f5e','#06b6d4','#ec4899','#84cc16','#6366f1','#f97316'];
 const HEIGHT = 460;
+const hashStr = (s) => { let h = 0; for (let i = 0; i < String(s).length; i++) { h = (h * 31 + String(s).charCodeAt(i)) | 0; } return h; };
+const clusterColor = (id) => CLUSTER_PALETTE[Math.abs(hashStr(id)) % CLUSTER_PALETTE.length];
 
-export default function GraphCanvas({ nodes, edges, focusId, onNodeClick }) {
+export default function GraphCanvas({ nodes, edges, focusId, onNodeClick, clusterMap, centralityMap, companyIds }) {
+  const maxCentrality = centralityMap ? Math.max(1, ...nodes.map((n) => centralityMap[n.id] || 0)) : 1;
   const svgRef = useRef(null);
   const posRef = useRef({});
   const simRef = useRef({ idMap: {}, nodes: [] });
@@ -107,7 +111,11 @@ export default function GraphCanvas({ nodes, edges, focusId, onNodeClick }) {
     dragRef.current = null;
   };
 
-  const radius = (n) => Math.min(20, 7 + (n.degree || 0) * 0.5);
+  const radius = (n) => {
+    if (centralityMap) return Math.min(22, 7 + ((centralityMap[n.id] || 0) / maxCentrality) * 15);
+    const base = Math.min(20, 7 + (n.degree || 0) * 0.5);
+    return (companyIds && companyIds.has(n.id)) ? base + 3 : base;
+  };
   const isConnected = (id) => edges.some((e) =>
     (e.source === focusId && e.target === id) || (e.target === focusId && e.source === id));
 
@@ -156,9 +164,9 @@ export default function GraphCanvas({ nodes, edges, focusId, onNodeClick }) {
             >
               <circle
                 r={r}
-                fill={TYPE_COLORS[n.type] || '#94a3b8'}
-                stroke={isFocus ? '#1e293b' : '#fff'}
-                strokeWidth={isFocus ? 3 : 1.5}
+                fill={companyIds && companyIds.has(n.id) ? '#8b1a1a' : (clusterMap && clusterMap[n.id] != null ? clusterColor(clusterMap[n.id]) : (TYPE_COLORS[n.type] || '#94a3b8'))}
+                stroke={isFocus ? '#1e293b' : (companyIds && companyIds.has(n.id) ? '#5b0f0f' : '#fff')}
+                strokeWidth={isFocus ? 3 : (companyIds && companyIds.has(n.id) ? 2.5 : 1.5)}
                 opacity={dim ? 0.35 : 1}
               />
               {r > 11 && (

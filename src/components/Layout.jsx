@@ -23,6 +23,7 @@ const navGroups = [
       { to: '/entities', label: 'الكيانات', icon: Users },
       { to: '/database', label: 'قاعدة البيانات', icon: DatabaseIcon },
       { to: '/graph', label: 'فهرس العلاقات', icon: GitFork },
+      { to: '/company-network', label: 'شبكة الشركات', icon: NetworkIcon },
       { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen },
       { to: '/yearly-stats', label: 'الإحصاءات السنوية', icon: BarChart3 }
     ]

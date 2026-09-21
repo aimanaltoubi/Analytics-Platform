@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import BarList from '@/components/BarList';
 import GraphCanvas from '@/components/GraphCanvas';
 import PathAnalysis from '@/components/PathAnalysis';
+import { buildAdjacencyFromEdges, degreeCentrality, betweennessCentrality, labelPropagation, communities } from '@/lib/networkAnalysis';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -81,6 +82,27 @@ export default function GraphIndex() {
   };
 
   useEffect(() => { if (data) buildInitialGraph(data); }, [data]);
+
+  const netMetrics = useMemo(() => {
+    if (!gNodes.length) return { clusterMap: {}, centralityMap: {}, communitiesList: [], centralityRanked: [] };
+    const { adj } = buildAdjacencyFromEdges(gNodes, gEdges);
+    const deg = degreeCentrality(adj);
+    const bc = betweennessCentrality(adj, 60);
+    const centralityMap = {};
+    gNodes.forEach((n) => { centralityMap[n.id] = (bc.get(n.id) || 0) + (deg.get(n.id) || 0) * 0.5; });
+    const label = labelPropagation(adj, 8);
+    const clusterMap = {};
+    label.forEach((l, id) => { clusterMap[id] = l; });
+    const comms = communities(label);
+    const communitiesList = comms.map((ids, i) => {
+      const members = ids.map((id) => gNodes.find((n) => n.id === id)).filter(Boolean);
+      return { index: i, ids, members };
+    }).sort((a, b) => b.ids.length - a.ids.length);
+    const centralityRanked = [...gNodes].map((n) => ({ ...n, c: centralityMap[n.id] || 0, deg: deg.get(n.id) || 0 })).sort((a, b) => b.c - a.c).slice(0, 8);
+    return { clusterMap, centralityMap, communitiesList, centralityRanked };
+  }, [gNodes, gEdges]);
+
+  const companyIds = useMemo(() => new Set(gNodes.filter((n) => n.type === 'company' || n.type === 'organization').map((n) => n.id)), [gNodes]);
 
   const filteredEntities = useMemo(() => {
     const ql = filter.trim().toLowerCase();
@@ -180,7 +202,51 @@ export default function GraphIndex() {
         <p className="text-xs text-muted-foreground">
           انقر على أي عقدة لتوسيع شبكة علاقاتها، واسحب العقد لإعادة ترتيبها. العقدة المحددة وعلاقاتها تُبرز باللون الأزرق.
         </p>
-        <GraphCanvas nodes={gNodes} edges={gEdges} focusId={focusId} onNodeClick={expandNode} />
+        <GraphCanvas nodes={gNodes} edges={gEdges} focusId={focusId} onNodeClick={expandNode} clusterMap={netMetrics.clusterMap} centralityMap={netMetrics.centralityMap} companyIds={companyIds} />
+      </div>
+
+      {/* أدوات تحليل الشبكة */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> مقاييس المركزية</h3>
+          <p className="text-xs text-muted-foreground mb-3">ترتيب الكيانات حسب المركزية (الدرجة + الوساطة) — الأعلى أكثر أهمية في الشبكة.</p>
+          {netMetrics.centralityRanked.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">لا توجد بيانات.</p>
+          ) : (
+            <div className="space-y-1">
+              {netMetrics.centralityRanked.map((n, i) => (
+                <Link key={n.id} to={`/entities/${n.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/60 transition-colors">
+                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{n.name}</div>
+                    <div className="text-xs text-muted-foreground">{TYPE_LABELS[n.type] || 'أخرى'} • {n.deg} رابط</div>
+                  </div>
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">{n.c.toFixed(1)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Network className="w-4 h-4 text-primary" /> كشف المجتمعات (Community Detection)</h3>
+          <p className="text-xs text-muted-foreground mb-3">{netMetrics.communitiesList.length} مجموعة مترابطة في الشبكة الحالية.</p>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {netMetrics.communitiesList.map((c) => (
+              <div key={c.index} className="rounded-lg bg-accent/40 p-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium">مجتمع {c.index + 1}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{c.ids.length} كيان</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {c.members.slice(0, 10).map((m) => (
+                    <Link key={m.id} to={`/entities/${m.id}`} className="text-xs px-2 py-0.5 rounded-md bg-card border border-border hover:border-primary/40 hover:text-primary transition-colors">{m.name}</Link>
+                  ))}
+                  {c.members.length > 10 && <span className="text-xs text-muted-foreground px-2 py-0.5">+{c.members.length - 10}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* مستكشف الشبكة */}

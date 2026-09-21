@@ -36,6 +36,7 @@ import ChangeTracking from '@/pages/ChangeTracking';
 import IntelligenceGaps from '@/pages/IntelligenceGaps';
 import PeriodComparison from '@/pages/PeriodComparison';
 import Settings from '@/pages/Settings';
+import CompanyNetwork from '@/pages/CompanyNetwork';
 
 
 const AuthenticatedApp = () => {
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/transit" element={<TransitSecurity />} />
         <Route path="/graph" element={<GraphIndex />} />
+        <Route path="/company-network" element={<CompanyNetwork />} />
         <Route path="/search" element={<Search />} />
         <Route path="/clir" element={<CrossLingualSearch />} />
         <Route path="/database" element={<Database />} />
