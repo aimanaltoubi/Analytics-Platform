@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, Database as DatabaseIcon, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import SystemStatus from '@/components/SystemStatus';
@@ -32,6 +32,15 @@ const navGroups = [
     items: [
       { to: '/search', label: 'البحث', icon: Search },
       { to: '/clir', label: 'بحث عبر اللغات', icon: Languages }
+    ]
+  },
+  {
+    section: 'أدوات تحليلية',
+    items: [
+      { to: '/path-analysis', label: 'مسار العلاقات', icon: GitFork },
+      { to: '/changes', label: 'تتبع التغيّرات', icon: TrendingUp },
+      { to: '/gaps', label: 'الفجوات التحليلية', icon: Unlink },
+      { to: '/compare', label: 'مقارنة الفترات', icon: GitCompare }
     ]
   },
   {

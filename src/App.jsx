@@ -30,6 +30,11 @@ import NationalityDetail from '@/pages/NationalityDetail';
 import CrossLingualSearch from '@/pages/CrossLingualSearch';
 import Database from '@/pages/Database';
 import YearlyStats from '@/pages/YearlyStats';
+import PathAnalysisPage from '@/pages/PathAnalysisPage';
+import EntityDossier from '@/pages/EntityDossier';
+import ChangeTracking from '@/pages/ChangeTracking';
+import IntelligenceGaps from '@/pages/IntelligenceGaps';
+import PeriodComparison from '@/pages/PeriodComparison';
 
 
 const AuthenticatedApp = () => {
@@ -62,6 +67,7 @@ const AuthenticatedApp = () => {
         <Route path="/documents/:id" element={<DocumentDetail />} />
         <Route path="/entities" element={<Entities />} />
         <Route path="/entities/:id" element={<EntityDetail />} />
+        <Route path="/entities/:id/dossier" element={<EntityDossier />} />
 
         <Route path="/alerts" element={<Alerts />} />
         <Route path="/transit" element={<TransitSecurity />} />
@@ -70,6 +76,10 @@ const AuthenticatedApp = () => {
         <Route path="/clir" element={<CrossLingualSearch />} />
         <Route path="/database" element={<Database />} />
         <Route path="/yearly-stats" element={<YearlyStats />} />
+        <Route path="/path-analysis" element={<PathAnalysisPage />} />
+        <Route path="/changes" element={<ChangeTracking />} />
+        <Route path="/gaps" element={<IntelligenceGaps />} />
+        <Route path="/compare" element={<PeriodComparison />} />
         <Route path="/import" element={<Import />} />
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/workspaces/:id" element={<WorkspaceDetail />} />

@@ -106,12 +106,20 @@ export default function EntityDetail() {
               <div className="text-2xl font-bold font-heading">{entity.mention_count || 0}</div>
               <div className="text-xs text-muted-foreground">ذكر</div>
             </div>
-            <button
-              onClick={() => setShowMerge(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-border bg-card hover:bg-accent transition-colors"
-            >
-              <GitMerge className="w-3.5 h-3.5" /> دمج مع كيان آخر
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setShowMerge(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-border bg-card hover:bg-accent transition-colors"
+              >
+                <GitMerge className="w-3.5 h-3.5" /> دمج مع كيان آخر
+              </button>
+              <Link
+                to={`/entities/${id}/dossier`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" /> الملف المركّز (Dossier)
+              </Link>
+            </div>
           </div>
         </div>
 
