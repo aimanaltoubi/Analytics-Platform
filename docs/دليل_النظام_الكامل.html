@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الدليل الشامل لنظام محلّل الكيانات — Strategic Data Fusion</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f4f5; --card:#ffffff; --fg:#222233; --muted:#6b7280;
+    --primary:#a31d1d; --primary-soft:#fdecec; --border:#e4e4e7;
+    --accent:#f8f9fa; --code:#374151;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Cairo',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7}
+  a{color:var(--primary);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* الغلاف */
+  .cover{
+    background:linear-gradient(135deg,#3a0a0a 0%,#7a1414 55%,#a31d1d 100%);
+    color:#fff;padding:64px 32px;text-align:center;position:relative;overflow:hidden;
+  }
+  .cover::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 20% 30%,rgba(255,255,255,.08) 0,transparent 40%),radial-gradient(circle at 80% 70%,rgba(255,255,255,.06) 0,transparent 40%);pointer-events:none}
+  .cover h1{font-size:2.6rem;font-weight:800;margin-bottom:8px;position:relative}
+  .cover .sub{font-size:1.15rem;opacity:.92;margin-bottom:6px;position:relative}
+  .cover .en{font-size:.95rem;opacity:.7;letter-spacing:.5px;position:relative}
+  .cover .meta{margin-top:22px;font-size:.85rem;opacity:.8;position:relative}
+
+  /* التخطيط */
+  .layout{display:flex;max-width:1400px;margin:0 auto;gap:0}
+  .toc{
+    width:280px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+    background:var(--card);border-left:1px solid var(--border);padding:24px 18px;font-size:.9rem;
+  }
+  .toc h2{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;font-weight:700}
+  .toc a{display:block;padding:7px 12px;border-radius:8px;color:var(--fg);font-weight:500;margin-bottom:2px}
+  .toc a:hover{background:var(--accent);text-decoration:none}
+  .toc a.active{background:var(--primary-soft);color:var(--primary)}
+  .toc .grp{margin-top:14px}
+  .content{flex:1;min-width:0;padding:32px 40px 80px}
+
+  /* الأقسام */
+  .section{margin-bottom:56px;scroll-margin-top:20px}
+  .section-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .section-head .num{width:34px;height:34px;border-radius:9px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0}
+  .section-head h2{font-size:1.5rem;font-weight:700}
+  .route-tag{display:inline-block;font-family:ui-monospace,monospace;font-size:.75rem;background:var(--accent);border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--muted);margin-right:8px}
+  .lead{color:var(--muted);font-size:.98rem;margin:6px 0 18px}
+
+  .features{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 26px;margin-bottom:18px}
+  .features h3{font-size:1.05rem;font-weight:700;margin-bottom:10px;color:var(--primary)}
+  .features ul{list-style:none;padding:0}
+  .features li{padding:7px 0 7px 26px;position:relative;font-size:.94rem}
+  .features li::before{content:"◆";position:absolute;right:0;top:7px;color:var(--primary);font-size:.7rem}
+  .features li b{color:var(--fg)}
+
+  .screen-label{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
+  .screen-label span{font-size:.82rem;color:var(--muted);font-weight:600}
+  .live-dot{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;color:#16a34a;font-weight:600}
+  .live-dot::before{content:"";width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.18)}
+
+  .frame-wrap{
+    border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--card);
+    box-shadow:0 4px 18px rgba(0,0,0,.05);
+  }
+  .frame-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--accent);border-bottom:1px solid var(--border)}
+  .frame-bar .dot{width:11px;height:11px;border-radius:50%}
+  .frame-bar .d1{background:#ff5f57}.frame-bar .d2{background:#febc2e}.frame-bar .d3{background:#28c840}
+  .frame-bar .url{flex:1;text-align:center;font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted);direction:ltr}
+  iframe{display:block;width:100%;height:640px;border:0;background:#fff}
+
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:.85rem;color:#92400e;margin-top:10px}
+  .note b{color:#78350f}
+
+  @media(max-width:980px){
+    .layout{flex-direction:column}
+    .toc{position:static;width:100%;height:auto;border-left:0;border-bottom:1px solid var(--border)}
+    .content{padding:20px}
+    iframe{height:520px}
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>الدليل الشامل لنظام محلّل الكيانات</h1>
+  <div class="sub">منصة التحليلات الاستراتيجية لدمج البيانات وكشف الروابط</div>
+  <div class="en">Strategic Data Fusion — Complete System Documentation</div>
+  <div class="meta">توثيق تفاعلي يحتوي على الشاشات الحيّة للنظام • الإصدار 1.0</div>
+</div>
+
+<div class="layout">
+
+  <nav class="toc" id="toc">
+    <h2>محتويات الدليل</h2>
+    <a href="#intro">مقدمة عن النظام</a>
+    <div class="grp"></div>
+    <h2>الرئيسية والاستيعاب</h2>
+    <a href="#home">١. لوحة العمليات</a>
+    <a href="#documents">٢. المستندات</a>
+    <a href="#import">٣. استيراد البيانات</a>
+    <div class="grp"></div>
+    <h2>التحليل</h2>
+    <a href="#entities">٤. الكيانات</a>
+    <a href="#database">٥. قاعدة البيانات</a>
+    <a href="#graph">٦. فهرس العلاقات</a>
+    <a href="#company">٧. شبكة الشركات</a>
+    <a href="#workspaces">٨. مساحات العمل</a>
+    <a href="#yearly">٩. الإحصاءات السنوية</a>
+    <div class="grp"></div>
+    <h2>البحث</h2>
+    <a href="#search">١٠. البحث الضبابي</a>
+    <a href="#clir">١١. البحث عبر اللغات</a>
+    <div class="grp"></div>
+    <h2>أدوات تحليلية</h2>
+    <a href="#path">١٢. مسار العلاقات</a>
+    <a href="#changes">١٣. تتبع التغيّرات</a>
+    <a href="#gaps">١٤. الفجوات التحليلية</a>
+    <a href="#compare">١٥. مقارنة الفترات</a>
+    <div class="grp"></div>
+    <h2>العمليات</h2>
+    <a href="#alerts">١٦. التنبيهات</a>
+    <a href="#settings">١٧. الإعدادات</a>
+  </nav>
+
+  <main class="content">
+
+    <!-- مقدمة -->
+    <section class="section" id="intro">
+      <div class="section-head"><div class="num">٠</div><h2>مقدمة عن النظام</h2></div>
+      <p class="lead">«محلّل الكيانات» هو محرك بيانات مركزي يربط بين مختلف مصادر البيانات تلقائياً: يستوعب المستندات، يستخرج الكيانات (أشخاص، شركات، منظمة، أرقام، مواقع)، يكشف الروابط بينها، وينتج تنبيهات تحليلية لحظية. يعمل في بيئة معزولة عن الشبكة بهوية بصرية موحّدة (رمادي فاتح مع لمسات حمراء داكنة وتخطيط عربي يميني).</p>
+      <div class="features">
+        <h3>القدرات الأساسية</h3>
+        <ul>
+          <li><b>استيعاب المستندات:</b> رفع PDF/نصوص/CSV واستخراج الكيانات والروابط آلياً عبر خط معالجة NER.</li>
+          <li><b>دمج البيانات (Data Fusion):</b> توحيد الكيانات المكررة عبر المصادر بمطابقة اسمية وصوتية.</li>
+          <li><b>تحليل الشبكة:</b> فهرس علاقات، خريطة تفاعلية، مقاييس مركزية، كشف مجتمعات، ومسار بين كيانين.</li>
+          <li><b>تنبيهات تلقائية:</b> محرك قواعد (CEP) يقيّم الكيانات مقابل ملفات الخطر وقوائم المراقبة.</li>
+          <li><b>أدوات تحليلية متقدمة:</b> ملف الكيان، تتبع التغيّرات، الفجوات التحليلية، ومقارنة الفترات.</li>
+          <li><b>تقرير سنوي تنفيذي:</b> إحصاءات مجمّعة حسب السنة مع تصفية زمنية شاملة.</li>
+        </ul>
+      </div>
+      <div class="note"><b>كيفية استخدام هذا الدليل:</b> كل قسم أدناه يشرح مزايا الصفحة ويعرض شاشته الحيّة من النظام الفعلي. إن لم تظهر الشاشة داخل الإطار، تأكد من اتصالك بالشبكة الداخلية ومن أن النظام يعمل على العنوان المُضمّن.</div>
+    </section>
+
+    <!-- 1. لوحة العمليات -->
+    <section class="section" id="home">
+      <div class="section-head"><div class="num">١</div><h2>لوحة العمليات <span class="route-tag">/</span></h2></div>
+      <p class="lead">الصفحة الرئيسية للنظام — نظرة شاملة على حالة الاستيعاب والتحليل والتنبيهات، مع تصفية حسب السنة.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>بطاقات المؤشرات:</b> تنبيهات جديدة، قيد المعالجة، الروابط، الكيانات، المستندات — كلها قابلة للنقر وتوجّهك إلى مصدر البيانات.</li>
+          <li><b>أبرز الكيانات:</b> قائمة بأعلى الكيانات ذكراً مع نوعها ودرجة خطورتها.</li>
+          <li><b>أحدث المستندات:</b> جدول بآخر المستندات المعالجة (العنوان، النوع، الكيانات، الروابط، الحالة، الوقت).</li>
+          <li><b>الاستيعاب السريع:</b> منطقة سحب وإفلات لرفع مستندات PDF فوراً.</li>
+          <li><b>التصفية الزمنية:</b> قائمة منسدلة لاختيار سنة لتحديد كل المؤشرات والبيانات.</li>
+          <li><b>تحديث يدوي:</b> زر لإعادة تحميل البيانات.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 2. المستندات -->
+    <section class="section" id="documents">
+      <div class="section-head"><div class="num">٢</div><h2>المستندات <span class="route-tag">/documents</span></h2></div>
+      <p class="lead">إدارة جميع المستندات المستوعبة وتحليلها، مع رفع مستندات جديدة ومعالجة آلية.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>رفع مستند:</b> زر أحمر لرفع ملفات PDF أو نصوص لبدء خط المعالجة الآلي.</li>
+          <li><b>بطاقات المستندات:</b> عرض كل مستند مع نوعه وعدد الكيانات والروابط المستخرجة وحالته.</li>
+          <li><b>بحث في المستندات:</b> تصفية فورية بالعنوان.</li>
+          <li><b>الحالات:</b> قيد الانتظار · قيد المعالجة · تم المعالجة · فشل — بألوان مميّزة.</li>
+          <li><b>التنقل:</b> النقر على أي مستند يفتح صفحة تفاصيله (النص المستخرج، الملخص، الكيانات، الروابط، التاريخ المرجعي).</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/documents</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/documents" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 3. الاستيراد -->
+    <section class="section" id="import">
+      <div class="section-head"><div class="num">٣</div><h2>استيراد البيانات <span class="route-tag">/import</span></h2></div>
+      <p class="lead">استيراد كيانات (أشخاص وشركات) من ملفات CSV خارجية، إضافة إلى استيراد قوائم المراقبة.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>استيراد CSV للكيانات:</b> رفع ملف بصفوف لكل كيان — يُكتشف عمود الاسم تلقائياً وباقي الأعمدة تُخزّن كسمات.</li>
+          <li><b>إنشاء روابط:</b> إن وُجدت أعمدة «مصدر» و«هدف» تُنشأ روابط بين الكيانات تلقائياً.</li>
+          <li><b>توحيد تلقائي:</b> الكيانات المكررة تُوحَّد مع الموجود بالاسم أو الأسماء البديلة.</li>
+          <li><b>دليل التنسيق المدمج:</b> جدول يشرح الأعمدة المتوقعة مع أمثلة عملية للأشخاص والشركات والروابط.</li>
+          <li><b>استيراد قائمة المراقبة:</b> رفع CSV بأسماء/جوازات تُطابق آلياً وتُعلَّم للمراقبة.</li>
+        </ul>
+      </div>
+      <div class="note"><b>تنسيق CSV المختصر:</b> الأعمدة <code>name</code>/<code>type</code> (person · company · organization) + أي سمات (passport, phone, nationality)، واختيارياً <code>source</code>/<code>target</code>/<code>relationship</code> لإنشاء روابط.</div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/import</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/import" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 4. الكيانات -->
+    <section class="section" id="entities">
+      <div class="section-head"><div class="num">٤</div><h2>الكيانات <span class="route-tag">/entities</span></h2></div>
+      <p class="lead">دليل بجميع الكيانات المستخرجة عبر المستندات — أشخاص، شركات، منظمة، مواقع، أرقام، أحداث.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>تصفية بالنوع:</b> شرائح (الكل، منظمة، شركة، شخص، موقع، حدث، تاريخ) مع عدّاد لكل نوع.</li>
+          <li><b>تصفية متقدمة:</b> بالجنسيات، مستويات الخطورة، ووجود سمات محددة (جواز، هاتف، بريد)، ونطاق تاريخي.</li>
+          <li><b>ترتيب:</b> حسب الأكثر ذكراً أو الخطورة أو الأحدث.</li>
+          <li><b>بطاقات الكيانات:</b> الاسم، النوع، عدد الذكر والمستندات، درجة الخطورة، وصورة الكيان إن وُجدت.</li>
+          <li><b>زر المراقبة:</b> لإضافة كيانات إلى قائمة المراقبة.</li>
+          <li><b>صفحة التفاصيل:</b> سمات تفصيلية، أسماء بديلة، روابط، ذكر في المستندات، خط زمني، تقرير تحقيق، ودمج الكيانات.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/entities</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/entities" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 5. قاعدة البيانات -->
+    <section class="section" id="database">
+      <div class="section-head"><div class="num">٥</div><h2>قاعدة البيانات <span class="route-tag">/database</span></h2></div>
+      <p class="lead">سجل بيانات الكيانات المستخرجة مع واجهة تصفح وتحرير وتصنيف يدوي.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>تصفح مصنّف:</b> لوحة يسرى منظّمة بتبويبات واضحة (أشخاص / شركات / منظمة) لسهولة الاستخدام.</li>
+          <li><b>بحث وتصفية:</b> تصفية فورية وعرض معاينات الكيانات (صورة، وسوم تعريف، سمات جوهرية).</li>
+          <li><b>محرر السمات (PII):</b> تحرير تفصيلي لسمات الكيان (جواز، هاتف، بريد، جنسية...) مع تحديث فوري.</li>
+          <li><b>إعادة تصنيف يدوية:</b> تجاوز التصنيف الآلي وتحويل الكيان بين «منظمة» و«شركة».</li>
+          <li><b>التنقل للملف الكامل:</b> زر للانتقال إلى صفحة الكيان التفصيلية.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/database</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/database" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 6. فهرس العلاقات -->
+    <section class="section" id="graph">
+      <div class="section-head"><div class="num">٦</div><h2>فهرس العلاقات <span class="route-tag">/graph</span></h2></div>
+      <p class="lead">قاعدة بيانات الرسم البياني — محرك يربط نقاط البيانات كشبكة علاقات مع استكشاف متعدد الدرجة.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>مؤشرات الشبكة:</b> عدد العقد، الروابط، الكيانات المتصلة، المعزولة، وكثافة الشبكة.</li>
+          <li><b>أعلى المحاور:</b> قائمة بالكيانات الأكثر ارتباطاً (بدرجاتها).</li>
+          <li><b>توزيع أنواع العلاقات:</b> مخطط أعمدة لأنواع الروابط (ذكر معاً، تواجد في موقع، اتصال هاتفي...).</li>
+          <li><b>خريطة الروابط التفاعلية:</b> لوحة SVG قابلة للسحب — انقر عقدة لتوسيع شبكة علاقاتها، مع تلوين العناقيد وحجم بالمركزية.</li>
+          <li><b>مقاييس المركزية:</b> ترتيب الكيانات بالدرجة + الوساطة.</li>
+          <li><b>كشف المجتمعات:</b> تجميع آلي للكيانات المتترابطة في مجموعات.</li>
+          <li><b>مستكشف الشبكة:</b> اختيار كيان لعرض جواره من الدرجتين الأولى والثانية.</li>
+          <li><b>تحليل المسار:</b> أداة مدمجة لاكتشاف مسار العلاقة بين كيانين.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/graph</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/graph" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 7. شبكة الشركات -->
+    <section class="section" id="company">
+      <div class="section-head"><div class="num">٧</div><h2>شبكة الشركات <span class="route-tag">/company-network</span></h2></div>
+      <p class="lead">تحليل شبكة الشركات والمنظمات — يكشف الروابط عبر الموظفين والهواتف والبريد المشترك والتشارك في المستندات.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>ربط بين الشركات:</b> يكتشف الشركات المرتبطة عبر موظف مشترك أو هاتف/بريد مشترك أو ظهور معاً في مستند.</li>
+          <li><b>خريطة شبكية:</b> عرض تفاعلي لعقد الشركات وحواف الارتباط مع تلوين العناقيد.</li>
+          <li><b>كشف المجتمعات:</b> تجميع الشركات المتترابطة.</li>
+          <li><b>شبكة الإيغو:</b> اختيار شركة لعرض شبكة علاقاتها المباشرة.</li>
+          <li><b>قائمة الشركات:</b> ترتيب الشركات حسب المركزية والروابط.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/company-network</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/company-network" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 8. مساحات العمل -->
+    <section class="section" id="workspaces">
+      <div class="section-head"><div class="num">٨</div><h2>مساحات العمل <span class="route-tag">/workspaces</span></h2></div>
+      <p class="lead">مجموعات مختارة يدوياً من الكيانات لتحليل روابط مخصص — تُجمع تلقائياً حسب السنة.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>إنشاء مساحة:</b> زر «مساحة جديدة» لإنشاء مجموعة تحليل.</li>
+          <li><b>تجميع تلقائي حسب السنة:</b> مساحات تُجمع تلقائياً مستندات وكيانات عام محدد.</li>
+          <li><b>بطاقات المساحات:</b> عرض الاسم، الوصف، عدد الكيانات والمستندات.</li>
+          <li><b>صفحة المساحة:</b> تبويبات (شبكة التحليل، البيانات، المستندات، التقارير) — شبكة علاقات قابلة للسحب بأسلوب Kharon، جداول كيانات، تصدير CSV، وتحميل PDF.</li>
+          <li><b>إدارة الكيانات:</b> إضافة وحذف كيانات من المساحة مع بحث.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/workspaces</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/workspaces" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 9. الإحصاءات السنوية -->
+    <section class="section" id="yearly">
+      <div class="section-head"><div class="num">٩</div><h2>الإحصاءات السنوية <span class="route-tag">/yearly-stats</span></h2></div>
+      <p class="lead">تقرير تنفيذي يجمع بيانات السنة المحددة — المستندات، الكيانات، الروابط، الشبكة، والتنبيهات.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>تصفية بالسنة:</b> اختيار سنة لتحديد كل المؤشرات.</li>
+          <li><b>مؤشرات تنفيذية:</b> عدد المستندات، الكيانات، الروابط، التنبيهات، والبيانات.</li>
+          <li><b>تحليل الشبكة:</b> العناقيد، الكيانات المحورية، ومقاييس الاتصال.</li>
+          <li><b>توزيع الخطورة:</b> مخطط لتوزيع درجات الخطورة.</li>
+          <li><b>الاتجاهات الزمنية:</b> مخطط زمني للنشاط عبر أشهر السنة.</li>
+          <li><b>أعلى الكيانات:</b> ترتيب الكيانات الأكثر ذكراً في تلك السنة.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/yearly-stats</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/yearly-stats" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 10. البحث -->
+    <section class="section" id="search">
+      <div class="section-head"><div class="num">١٠</div><h2>البحث الضبابي <span class="route-tag">/search</span></h2></div>
+      <p class="lead">محرك بحث فوري يطابق الكلمات الجزئية والأسماء المخطئة عبر الكيانات والمستندات والروابط.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>مطابقة ضبابية:</b> يطابق الأسماء الجزئية والمخطئة بدرجة تشابه.</li>
+          <li><b>بحث شامل:</b> عبر الكيانات والمستندات والروابط في آن واحد.</li>
+          <li><b>ترتيب النتائج:</b> حسب درجة التشابه.</li>
+          <li><b>وصول سريع:</b> حقل البحث في الشريط العلوي مع اختصار «/».</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/search</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/search" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 11. البحث عبر اللغات -->
+    <section class="section" id="clir">
+      <div class="section-head"><div class="num">١١</div><h2>البحث عبر اللغات (CLIR) <span class="route-tag">/clir</span></h2></div>
+      <p class="lead">ابحث بأي لغة — يترجم استعلامك آلياً إلى العربية للبحث في الوثائق، وتُعرض النتائج مع ترجمة إنجليزية وكيانات مشبوهة فرزت.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>ترجمة آلية للاستعلام:</b> اكتب بالإنجليزية أو أي لغة ويُترجم ليعمل في الوثائق العربية.</li>
+          <li><b>نتائج ثنائية اللغة:</b> عرض النص الأصلي مع ترجمة إنجليزية.</li>
+          <li><b>فرز الكيانات المشبوهة:</b> إبراز الكيانات المرتبطة في النتائج.</li>
+          <li><b>مثال جاهز:</b> حقل بحث مع مثال توضيحي.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/clir</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/clir" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 12. مسار العلاقات -->
+    <section class="section" id="path">
+      <div class="section-head"><div class="num">١٢</div><h2>مسار العلاقات <span class="route-tag">/path-analysis</span></h2></div>
+      <p class="lead">أداة لاكتشاف وعرض مسار العلاقة بين كيانين — كم درجة تفصلهما وما الروابط بينهما.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>اختيار كيانين:</b> قوائم منسدلة لاختيار المصدر والهدف.</li>
+          <li><b>إيجاد المسار:</b> حساب أقصر مسار في الرسم البياني.</li>
+          <li><b>عرض مرئي:</b> رسم المسار بالعقد والحواف الوسيطة.</li>
+          <li><b>تفاصيل كل خطوة:</b> نوع العلاقة والدليل لكل حافة.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/path-analysis</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/path-analysis" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 13. تتبع التغيّرات -->
+    <section class="section" id="changes">
+      <div class="section-head"><div class="num">١٣</div><h2>تتبع التغيّرات <span class="route-tag">/changes</span></h2></div>
+      <p class="lead">مراقبة الإضافات الحديثة على النظام — كيانات، روابط، مستندات، تنبيهات — مع تصفية حسب تاريخ أساسي.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>تاريخ أساسي قابل للتعديل:</b> تحديد نقطة انطلاق لمقارنة الإضافات بعدها.</li>
+          <li><b>بطاقات ملخصة:</b> عدد الكيانات والروابط والمستندات والتنبيهات الجديدة.</li>
+          <li><b>قوائم قابلة للتمرير:</b> العناصر الجديدة مع روابط سريعة لصفاتها.</li>
+          <li><b>تنقل مباشر:</b> النقر ينقل إلى الكيان أو المستند أو التنبيه.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/changes</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/changes" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 14. الفجوات التحليلية -->
+    <section class="section" id="gaps">
+      <div class="section-head"><div class="num">١٤</div><h2>الفجوات التحليلية <span class="route-tag">/gaps</span></h2></div>
+      <p class="lead">تصور الفجوات في البيانات — ما الذي ينقص لتحليل أكثر اكتمالاً.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>كيانات بذكر وحيد:</b> ظهرت مرة واحدة فقط — قد تكون تحتاج توثيقاً.</li>
+          <li><b>كيانات معزولة:</b> بلا روابط — خارج الشبكة.</li>
+          <li><b>كيانات من مصدر وحيد:</b> ذُكرت في مستند واحد فقط.</li>
+          <li><b>مستندات بلا كيانات:</b> فشل استخراج الكيانات منها.</li>
+          <li><b>روابط بلا دليل:</b> علاقات تفتقر للدليل الموثّق.</li>
+          <li><b>بطاقات تفاعلية:</b> عدّاد لكل فجوة مع قائمة عناصرها وروابط للوصول.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/gaps</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/gaps" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 15. مقارنة الفترات -->
+    <section class="section" id="compare">
+      <div class="section-head"><div class="num">١٥</div><h2>مقارنة الفترات <span class="route-tag">/compare</span></h2></div>
+      <p class="lead">مقارنة مؤشرات الأداء وذكر الكيانات بين سنتين — أداة لتتبع التطور عبر الزمن.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>اختيار سنتين:</b> قوائم لاختيار الفترتين للمقارنة.</li>
+          <li><b>مؤشرات مجمّعة:</b> عدد المستندات، الكيانات، الروابط، التنبيهات لكل سنة.</li>
+          <li><b>عرض الفروقات:</b> دلتا مع مؤشرات اتجاهية (زيادة/نقص).</li>
+          <li><b>أعلى الكيانات لكل فترة:</b> ترتيب مقارن جنباً إلى جنب.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/compare</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/compare" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 16. التنبيهات -->
+    <section class="section" id="alerts">
+      <div class="section-head"><div class="num">١٦</div><h2>التنبيهات <span class="route-tag">/alerts</span></h2></div>
+      <p class="lead">محرك قواعد يعمل في الخلفية (CEP) ويقيّم البيانات الواردة مقابل ملفات الخطر، وينشئ تنبيهات تلقائية عند تطابق الأنماط.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>ملفات الخطر (Risk Profiles):</b> قواعد قابلة للإدارة (عتبة خطورة، قائمة مراقبة، محوري، عنقود كبير، تشارك مكثف).</li>
+          <li><b>ت启用/تعطيل القواعد:</b> مفتاح لتفعيل كل ملف خطر.</li>
+          <li><b>لوحة مراقبة:</b> ملخص بالخطورة (منخفضة/متوسطة/عالية/حرجة) والإجمالي.</li>
+          <li><b>قائمة التنبيهات:</b> كل تنبيه باسم الكيان، نوعه، درجة خطورته، السبب، وعدد الذكر.</li>
+          <li><b>إشعارات بريد:</b> تُرسل تلقائياً إلى وجهة الإشعار المعدّة في الإعدادات.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/alerts</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/alerts" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+    <!-- 17. الإعدادات -->
+    <section class="section" id="settings">
+      <div class="section-head"><div class="num">١٧</div><h2>الإعدادات <span class="route-tag">/settings</span></h2></div>
+      <p class="lead">تكوين وجهة إشعارات البريد وخادم البريد (SMTP) للبيئة المعزولة.</p>
+      <div class="features">
+        <h3>المزايا</h3>
+        <ul>
+          <li><b>وجهة إشعارات البريد:</b> إدارة قائمة البريد المستلم للتنبيهات (إضافة/حذف) — إن لم تُضف يُعاد للمسؤولين.</li>
+          <li><b>خادم البريد (SMTP):</b> إعداد خادم SMTP محلي للبيئة المعزولة (العنوان، المنفذ، التشفير، المُرسِل، الاعتماد).</li>
+          <li><b>حفظ آمن:</b> تُخزّن الإعدادات في كيان «Setting» مركزي.</li>
+        </ul>
+      </div>
+      <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
+      <div class="frame-wrap">
+        <div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/settings</span></div>
+        <iframe src="https://honored-link-trace-hub.base44.app/settings" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // تمييز القسم النشط في الفهرس
+  const links = document.querySelectorAll('#toc a');
+  const sections = document.querySelectorAll('.section');
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = document.querySelector('#toc a[href="#'+e.target.id+'"]');
+        if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(s=>obs.observe(s));
+</script>
+
+</body>
+</html>
