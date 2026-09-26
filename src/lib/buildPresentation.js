@@ -108,36 +108,6 @@ function introSlide(pres) {
   });
 }
 
-// مخطط تخطيطي موحّد لشاشة التطبيق (يمين: شريط جانبي، أعلى: ترويسة، وسط: بطاقات)
-function schematic(s, accentLabel) {
-  // خلفية الشاشة
-  s.addShape(pres.ShapeType.rect, { x: 0.5, y: 2.5, w: 12.33, h: 4.6, fill: { color: C.card }, line: { color: C.border, width: 1 } });
-  // الشريط الجانبي (يمين في RTL)
-  s.addShape(pres.ShapeType.rect, { x: 10.4, y: 2.5, w: 2.43, h: 4.6, fill: { color: C.accent }, line: { color: C.border, width: 1 } });
-  for (let i = 0; i < 5; i++) {
-    s.addShape(pres.ShapeType.rect, { x: 10.6, y: 2.8 + i * 0.5, w: 2.0, h: 0.32, fill: { color: i === 0 ? C.primarySoft : C.white }, line: { color: C.border, width: 0.5 } });
-    s.addText('•', { x: 10.6, y: 2.8 + i * 0.5, w: 2.0, h: 0.32, align: 'center', fontFace: FONT, fontSize: 10, color: C.muted, valign: 'middle' });
-  }
-  // الترويسة
-  s.addShape(pres.ShapeType.rect, { x: 0.5, y: 2.5, w: 9.9, h: 0.6, fill: { color: C.white }, line: { color: C.border, width: 1 } });
-  s.addText(accentLabel, { x: 0.7, y: 2.5, w: 9.5, h: 0.6, align: 'right', fontFace: FONT, fontSize: 11, color: C.muted, valign: 'middle', rtlMode: true });
-  // بطاقات المحتوى
-  for (let i = 0; i < 3; i++) {
-    s.addShape(pres.ShapeType.rect, { x: 0.8 + i * 3.2, y: 3.4, w: 2.9, h: 1.5, fill: { color: C.white }, line: { color: C.border, width: 1 } });
-    s.addShape(pres.ShapeType.rect, { x: 0.8 + i * 3.2, y: 3.4, w: 2.9, h: 0.3, fill: { color: C.primarySoft } });
-    s.addText('بطاقة', { x: 0.8 + i * 3.2, y: 3.4, w: 2.9, h: 0.3, align: 'center', fontFace: FONT, fontSize: 9, color: C.primary, valign: 'middle', rtlMode: true });
-    s.addShape(pres.ShapeType.rect, { x: 1.0 + i * 3.2, y: 3.85, w: 2.5, h: 0.18, fill: { color: C.border } });
-    s.addShape(pres.ShapeType.rect, { x: 1.0 + i * 3.2, y: 4.15, w: 2.0, h: 0.14, fill: { color: C.border } });
-    s.addShape(pres.ShapeType.rect, { x: 1.0 + i * 3.2, y: 4.4, w: 2.3, h: 0.14, fill: { color: C.border } });
-  }
-  // مخطط/جدول سفلي
-  s.addShape(pres.ShapeType.rect, { x: 0.8, y: 5.2, w: 9.4, h: 1.6, fill: { color: C.white }, line: { color: C.border, width: 1 } });
-  for (let i = 0; i < 4; i++) {
-    s.addShape(pres.ShapeType.rect, { x: 0.8, y: 5.55 + i * 0.3, w: 9.4, h: 0.3, fill: { color: i % 2 ? C.accent : C.white }, line: { color: C.border, width: 0.3 } });
-  }
-  s.addText('جدول / مخطط', { x: 0.8, y: 5.2, w: 9.4, h: 0.35, align: 'center', fontFace: FONT, fontSize: 10, color: C.muted, valign: 'middle', rtlMode: true });
-}
-
 function moduleSlide(pres, m) {
   const s = pres.addSlide();
   s.background = { color: C.bg };

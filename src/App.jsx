@@ -37,6 +37,7 @@ import IntelligenceGaps from '@/pages/IntelligenceGaps';
 import PeriodComparison from '@/pages/PeriodComparison';
 import Settings from '@/pages/Settings';
 import CompanyNetwork from '@/pages/CompanyNetwork';
+import PresentationPage from '@/pages/PresentationPage';
 
 
 const AuthenticatedApp = () => {
@@ -84,6 +85,7 @@ const AuthenticatedApp = () => {
         <Route path="/gaps" element={<IntelligenceGaps />} />
         <Route path="/compare" element={<PeriodComparison />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/presentation" element={<PresentationPage />} />
         <Route path="/import" element={<Import />} />
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/workspaces/:id" element={<WorkspaceDetail />} />
