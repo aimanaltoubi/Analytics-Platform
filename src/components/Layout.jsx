@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon, BookOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import SystemStatus from '@/components/SystemStatus';
@@ -147,6 +147,16 @@ export default function Layout() {
             <kbd className="mr-auto text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted text-muted-foreground font-mono">/</kbd>
           </Link>
           <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/دليل_النظام_الكامل.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors"
+              title="فتح الدليل الشامل للنظام"
+            >
+              <BookOpen style={{ width: 14, height: 14 }} />
+              الدليل
+            </a>
             <NotificationsBell />
             <SystemStatus />
           </div>
