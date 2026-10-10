@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw, AlertOctagon, Clock, ShieldAlert, Activity, Eye, Radio } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const SEV = {
@@ -27,13 +27,13 @@ export default function TransitMonitoring() {
   const { toast } = useToast();
 
   const load = async () => {
-    try { setAlerts(await base44.entities.Alert.list('-triggered_at', 200)); }
+    try { setAlerts(await localClient.entities.Alert.list('-triggered_at', 200)); }
     catch (e) {} finally { setLoading(false); }
   };
 
   useEffect(() => {
     load();
-    const unsub = base44.entities.Alert.subscribe((event) => {
+    const unsub = localClient.entities.Alert.subscribe((event) => {
       if (event.type === 'create') {
         setAlerts((prev) => [event.data, ...prev].slice(0, 200));
       }
@@ -44,7 +44,7 @@ export default function TransitMonitoring() {
   const run = async () => {
     setRunning(true);
     try {
-      const res = await base44.functions.invoke('runCepAlerts', {});
+      const res = await localClient.functions.invoke('runCepAlerts', {});
       toast({ title: 'تم تشغيل المحرك', description: `${res.data.alerts_created} تنبيه جديد` });
       await load();
     } catch (e) {

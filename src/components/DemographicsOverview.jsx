@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Globe, MapPin, Flag } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { entitiesForDocs, yearDocIdSet } from '@/lib/yearFilter';
 
 // يستخرج القيمة الأولى غير الفارغة من مجموعة مفاتيح سمات محتملة
@@ -26,8 +26,8 @@ export default function DemographicsOverview({ year }) {
     (async () => {
       try {
         const [ents, docs] = await Promise.all([
-          base44.entities.Entity.list('-mention_count', 500),
-          base44.entities.Document.list('-created_date', 500)
+          localClient.entities.Entity.list('-mention_count', 500),
+          localClient.entities.Document.list('-created_date', 500)
         ]);
         setEntities(ents);
         setDocuments(docs);

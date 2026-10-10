@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Users, Share2, FileText, Bell, Calendar } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const TYPE_LABELS = {
   person: 'فرد', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -22,10 +22,10 @@ export default function ChangeTracking() {
     (async () => {
       try {
         const [ents, conns, docs, alerts] = await Promise.all([
-          base44.entities.Entity.list('-created_date', 500),
-          base44.entities.Connection.list('-created_date', 500),
-          base44.entities.Document.list('-created_date', 500),
-          base44.entities.Alert.list('-created_date', 200)
+          localClient.entities.Entity.list('-created_date', 500),
+          localClient.entities.Connection.list('-created_date', 500),
+          localClient.entities.Document.list('-created_date', 500),
+          localClient.entities.Alert.list('-created_date', 200)
         ]);
         setAllEnts(ents); setAllConns(conns); setAllDocs(docs); setAllAlerts(alerts);
       } catch (e) {} finally { setLoading(false); }

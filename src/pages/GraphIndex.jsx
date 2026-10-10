@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Network, RefreshCw, Users, Share2, GitFork, Unlink, Search, ArrowRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import BarList from '@/components/BarList';
 import GraphCanvas from '@/components/GraphCanvas';
 import PathAnalysis from '@/components/PathAnalysis';
@@ -25,8 +25,8 @@ export default function GraphIndex() {
     setLoading(true);
     try {
       const [res, ents] = await Promise.all([
-        base44.functions.invoke('buildGraphIndex', {}),
-        base44.entities.Entity.list('-mention_count', 2000)
+        localClient.functions.invoke('buildGraphIndex', {}),
+        localClient.entities.Entity.list('-mention_count', 2000)
       ]);
       setData(res.data);
       setEntities(ents);
@@ -61,7 +61,7 @@ export default function GraphIndex() {
     if (!id) { setFocus(null); return; }
     setFocusLoading(true);
     try {
-      const res = await base44.functions.invoke('buildGraphIndex', { focus_id: id });
+      const res = await localClient.functions.invoke('buildGraphIndex', { focus_id: id });
       const f = res.data.focus;
       setFocus(f);
       setGNodes((prev) => {

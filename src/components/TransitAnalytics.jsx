@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { Plane, Ship, Users, AlertTriangle, ShieldCheck, Ban } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import BarList from '@/components/BarList';
 
 const STATUS_LABELS = {
@@ -46,7 +46,7 @@ export default function TransitAnalytics() {
 
   useEffect(() => {
     (async () => {
-      try { setManifests(await base44.entities.Manifest.list('-created_date', 500)); }
+      try { setManifests(await localClient.entities.Manifest.list('-created_date', 500)); }
       catch (e) {} finally { setLoading(false); }
     })();
   }, []);

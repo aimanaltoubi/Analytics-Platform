@@ -1,77 +1,101 @@
-# Base44 Project
+# Strategic Data Fusion
 
-Use this repository to run and edit the app locally, then publish changes back through Base44.
+Strategic Data Fusion is a local-first document and entity analysis application. The React interface, Node.js API, SQLite database, uploaded files, authentication, and optional AI model all run on the same computer. The application does not require a hosted backend.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+## Requirements
 
-## Prerequisites
+- Node.js 22.13 or newer
+- npm
+- Windows 10/11 for producing and testing the Windows installer
 
-1. Clone the repository using the project's Git URL.
-2. Navigate to the project directory.
-3. Install dependencies: `npm install`.
-4. Install the Base44 CLI: `npm install -g base44@latest`.
-
-See the [Base44 CLI docs](https://docs.base44.com/developers/references/cli/get-started/overview) if you want to run Base44 commands directly.
-
-## Run Locally
-
-Run the full local development environment from the project root:
+Install dependencies:
 
 ```bash
-base44 dev
+npm install
 ```
 
-`base44 dev` starts the local Base44 development backend and, when this app is configured for it, also starts the frontend dev server for you. Use the frontend URL printed by the command.
+## Local browser development
 
-For example, when the Base44 project config includes a `serveCommand`, `base44 dev` can launch the frontend too:
+Start the local API in one terminal:
 
-```json5
-{
-  "site": {
-    "serveCommand": "npm run dev"
-  }
-}
+```bash
+npm start
 ```
 
-In a Base44 project this lives in `base44/config.jsonc`.
-
-## Run Only The Frontend
-
-If you only want to work on the frontend against the hosted Base44 backend, run:
+Start Vite in a second terminal:
 
 ```bash
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the loopback URL printed by Vite. Vite proxies `/api` and `/files` to the local API at `127.0.0.1:3001`.
 
-## Use The Hosted Backend
+The first account registered becomes the local administrator. Save the recovery key displayed during registration; it is required to reset that account's password.
 
-For frontend-only development, create or update `.env.local` in the project root:
+## Desktop development
 
-```bash
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
-```
-
-`VITE_BASE44_APP_ID` identifies the Base44 app.
-
-`VITE_BASE44_APP_BASE_URL` tells the Base44 Vite plugin where to send local `/api` requests. Point it at your deployed Base44 app URL when you want the local frontend to use the hosted backend.
-
-When you use `base44 dev`, the command injects the local Base44 values for you, so `.env.local` is mainly needed for frontend-only workflows.
-
-## Publish Your Changes
-
-After pushing your changes to git, open the Base44 dashboard and publish the app:
+Build the frontend and launch Electron:
 
 ```bash
-base44 dashboard open
+npm run desktop
 ```
 
-## Docs & Support
+Electron starts the API on a random loopback port and stores persistent data under the operating system's per-user application-data directory. Browser APIs do not receive Node.js or Electron privileges.
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+## Optional local AI
 
-Base44 CLI command reference: [https://docs.base44.com/developers/references/cli/commands/introduction](https://docs.base44.com/developers/references/cli/commands/introduction)
+Database, authentication, upload, backup, CSV, text, and PDF features work without an AI model. AI extraction and analysis require a local llama.cpp server bundle.
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+For Windows packaging, extract the complete official llama.cpp CPU x64 release into `resources/ai/`, then add one GGUF instruct model. The directory must include at least:
+
+```text
+resources/ai/
+├── llama-server.exe
+├── llama-server-impl.dll
+├── llama-common.dll
+├── llama.dll
+├── ggml*.dll
+├── libomp.dll
+└── your-instruct-model.gguf
+```
+
+Use a llama.cpp build and a GGUF instruct model whose licenses permit redistribution. Runtime binaries and model files are intentionally not stored in git; their license and attribution files are. At runtime the desktop app launches the bundled server on a random loopback port; it never configures a remote AI endpoint.
+
+For desktop development on Linux or macOS, use a platform-native executable named `llama-server` in the same directory. You can alternatively set `LOCAL_AI_DIR` to an external bundle directory.
+
+## Validation
+
+```bash
+npm test
+npm run lint
+npm run build
+npm run check:offline
+```
+
+`check:offline` scans source and production assets for the removed retired hosted SDK and known remote asset hosts.
+
+## Build a Windows executable
+
+After adding the local AI resources, run on Windows:
+
+```bash
+npm run package:win
+```
+
+The NSIS installer and GGUF model sidecar are written to `release/`. Keep both files in the same directory when installing. Because NSIS installers have a 2 GB size limit, the installer copies the model from beside itself into the application rather than embedding the model in the `.exe`. If the sidecar is missing, installation succeeds with a warning and AI analysis remains unavailable.
+
+A portable executable can be built with:
+
+```bash
+npm run package:portable
+```
+
+Keep the model sidecar beside the portable executable. The desktop runtime discovers it there without copying it. Packaging deliberately stops when the complete llama.cpp runtime, license files, or a real `.gguf` model is missing.
+
+The provided Qwen2.5 14B Q4_K_M model targets computers with at least 32 GB RAM. Lower-memory deployments should substitute a smaller model and update `build/installer.nsh` to use its exact filename.
+
+## Local data and backups
+
+The desktop database and uploads remain in the current user's application-data directory and are not removed during a normal uninstall. Administrators can export and restore backups from **Settings**.
+
+Backups contain local records and uploaded files. They do not contain passwords, sessions, recovery keys, or the AI model. Backup files can still contain sensitive application data and should be protected accordingly.

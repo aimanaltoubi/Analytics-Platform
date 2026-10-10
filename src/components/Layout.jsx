@@ -1,6 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, MapPin, Bell, ShieldCheck, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon, BookOpen, Presentation } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, Bell, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon, BookOpen, Presentation } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import SystemStatus from '@/components/SystemStatus';
 import NotificationsBell from '@/components/NotificationsBell';
@@ -54,10 +53,10 @@ const navGroups = [
 ];
 
 export default function Layout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    await base44.auth.logout();
+    await logout();
     window.location.href = '/login';
   };
 

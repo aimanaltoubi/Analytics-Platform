@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, X, FileText, Users, Network as NetworkIcon } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function WorkspaceDocumentPicker({ workspace, allDocuments, selectedDocuments, onChange }) {
@@ -16,7 +16,7 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
 
   const addDocument = async (docId) => {
     const updated = [...(workspace.document_ids || []), docId];
-    await base44.entities.Workspace.update(workspace.id, { document_ids: updated });
+    await localClient.entities.Workspace.update(workspace.id, { document_ids: updated });
     setSearch('');
     onChange();
     // تشغيل التعرف على الكيانات والروابط تلقائياً إن لم يُعالَج المستند بعد
@@ -30,15 +30,15 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
     setBusy(docId);
     toast({ title: `جارٍ التعرف على الكيانات والروابط: ${title || ''}`, description: 'قد يستغرق هذا لحظات...' });
     try {
-      await base44.functions.invoke('processDocument', { document_id: docId });
+      await localClient.functions.invoke('processDocument', { document_id: docId });
       // استيراد الكيانات المُتعرَّف عليها تلقائياً إلى مساحة العمل
-      const mentions = await base44.entities.Mention.filter({ document_id: docId }, '-created_date', 500);
+      const mentions = await localClient.entities.Mention.filter({ document_id: docId }, '-created_date', 500);
       const entityIds = [...new Set(mentions.map((m) => m.entity_id).filter(Boolean))];
       const current = new Set(workspace.entity_ids || []);
       const toAdd = entityIds.filter((id) => !current.has(id));
       if (toAdd.length > 0) {
         const updated = [...(workspace.entity_ids || []), ...toAdd];
-        await base44.entities.Workspace.update(workspace.id, { entity_ids: updated });
+        await localClient.entities.Workspace.update(workspace.id, { entity_ids: updated });
       }
       toast({ title: 'اكتمل التعرف على الكيانات والروابط', description: `تمت إضافة ${toAdd.length} كيان وتحديث شبكة التحليل.` });
       onChange();
@@ -51,14 +51,14 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
 
   const removeDocument = async (docId) => {
     const updated = (workspace.document_ids || []).filter((id) => id !== docId);
-    await base44.entities.Workspace.update(workspace.id, { document_ids: updated });
+    await localClient.entities.Workspace.update(workspace.id, { document_ids: updated });
     onChange();
   };
 
   const addEntitiesFromDoc = async (docId) => {
     setBusy(docId);
     try {
-      const mentions = await base44.entities.Mention.filter({ document_id: docId }, '-created_date', 500);
+      const mentions = await localClient.entities.Mention.filter({ document_id: docId }, '-created_date', 500);
       const entityIds = [...new Set(mentions.map((m) => m.entity_id).filter(Boolean))];
       const current = new Set(workspace.entity_ids || []);
       const toAdd = entityIds.filter((id) => !current.has(id));
@@ -67,7 +67,7 @@ export default function WorkspaceDocumentPicker({ workspace, allDocuments, selec
         return;
       }
       const updated = [...(workspace.entity_ids || []), ...toAdd];
-      await base44.entities.Workspace.update(workspace.id, { entity_ids: updated });
+      await localClient.entities.Workspace.update(workspace.id, { entity_ids: updated });
       toast({ title: `تمت إضافة ${toAdd.length} كيان من المستند` });
       onChange();
     } catch (e) {

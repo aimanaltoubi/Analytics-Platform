@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, RefreshCw, CheckCircle2, XCircle, AlertOctagon, Clock } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { RefreshCw, CheckCircle2, XCircle, AlertOctagon, Clock } from 'lucide-react';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const SEV = {
@@ -29,7 +29,7 @@ export default function AlertsList() {
   const load = async () => {
     setLoading(true);
     try {
-      setAlerts(await base44.entities.Alert.list('-triggered_at', 200));
+      setAlerts(await localClient.entities.Alert.list('-triggered_at', 200));
     } catch (e) {} finally { setLoading(false); }
   };
 
@@ -38,7 +38,7 @@ export default function AlertsList() {
   const run = async () => {
     setRunning(true);
     try {
-      const res = await base44.functions.invoke('runCepAlerts', {});
+      const res = await localClient.functions.invoke('runCepAlerts', {});
       toast({ title: 'تم تشغيل المحرك', description: `${res.data.alerts_created} تنبيه جديد` });
       await load();
     } catch (e) {
@@ -47,7 +47,7 @@ export default function AlertsList() {
   };
 
   const update = async (id, status) => {
-    try { await base44.entities.Alert.update(id, { status }); await load(); }
+    try { await localClient.entities.Alert.update(id, { status }); await load(); }
     catch (e) { toast({ variant: 'destructive', title: 'فشل التحديث' }); }
   };
 

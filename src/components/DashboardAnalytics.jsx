@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Users, Share2, FileText } from 'lucide-react';
 import { Image } from '@/components/ui/image';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
 import TimelineAnalysis from '@/components/TimelineAnalysis';
 import FusionInsights from '@/components/FusionInsights';
@@ -55,9 +55,9 @@ export default function DashboardAnalytics({ year }) {
   const loadAll = async () => {
     try {
       const [ents, conns, docs] = await Promise.all([
-        base44.entities.Entity.list('-mention_count', 500),
-        base44.entities.Connection.list('-created_date', 500),
-        base44.entities.Document.list('-created_date', 500)
+        localClient.entities.Entity.list('-mention_count', 500),
+        localClient.entities.Connection.list('-created_date', 500),
+        localClient.entities.Document.list('-created_date', 500)
       ]);
       setAllEntities(ents);
       setAllConnections(conns);

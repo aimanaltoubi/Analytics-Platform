@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Search, Flag, Calendar } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import { getNationality, hasPassport, hasPhone, hasEmail, hasCoordinates, riskTier } from '@/lib/entityClassify';
 
@@ -48,7 +48,7 @@ export default function Entities() {
     (async () => {
       setLoading(true);
       try {
-        const list = await base44.entities.Entity.list('-mention_count', 300);
+        const list = await localClient.entities.Entity.list('-mention_count', 300);
         setEntities(list);
       } catch (e) {} finally { setLoading(false); }
     })();

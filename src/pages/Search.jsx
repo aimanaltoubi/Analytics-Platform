@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search as SearchIcon, Users, FileText, Share2, Zap } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
@@ -38,7 +38,7 @@ export default function Search() {
     setLoading(true);
     setSearched(true);
     try {
-      const res = await base44.functions.invoke('fuzzySearch', { query: q, limit: 50 });
+      const res = await localClient.functions.invoke('fuzzySearch', { query: q, limit: 50 });
       setResults(res.data.results || []);
       setTotal(res.data.total || 0);
     } catch (e) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Unlink, FileQuestion, Link2Off, AlertCircle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const TYPE_LABELS = {
   person: 'فرد', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -18,9 +18,9 @@ export default function IntelligenceGaps() {
     (async () => {
       try {
         const [ents, conns, docs] = await Promise.all([
-          base44.entities.Entity.list('-mention_count', 1000),
-          base44.entities.Connection.list('-created_date', 1000),
-          base44.entities.Document.list('-created_date', 500)
+          localClient.entities.Entity.list('-mention_count', 1000),
+          localClient.entities.Connection.list('-created_date', 1000),
+          localClient.entities.Document.list('-created_date', 500)
         ]);
         setEntities(ents); setConnections(conns); setDocuments(docs);
       } catch (e) {} finally { setLoading(false); }

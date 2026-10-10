@@ -163,7 +163,7 @@ Sort high-risk entities to the top of lists by default.
 
 ## 7. Component inventory to port (visual only — no logic change)
 
-These components carry the aesthetic and must be copied as-is (only swapping `base44` → `api` imports per the blueprint's §12):
+These components carry the aesthetic and must be copied as-is (only swapping `legacy hosted platform` → `api` imports per the blueprint's §12):
 
 | Component | Role in the aesthetic |
 |---|---|

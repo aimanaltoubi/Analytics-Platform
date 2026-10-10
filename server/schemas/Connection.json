@@ -1,0 +1,44 @@
+{
+  "name": "Connection",
+  "type": "object",
+  "properties": {
+    "source_entity_id": {
+      "type": "string",
+      "title": "الكيان المصدر"
+    },
+    "target_entity_id": {
+      "type": "string",
+      "title": "الكيان الهدف"
+    },
+    "source_entity_name": {
+      "type": "string",
+      "title": "اسم المصدر"
+    },
+    "target_entity_name": {
+      "type": "string",
+      "title": "اسم الهدف"
+    },
+    "relationship_type": {
+      "type": "string",
+      "title": "نوع العلاقة"
+    },
+    "document_id": {
+      "type": "string",
+      "title": "المستند المصدر"
+    },
+    "evidence": {
+      "type": "string",
+      "title": "الدليل"
+    },
+    "strength": {
+      "type": "number",
+      "default": 1,
+      "title": "القوة"
+    }
+  },
+  "required": [
+    "source_entity_id",
+    "target_entity_id",
+    "relationship_type"
+  ]
+}

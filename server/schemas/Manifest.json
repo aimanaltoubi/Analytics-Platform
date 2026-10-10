@@ -1,0 +1,115 @@
+{
+  "name": "Manifest",
+  "type": "object",
+  "properties": {
+    "manifest_type": {
+      "type": "string",
+      "enum": [
+        "passenger",
+        "cargo"
+      ],
+      "title": "نوع البيان",
+      "default": "passenger"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "air",
+        "sea"
+      ],
+      "title": "وسيلة النقل",
+      "default": "air"
+    },
+    "carrier": {
+      "type": "string",
+      "title": "الناقل"
+    },
+    "voyage_number": {
+      "type": "string",
+      "title": "رقم الرحلة"
+    },
+    "departure_location": {
+      "type": "string",
+      "title": "مكان المغادرة"
+    },
+    "destination_location": {
+      "type": "string",
+      "title": "مكان الوصول"
+    },
+    "departure_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "title": "وقت المغادرة"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "screening",
+        "cleared",
+        "flagged",
+        "intercepted"
+      ],
+      "title": "الحالة",
+      "default": "submitted"
+    },
+    "passengers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "passport_number": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "dob": {
+            "type": "string"
+          },
+          "seat": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "الركاب"
+    },
+    "cargo": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "string"
+          },
+          "consignee": {
+            "type": "string"
+          },
+          "hazardous": {
+            "type": "boolean"
+          }
+        }
+      },
+      "title": "الشحنات"
+    },
+    "screening_summary": {
+      "type": "object",
+      "title": "ملخص الفحص"
+    },
+    "submitted_by": {
+      "type": "string",
+      "title": "مُقدّم البيان"
+    }
+  },
+  "required": [
+    "manifest_type",
+    "carrier",
+    "voyage_number"
+  ]
+}

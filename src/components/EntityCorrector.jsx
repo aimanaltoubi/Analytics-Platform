@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Check, X, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_OPTIONS = [
@@ -40,7 +40,7 @@ export default function EntityCorrector({ entity, onSaved }) {
     }
     setSaving(true);
     try {
-      const updated = await base44.entities.Entity.update(entity.id, {
+      const updated = await localClient.entities.Entity.update(entity.id, {
         name: name.trim(),
         type
       });

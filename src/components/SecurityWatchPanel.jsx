@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldAlert, Flag, Eye, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
@@ -31,8 +31,8 @@ export default function SecurityWatchPanel() {
       setLoading(true);
       try {
         const [all, profs] = await Promise.all([
-          base44.entities.Entity.list('-risk_score', 300),
-          base44.entities.RiskProfile.list('-created_date', 100)
+          localClient.entities.Entity.list('-risk_score', 300),
+          localClient.entities.RiskProfile.list('-created_date', 100)
         ]);
         setEntities((all || []).filter((e) => e.watchlist || (e.risk_score || 0) > 0));
         setProfiles((profs || []).filter((p) => p.enabled));

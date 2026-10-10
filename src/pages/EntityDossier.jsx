@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, FileText, Share2, Users, Flag, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { Image } from '@/components/ui/image';
 import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
@@ -26,13 +26,13 @@ export default function EntityDossier() {
     (async () => {
       setLoading(true);
       try {
-        const ent = await base44.entities.Entity.get(id);
+        const ent = await localClient.entities.Entity.get(id);
         setEntity(ent);
         const [conns, ment, allEnts, allDocs] = await Promise.all([
-          base44.entities.Connection.list('-created_date', 500),
-          base44.entities.Mention.filter({ entity_id: id }, '-created_date', 100),
-          base44.entities.Entity.list('-mention_count', 1000),
-          base44.entities.Document.list('-created_date', 500)
+          localClient.entities.Connection.list('-created_date', 500),
+          localClient.entities.Mention.filter({ entity_id: id }, '-created_date', 100),
+          localClient.entities.Entity.list('-mention_count', 1000),
+          localClient.entities.Document.list('-created_date', 500)
         ]);
         const nm = {}; allEnts.forEach((e) => { nm[e.id] = e.name; });
         setNameMap(nm);

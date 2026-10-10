@@ -1,0 +1,59 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "العنوان"
+    },
+    "message": {
+      "type": "string",
+      "title": "الرسالة"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "high_risk_entity",
+        "watchlist_match",
+        "info"
+      ],
+      "title": "نوع التنبيه",
+      "default": "info"
+    },
+    "entity_id": {
+      "type": "string",
+      "title": "الكيان"
+    },
+    "entity_name": {
+      "type": "string",
+      "title": "اسم الكيان"
+    },
+    "document_id": {
+      "type": "string",
+      "title": "المستند"
+    },
+    "document_title": {
+      "type": "string",
+      "title": "عنوان المستند"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "الخطورة",
+      "default": "medium"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "title": "مقروء"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

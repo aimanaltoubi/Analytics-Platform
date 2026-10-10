@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Brain, RefreshCw, Network, GitBranch, Link2, ShieldAlert, Users, Layers, AlertTriangle, Sparkles, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const DOC_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -22,8 +22,8 @@ export default function FusionInsights() {
     setRunning(true);
     try {
       const [res, conns] = await Promise.all([
-        base44.functions.invoke('runFusion', {}),
-        base44.entities.Connection.list('-created_date', 500)
+        localClient.functions.invoke('runFusion', {}),
+        localClient.entities.Connection.list('-created_date', 500)
       ]);
       setInsights(res.data);
       setConnections(conns);

@@ -1,5 +1,5 @@
 import { Download } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 function escapeCell(v) {
@@ -58,7 +58,7 @@ export default function WorkspaceCsvExport({ workspace, entities }) {
       return;
     }
     try {
-      const conns = await base44.entities.Connection.list('-created_date', 500);
+      const conns = await localClient.entities.Connection.list('-created_date', 500);
       const filtered = conns.filter((c) => entityIds.has(c.source_entity_id) || entityIds.has(c.target_entity_id));
       if (filtered.length === 0) {
         toast({ title: 'لا توجد روابط بين كيانات المساحة', variant: 'destructive' });

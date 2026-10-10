@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import EntityCorrector from '@/components/EntityCorrector';
 
@@ -25,11 +25,11 @@ export default function DocumentDetail() {
   const load = async () => {
     setLoading(true);
     try {
-      const d = await base44.entities.Document.get(id);
+      const d = await localClient.entities.Document.get(id);
       setDoc(d);
       const [ents, conns] = await Promise.all([
-        base44.entities.Entity.filter({ document_ids: id }, '-mention_count', 50),
-        base44.entities.Connection.filter({ document_id: id }, '-created_date', 100)
+        localClient.entities.Entity.filter({ document_ids: id }, '-mention_count', 50),
+        localClient.entities.Connection.filter({ document_id: id }, '-created_date', 100)
       ]);
       setEntities(ents);
       setConnections(conns);
@@ -41,7 +41,7 @@ export default function DocumentDetail() {
   const handleReprocess = async () => {
     setReprocessing(true);
     try {
-      const res = await base44.functions.invoke('processDocument', { document_id: id });
+      const res = await localClient.functions.invoke('processDocument', { document_id: id });
       const result = res.data || {};
       toast({
         title: 'تمت إعادة التحليل',

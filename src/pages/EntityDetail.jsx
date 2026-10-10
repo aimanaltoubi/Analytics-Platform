@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, Users, Share2, FileText, Flag, Save, GitMerge } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
 import InvestigationReport from '@/components/InvestigationReport';
@@ -40,15 +40,15 @@ export default function EntityDetail() {
     (async () => {
       setLoading(true);
       try {
-        const ent = await base44.entities.Entity.get(id);
+        const ent = await localClient.entities.Entity.get(id);
         setEntity(ent);
         setRiskScore(ent.risk_score || 0);
         setWatchlist(!!ent.watchlist);
         setNotes(ent.notes || '');
         const [conns, ment, allEnts] = await Promise.all([
-          base44.entities.Connection.list('-created_date', 200),
-          base44.entities.Mention.filter({ entity_id: id }, '-created_date', 50),
-          base44.entities.Entity.list('-mention_count', 1000)
+          localClient.entities.Connection.list('-created_date', 200),
+          localClient.entities.Mention.filter({ entity_id: id }, '-created_date', 50),
+          localClient.entities.Entity.list('-mention_count', 1000)
         ]);
         const nm = {};
         allEnts.forEach((e) => { nm[e.id] = e.name; });
@@ -65,7 +65,7 @@ export default function EntityDetail() {
   const saveFlags = async () => {
     setSaving(true);
     try {
-      const updated = await base44.entities.Entity.update(id, { risk_score: riskScore, watchlist });
+      const updated = await localClient.entities.Entity.update(id, { risk_score: riskScore, watchlist });
       setEntity(updated);
       toast({ title: 'تم حفظ التغييرات' });
     } catch (e) {
@@ -76,7 +76,7 @@ export default function EntityDetail() {
   const saveNotes = async () => {
     setSavingNotes(true);
     try {
-      const updated = await base44.entities.Entity.update(id, { notes });
+      const updated = await localClient.entities.Entity.update(id, { notes });
       setEntity(updated);
       toast({ title: 'تم حفظ الملاحظات' });
     } catch (e) {

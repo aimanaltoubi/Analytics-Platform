@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Plus, X, Users, FileText, Network as NetworkIcon, Clock, Table2, Share2, FileBarChart2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import WorkspaceDocumentPicker from '@/components/WorkspaceDocumentPicker';
@@ -32,12 +32,12 @@ export default function WorkspaceDetail() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const ws = await base44.entities.Workspace.get(id);
+      const ws = await localClient.entities.Workspace.get(id);
       setWorkspace(ws);
       const [allEnts, allDocs, allConns] = await Promise.all([
-        base44.entities.Entity.list('-mention_count', 300),
-        base44.entities.Document.list('-created_date', 100),
-        base44.entities.Connection.list('-created_date', 500)
+        localClient.entities.Entity.list('-mention_count', 300),
+        localClient.entities.Document.list('-created_date', 100),
+        localClient.entities.Connection.list('-created_date', 500)
       ]);
       setAllEntities(allEnts);
       setAllDocuments(allDocs);
@@ -61,14 +61,14 @@ export default function WorkspaceDetail() {
     const current = workspace.entity_ids || [];
     if (current.includes(entityId)) return;
     const updated = [...current, entityId];
-    await base44.entities.Workspace.update(id, { entity_ids: updated });
+    await localClient.entities.Workspace.update(id, { entity_ids: updated });
     setWorkspace({ ...workspace, entity_ids: updated });
     setEntities((prev) => [...prev, allEntities.find((e) => e.id === entityId)]);
   };
 
   const removeEntity = async (entityId) => {
     const updated = (workspace.entity_ids || []).filter((eid) => eid !== entityId);
-    await base44.entities.Workspace.update(id, { entity_ids: updated });
+    await localClient.entities.Workspace.update(id, { entity_ids: updated });
     setWorkspace({ ...workspace, entity_ids: updated });
     setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };

@@ -1,0 +1,19 @@
+Bundled local AI components
+===========================
+
+llama.cpp b11541
+Source: https://github.com/ggml-org/llama.cpp/releases/tag/b11541
+Artifact: llama-b11541-bin-win-cpu-x64.zip
+SHA-256: cdc0535d11038bb337dfba3c15682050eaa9c07aedd0f915b4c09e8a8e8c0a5c
+License: MIT (see LICENSE-llama.cpp)
+
+Qwen2.5 14B Instruct Q4_K_M GGUF
+Base model: https://huggingface.co/Qwen/Qwen2.5-14B-Instruct
+Quantization: https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF
+Artifact: Qwen2.5-14B-Instruct-Q4_K_M.gguf
+SHA-256: e47ad95dad6ff848b431053b375adb5d39321290ea2c638682577dafca87c008
+License: Apache License 2.0 (see LICENSE-Qwen2.5)
+
+LLVM OpenMP runtime
+Distributed with the llama.cpp CPU artifact.
+License: see LICENSE-LLVM-OpenMP.

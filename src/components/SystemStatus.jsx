@@ -1,23 +1,29 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, AlertTriangle } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 export default function SystemStatus() {
   const [processing, setProcessing] = useState(0);
   const [newAlerts, setNewAlerts] = useState(0);
   const [now, setNow] = useState(new Date());
+  const [available, setAvailable] = useState(false);
+  const [error, setError] = useState('');
 
   const load = async () => {
     try {
-      const [docs, alerts] = await Promise.all([
-        base44.entities.Document.list('-created_date', 50),
-        base44.entities.Alert.filter({ status: 'new' }, '-created_date', 50)
+      const [docs, alerts, status] = await Promise.all([
+        localClient.entities.Document.list('-created_date', 50),
+        localClient.entities.Alert.filter({ status: 'new' }, '-created_date', 50),
+        localClient.status()
       ]);
       setProcessing(docs.filter((d) => d.status === 'processing' || d.status === 'pending').length);
       setNewAlerts(alerts.length);
+      setAvailable(status.ai?.available === true);
+      setError('');
     } catch (e) {
-      // ignore
+      console.error('Could not load local system status', e);
+      setError(e.message);
     }
   };
 
@@ -47,8 +53,8 @@ export default function SystemStatus() {
         <span className="font-mono tabular-nums">{date}</span>
         <span className="font-mono tabular-nums text-foreground font-medium">{time}</span>
         <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          النظام يعمل
+          <span className={`w-1.5 h-1.5 rounded-full ${error ? 'bg-red-500' : available ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          {error ? 'تعذّر الاتصال' : available ? 'تحليل محلي جاهز' : 'النموذج غير جاهز'}
         </span>
       </div>
     </div>

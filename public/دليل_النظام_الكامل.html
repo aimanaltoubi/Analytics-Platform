@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الدليل الشامل لنظام محلّل الكيانات — Strategic Data Fusion</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f4f4f5; --card:#ffffff; --fg:#222233; --muted:#6b7280;
@@ -12,7 +11,7 @@
     --accent:#f8f9fa; --code:#374151;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Cairo',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7}
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--fg);line-height:1.7}
   a{color:var(--primary);text-decoration:none}
   a:hover{text-decoration:underline}
   .cover{background:linear-gradient(135deg,#3a0a0a 0%,#7a1414 55%,#a31d1d 100%);color:#fff;padding:64px 32px;text-align:center;position:relative;overflow:hidden}
@@ -121,7 +120,7 @@
         <li><b>تحديث يدوي:</b> زر لإعادة تحميل البيانات.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/</span></div><iframe src="https://honored-link-trace-hub.base44.app/" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/</span></div><iframe src="http://localhost:5173/" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="documents">
       <div class="section-head"><div class="num">٢</div><h2>المستندات <span class="route-tag">/documents</span></h2></div>
@@ -134,7 +133,7 @@
         <li><b>التنقل:</b> النقر على أي مستند يفتح صفحة تفاصيله (النص المستخرج، الملخص، الكيانات، الروابط، التاريخ المرجعي).</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/documents</span></div><iframe src="https://honored-link-trace-hub.base44.app/documents" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/documents</span></div><iframe src="http://localhost:5173/documents" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="import">
       <div class="section-head"><div class="num">٣</div><h2>استيراد البيانات <span class="route-tag">/import</span></h2></div>
@@ -148,7 +147,7 @@
       </ul></div>
       <div class="note"><b>تنسيق CSV المختصر:</b> الأعمدة <code>name</code>/<code>type</code> (person · company · organization) + أي سمات (passport, phone, nationality)، واختيارياً <code>source</code>/<code>target</code>/<code>relationship</code> لإنشاء روابط.</div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/import</span></div><iframe src="https://honored-link-trace-hub.base44.app/import" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/import</span></div><iframe src="http://localhost:5173/import" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="entities">
       <div class="section-head"><div class="num">٤</div><h2>الكيانات <span class="route-tag">/entities</span></h2></div>
@@ -162,7 +161,7 @@
         <li><b>صفحة التفاصيل:</b> سمات تفصيلية، أسماء بديلة، روابط، ذكر في المستندات، خط زمني، تقرير تحقيق، ودمج الكيانات.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/entities</span></div><iframe src="https://honored-link-trace-hub.base44.app/entities" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/entities</span></div><iframe src="http://localhost:5173/entities" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="database">
       <div class="section-head"><div class="num">٥</div><h2>قاعدة البيانات <span class="route-tag">/database</span></h2></div>
@@ -175,7 +174,7 @@
         <li><b>التنقل للملف الكامل:</b> زر للانتقال إلى صفحة الكيان التفصيلية.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/database</span></div><iframe src="https://honored-link-trace-hub.base44.app/database" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/database</span></div><iframe src="http://localhost:5173/database" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="graph">
       <div class="section-head"><div class="num">٦</div><h2>فهرس العلاقات <span class="route-tag">/graph</span></h2></div>
@@ -191,7 +190,7 @@
         <li><b>تحليل المسار:</b> أداة مدمجة لاكتشاف مسار العلاقة بين كيانين.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/graph</span></div><iframe src="https://honored-link-trace-hub.base44.app/graph" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/graph</span></div><iframe src="http://localhost:5173/graph" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="company">
       <div class="section-head"><div class="num">٧</div><h2>شبكة الشركات <span class="route-tag">/company-network</span></h2></div>
@@ -204,7 +203,7 @@
         <li><b>قائمة الشركات:</b> ترتيب الشركات حسب المركزية والروابط.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/company-network</span></div><iframe src="https://honored-link-trace-hub.base44.app/company-network" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/company-network</span></div><iframe src="http://localhost:5173/company-network" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="workspaces">
       <div class="section-head"><div class="num">٨</div><h2>مساحات العمل <span class="route-tag">/workspaces</span></h2></div>
@@ -217,7 +216,7 @@
         <li><b>إدارة الكيانات:</b> إضافة وحذف كيانات من المساحة مع بحث.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/workspaces</span></div><iframe src="https://honored-link-trace-hub.base44.app/workspaces" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/workspaces</span></div><iframe src="http://localhost:5173/workspaces" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="yearly">
       <div class="section-head"><div class="num">٩</div><h2>الإحصاءات السنوية <span class="route-tag">/yearly-stats</span></h2></div>
@@ -231,7 +230,7 @@
         <li><b>أعلى الكيانات:</b> ترتيب الكيانات الأكثر ذكراً في تلك السنة.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/yearly-stats</span></div><iframe src="https://honored-link-trace-hub.base44.app/yearly-stats" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/yearly-stats</span></div><iframe src="http://localhost:5173/yearly-stats" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="search">
       <div class="section-head"><div class="num">١٠</div><h2>البحث الضبابي <span class="route-tag">/search</span></h2></div>
@@ -243,7 +242,7 @@
         <li><b>وصول سريع:</b> حقل البحث في الشريط العلوي مع اختصار «/».</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/search</span></div><iframe src="https://honored-link-trace-hub.base44.app/search" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/search</span></div><iframe src="http://localhost:5173/search" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="clir">
       <div class="section-head"><div class="num">١١</div><h2>البحث عبر اللغات (CLIR) <span class="route-tag">/clir</span></h2></div>
@@ -255,7 +254,7 @@
         <li><b>مثال جاهز:</b> حقل بحث مع مثال توضيحي.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/clir</span></div><iframe src="https://honored-link-trace-hub.base44.app/clir" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/clir</span></div><iframe src="http://localhost:5173/clir" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="path">
       <div class="section-head"><div class="num">١٢</div><h2>مسار العلاقات <span class="route-tag">/path-analysis</span></h2></div>
@@ -267,7 +266,7 @@
         <li><b>تفاصيل كل خطوة:</b> نوع العلاقة والدليل لكل حافة.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/path-analysis</span></div><iframe src="https://honored-link-trace-hub.base44.app/path-analysis" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/path-analysis</span></div><iframe src="http://localhost:5173/path-analysis" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="changes">
       <div class="section-head"><div class="num">١٣</div><h2>تتبع التغيّرات <span class="route-tag">/changes</span></h2></div>
@@ -279,7 +278,7 @@
         <li><b>تنقل مباشر:</b> النقر ينقل إلى الكيان أو المستند أو التنبيه.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/changes</span></div><iframe src="https://honored-link-trace-hub.base44.app/changes" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/changes</span></div><iframe src="http://localhost:5173/changes" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="gaps">
       <div class="section-head"><div class="num">١٤</div><h2>الفجوات التحليلية <span class="route-tag">/gaps</span></h2></div>
@@ -293,7 +292,7 @@
         <li><b>بطاقات تفاعلية:</b> عدّاد لكل فجوة مع قائمة عناصرها وروابط للوصول.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/gaps</span></div><iframe src="https://honored-link-trace-hub.base44.app/gaps" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/gaps</span></div><iframe src="http://localhost:5173/gaps" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="compare">
       <div class="section-head"><div class="num">١٥</div><h2>مقارنة الفترات <span class="route-tag">/compare</span></h2></div>
@@ -305,7 +304,7 @@
         <li><b>أعلى الكيانات لكل فترة:</b> ترتيب مقارن جنباً إلى جنب.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/compare</span></div><iframe src="https://honored-link-trace-hub.base44.app/compare" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/compare</span></div><iframe src="http://localhost:5173/compare" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="alerts">
       <div class="section-head"><div class="num">١٦</div><h2>التنبيهات <span class="route-tag">/alerts</span></h2></div>
@@ -318,7 +317,7 @@
         <li><b>إشعارات بريد:</b> تُرسل تلقائياً إلى وجهة الإشعار المعدّة في الإعدادات.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/alerts</span></div><iframe src="https://honored-link-trace-hub.base44.app/alerts" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/alerts</span></div><iframe src="http://localhost:5173/alerts" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
     <section class="section" id="settings">
       <div class="section-head"><div class="num">١٧</div><h2>الإعدادات <span class="route-tag">/settings</span></h2></div>
@@ -329,7 +328,7 @@
         <li><b>حفظ آمن:</b> تُخزّن الإعدادات في كيان «Setting» مركزي.</li>
       </ul></div>
       <div class="screen-label"><span>شاشة حيّة من النظام</span><span class="live-dot">مباشر</span></div>
-      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">honored-link-trace-hub.base44.app/settings</span></div><iframe src="https://honored-link-trace-hub.base44.app/settings" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+      <div class="frame-wrap"><div class="frame-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="url">localhost:5173/settings</span></div><iframe src="http://localhost:5173/settings" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
     </section>
   </main>
 </div>

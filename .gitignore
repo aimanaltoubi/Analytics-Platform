@@ -29,4 +29,11 @@ dist-ssr
 
 .env
 .vite
-base44/.app.jsonc
+release/
+.local-data/
+resources/ai/*
+!resources/ai/.gitkeep
+!resources/ai/LICENSE-*
+!resources/ai/THIRD_PARTY_NOTICES.txt
+.agents/
+skills-lock.json

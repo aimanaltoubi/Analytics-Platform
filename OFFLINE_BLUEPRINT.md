@@ -2,7 +2,7 @@
 
 A complete, buildable specification for a **fully offline, air-gapped** port of the current link-analysis system. Nothing in this blueprint requires internet at runtime — no cloud DB, no cloud LLM, no cloud storage, no online map tiles.
 
-This document is self-contained: a developer can follow it end-to-end without referring back to the Base44-hosted app.
+This document is self-contained: a developer can follow it end-to-end without referring back to the previous hosted app.
 
 ---
 
@@ -16,7 +16,7 @@ This document is self-contained: a developer can follow it end-to-end without re
 | **Local files** | Uploaded PDFs/text stored on the local filesystem under a data directory. |
 | **Local maps** | Pre-downloaded **OpenStreetMap raster tiles** served by a local tile server. |
 | **Local auth** | Single-user (or multi-user) accounts stored in the local DB; bcrypt-hashed passwords. No external identity provider. |
-| **Same data model** | Entity schemas are ported 1:1 from the current Base44 entities so logic transfers with minimal change. |
+| **Same data model** | Entity schemas are ported 1:1 from the current previous entity schemas so logic transfers with minimal change. |
 | **Same UI** | The React + Tailwind frontend is reused almost verbatim; only the API client is swapped. |
 
 ---
@@ -106,9 +106,9 @@ entity-analyzer-offline/
 │   │   ├── workspaces.js
 │   │   └── manifests.js
 │   ├── services/
-│   │   ├── nerPipeline.js         # PORT of base44/shared/nerPipeline.ts
-│   │   ├── alertEngine.js         # PORT of base44/shared/alertEngine.ts
-│   │   ├── entityResolution.js   # PORT of base44/shared/entityResolution.ts
+│   │   ├── nerPipeline.js         # PORT of legacy/shared/nerPipeline.ts
+│   │   ├── alertEngine.js         # PORT of legacy/shared/alertEngine.ts
+│   │   ├── entityResolution.js   # PORT of legacy/shared/entityResolution.ts
 │   │   ├── pdfExtract.js          # local PDF → text
 │   │   └── ollama.js              # localhost LLM client
 │   └── utils/
@@ -119,7 +119,7 @@ entity-analyzer-offline/
     ├── index.html
     ├── src/
     │   ├── main.jsx
-    │   ├── App.jsx                # router (reused, minus Base44 wrappers)
+    │   ├── App.jsx                # router (reused, minus hosted-backend wrappers)
     │   ├── api/
     │   │   └── client.js          # fetch wrapper → localhost:3001
     │   ├── components/            # reused from current app
@@ -133,12 +133,12 @@ entity-analyzer-offline/
 
 ## 5. Data Models (ported 1:1 from current entities)
 
-The current Base44 entities map directly to SQLite tables. Built-in fields (`id`, `created_date`, `updated_date`, `created_by_id`) become real columns.
+The current previous entity schemas map directly to SQLite tables. Built-in fields (`id`, `created_date`, `updated_date`, `created_by_id`) become real columns.
 
 ### `schema.sql`
 
 ```sql
--- Users (local auth; replaces Base44's built-in User entity)
+-- Users (local auth; replaces the previous built-in User entity)
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -349,7 +349,7 @@ POST /v1/chat/completions
 
 ## 7. NER Pipeline — Port of `nerPipeline.ts`
 
-The current pipeline (`base44/shared/nerPipeline.ts`) is plain TypeScript and ports almost directly. The **only** change is the LLM call. Below is the ported Node module.
+The current pipeline (`legacy/shared/nerPipeline.ts`) is plain TypeScript and ports almost directly. The **only** change is the LLM call. Below is the ported Node module.
 
 ### `server/services/ollama.js`
 
@@ -621,7 +621,7 @@ export async function extractPdfText(filePath) {
 
 ## 8. Entity Resolution — Port of `entityResolution.ts`
 
-This file is **pure functions with zero platform dependencies** — it ports verbatim. Copy `base44/shared/entityResolution.ts` to `server/services/entityResolution.js` and change only:
+This file is **pure functions with zero platform dependencies** — it ports verbatim. Copy `legacy/shared/entityResolution.ts` to `server/services/entityResolution.js` and change only:
 
 ```diff
 - export function norm(s) { ... }
@@ -813,7 +813,7 @@ export function authMiddleware(req, res, next) {
 
 The React frontend reuses **~90%** of the current code. Changes:
 
-1. **Replace `@/api/base44Client`** with a local fetch wrapper:
+1. **Replace `@/api/localClient`** with a local fetch wrapper:
 
 ### `client/src/api/client.js`
 
@@ -839,7 +839,7 @@ async function request(path, opts = {}) {
   return res.json();
 }
 
-// Entity-style API mirroring base44.entities.Entity.method()
+// Entity-style API mirroring api.entities.Entity.method()
 function makeEntity(name) {
   return {
     list: (sort, limit) => request(`/${name}?sort=${sort||''}&limit=${limit||100}`),
@@ -881,14 +881,14 @@ export const api = {
 ```
 
 2. **Find-and-replace** across the frontend:
-   - `from '@/api/base44Client'` → `from '@/api/client'`
-   - `base44.entities.X` → `api.entities.X`
-   - `base44.auth.me()` → `api.auth.me()`
-   - `base44.auth.logout()` → `api.auth.logout()`
-   - `base44.integrations.Core.UploadFile({file})` → upload to `POST /api/upload` (returns `{ file_url }` = local path)
+   - `from '@/api/localClient'` → `from '@/api/client'`
+   - `api.entities.X` → `api.entities.X`
+   - `api.auth.me()` → `api.auth.me()`
+   - `api.auth.logout()` → `api.auth.logout()`
+   - `localApi.integrations.Core.UploadFile({file})` → upload to `POST /api/upload` (returns `{ file_url }` = local path)
    - Remove `ProtectedRoute`, `AuthProvider` cloud wrappers → replace with local JWT check.
 
-3. **Realtime subscriptions** — the current app uses `base44.entities.X.subscribe()`. Offline, replace with either:
+3. **Realtime subscriptions** — the current app uses `api.entities.X.subscribe()`. Offline, replace with either:
    - **Polling** (simplest): `setInterval` every 5s on the notifications list.
    - **WebSocket** (better): add `ws` on the Express server, emit on DB writes.
 
@@ -1006,9 +1006,9 @@ npm install -D nodemon
 
 # 6. Create the folder structure from §4
 # 7. Copy shared logic:
-#    base44/shared/entityResolution.ts → server/services/entityResolution.js
-#    base44/shared/nerPipeline.ts      → server/services/nerPipeline.js (per §7)
-#    base44/shared/alertEngine.ts      → server/services/alertEngine.js (per §9)
+#    legacy/shared/entityResolution.ts → server/services/entityResolution.js
+#    legacy/shared/nerPipeline.ts      → server/services/nerPipeline.js (per §7)
+#    legacy/shared/alertEngine.ts      → server/services/alertEngine.js (per §9)
 # 8. Copy frontend from current app's src/ → client/src/, apply §12 changes
 # 9. Test end-to-end while online:
 cd server && npm run dev        # API on :3001
@@ -1076,7 +1076,7 @@ If you want to bring your current cloud data offline:
 | `CreateFileSignedUrl` (private files) | Cloud signed URLs | Serve from local Express route |
 | `GenerateImage` (entity photos) | Cloud image AI | Pre-load photos, or use initials avatars |
 | `SendEmail` (notifications) | Cloud email | In-app notifications only (already built) |
-| `base44.entities.X.subscribe()` (realtime) | Cloud websocket | **Polling** (§13) or local WebSocket |
+| `api.entities.X.subscribe()` (realtime) | Cloud websocket | **Polling** (§13) or local WebSocket |
 | Cloud auth (Google OAuth, OTP) | Cloud identity | **Local bcrypt + JWT** (§11) |
 | Satellite map tiles | Esri online | Drop satellite, or pre-stage imagery `.mbtiles` |
 | `TranscribeAudio` | Cloud Whisper | Local `whisper.cpp` (if needed) |
@@ -1114,7 +1114,7 @@ If you want to bring your current cloud data offline:
 - [ ] `pdfExtract.js` working on sample PDFs
 - [ ] Express routes wired for all entities
 - [ ] Local auth (bcrypt + JWT) + admin user created
-- [ ] Frontend ported (`base44` → `api` client)
+- [ ] Frontend ported (`legacy hosted platform` → `api` client)
 - [ ] Leaflet pointed at local tile server
 - [ ] OSM `.mbtiles` downloaded + `tileserver-gl` running
 - [ ] Notifications polling working
@@ -1123,4 +1123,4 @@ If you want to bring your current cloud data offline:
 
 ---
 
-*This blueprint is a faithful port of the current Base44-hosted "محلّل الكيانات" system. The entity schemas, NER prompt, entity-resolution algorithms, and alert-engine rules are preserved exactly; only the runtime substrate (cloud → local) changes.*
+*This blueprint is a faithful port of the current implementation-hosted "محلّل الكيانات" system. The entity schemas, NER prompt, entity-resolution algorithms, and alert-engine rules are preserved exactly; only the runtime substrate (cloud → local) changes.*

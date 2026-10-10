@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, FileText, Loader2, X, Link2, CheckCircle2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_LABELS = {
@@ -45,9 +45,9 @@ export default function WorkspacePdfLoader({ workspace, onLoaded }) {
     setStage('رفع الملف...');
     setAnalysis(null);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await localClient.integrations.Core.UploadFile({ file });
       setStage('إنشاء سجل المستند...');
-      const doc = await base44.entities.Document.create({
+      const doc = await localClient.entities.Document.create({
         title: title || file.name,
         document_type: docType,
         file_url,
@@ -55,16 +55,16 @@ export default function WorkspacePdfLoader({ workspace, onLoaded }) {
       });
 
       setStage('استخراج النص وتحليل الكيانات...');
-      const res = await base44.functions.invoke('processDocument', { document_id: doc.id });
+      const res = await localClient.functions.invoke('processDocument', { document_id: doc.id });
       const result = res.data || {};
 
       const previousDocIds = (workspace.document_ids || []).filter((id) => id !== doc.id);
-      await base44.entities.Workspace.update(workspace.id, {
+      await localClient.entities.Workspace.update(workspace.id, {
         document_ids: [...previousDocIds, doc.id]
       });
 
       setStage('فحص الروابط المشتركة مع المستندات السابقة...');
-      const allMentions = await base44.entities.Mention.list('-created_date', 500);
+      const allMentions = await localClient.entities.Mention.list('-created_date', 500);
       const newDocMentions = allMentions.filter((m) => m.document_id === doc.id);
       const previousMentions = allMentions.filter((m) => previousDocIds.includes(m.document_id));
 
@@ -82,12 +82,12 @@ export default function WorkspacePdfLoader({ workspace, onLoaded }) {
       const matchedEntities = [];
       for (const id of matchedEntityIds) {
         try {
-          const ent = await base44.entities.Entity.get(id);
+          const ent = await localClient.entities.Entity.get(id);
           matchedEntities.push({ ...ent, previousDocs: previousEntityMap[id] });
         } catch (e) {}
       }
 
-      const allConnections = await base44.entities.Connection.list('-created_date', 500);
+      const allConnections = await localClient.entities.Connection.list('-created_date', 500);
       const crossConnections = allConnections.filter(
         (c) => c.document_id === doc.id &&
           (previousEntityIds.has(c.source_entity_id) || previousEntityIds.has(c.target_entity_id))

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft, Calendar } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import DashboardAnalytics from '@/components/DashboardAnalytics';
 import DemographicsOverview from '@/components/DemographicsOverview';
 import { availableYears, docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
@@ -64,10 +64,10 @@ export default function Home() {
   const load = async () => {
     try {
       const [docs, ents, conns, alerts] = await Promise.all([
-        base44.entities.Document.list('-created_date', 500),
-        base44.entities.Entity.list('-mention_count', 500),
-        base44.entities.Connection.list('-created_date', 500),
-        base44.entities.Alert.filter({ status: 'new' }, '-created_date', 50)
+        localClient.entities.Document.list('-created_date', 500),
+        localClient.entities.Entity.list('-mention_count', 500),
+        localClient.entities.Connection.list('-created_date', 500),
+        localClient.entities.Alert.filter({ status: 'new' }, '-created_date', 50)
       ]);
       setAllDocs(docs);
       setAllEntities(ents);

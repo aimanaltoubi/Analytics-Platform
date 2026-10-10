@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCheck, AlertTriangle, Flag, FileText, X } from 'lucide-react';
+import { Bell, CheckCheck, AlertTriangle, Flag, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const SEV_STYLE = {
@@ -34,12 +34,12 @@ export default function NotificationsBell() {
     let unsub;
     (async () => {
       try {
-        const list = await base44.entities.Notification.list('-created_date', 30);
+        const list = await localClient.entities.Notification.list('-created_date', 30);
         setNotifications(list);
         list.forEach((n) => seenIds.current.add(n.id));
       } catch (e) {} finally { setLoading(false); }
 
-      unsub = base44.entities.Notification.subscribe((event) => {
+      unsub = localClient.entities.Notification.subscribe((event) => {
         if (event.type === 'create' && event.data) {
           const n = event.data;
           if (seenIds.current.has(n.id)) return;
@@ -60,14 +60,14 @@ export default function NotificationsBell() {
   const unread = notifications.filter((n) => !n.read).length;
 
   const markRead = async (id) => {
-    try { await base44.entities.Notification.update(id, { read: true }); } catch (e) {}
+    try { await localClient.entities.Notification.update(id, { read: true }); } catch (e) {}
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
 
   const markAllRead = async () => {
     const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadIds.length === 0) return;
-    try { await base44.entities.Notification.bulkUpdate(unreadIds.map((id) => ({ id, read: true }))); } catch (e) {}
+    try { await localClient.entities.Notification.bulkUpdate(unreadIds.map((id) => ({ id, read: true }))); } catch (e) {}
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 

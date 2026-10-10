@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Search } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import DocumentUploader from '@/components/DocumentUploader';
 
 const TYPE_LABELS = {
@@ -29,7 +29,7 @@ export default function Documents() {
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.Document.list('-created_date', 100);
+      const list = await localClient.entities.Document.list('-created_date', 100);
       setDocs(list);
     } catch (e) {} finally { setLoading(false); }
   };

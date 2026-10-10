@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText, Users, Share2, Bell, ShieldAlert, Flag, Calendar, BarChart3,
-  GitBranch, Network as NetworkIcon, AlertTriangle, Boxes, Link2, Unlink,
+  GitBranch, AlertTriangle, Boxes, Link2, Unlink,
   TrendingUp, Activity, Gauge, RefreshCw
 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { availableYears, docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
 import TopEntitiesChart from '@/components/TopEntitiesChart';
 import BarList from '@/components/BarList';
@@ -93,11 +93,11 @@ export default function YearlyStats() {
   const load = async () => {
     try {
       const [docs, ents, conns, alerts, manifests] = await Promise.all([
-        base44.entities.Document.list('-created_date', 500),
-        base44.entities.Entity.list('-mention_count', 500),
-        base44.entities.Connection.list('-created_date', 500),
-        base44.entities.Alert.list('-created_date', 500),
-        base44.entities.Manifest.list('-created_date', 200)
+        localClient.entities.Document.list('-created_date', 500),
+        localClient.entities.Entity.list('-mention_count', 500),
+        localClient.entities.Connection.list('-created_date', 500),
+        localClient.entities.Alert.list('-created_date', 500),
+        localClient.entities.Manifest.list('-created_date', 200)
       ]);
       setAllDocs(docs); setAllEntities(ents); setAllConns(conns); setAllAlerts(alerts); setAllManifests(manifests);
     } catch (e) { /* ignore */ } finally { setLoading(false); setRefreshing(false); }

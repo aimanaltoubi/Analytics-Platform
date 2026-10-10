@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Globe } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { Image } from '@/components/ui/image';
 
 export default function NationalityDetail() {
@@ -14,7 +14,7 @@ export default function NationalityDetail() {
     (async () => {
       setLoading(true);
       try {
-        const all = await base44.entities.Entity.list('-mention_count', 1000);
+        const all = await localClient.entities.Entity.list('-mention_count', 1000);
         setEntities(
           all.filter(
             (e) => e.type === 'person' && String(e.attributes?.['الجنسية'] || '').trim() === nat

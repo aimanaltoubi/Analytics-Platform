@@ -1,19 +1,29 @@
 {
-  "name": "base44-app",
+  "name": "strategic-data-fusion",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
+  "description": "Offline document and entity analysis for Windows",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/index.js",
+    "desktop": "npm run build && electron .",
+    "test": "node --test server/tests/*.test.js electron/*.test.js",
+    "check:offline": "node scripts/check-offline.js",
+    "package:win": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win nsis --x64 && node scripts/stage-model.js",
+    "package:portable": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win portable --x64 && node scripts/stage-model.js"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.51",
-    "@base44/vite-plugin": "^1.0.42",
+    "@fontsource/cairo": "^5.2.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
@@ -61,6 +71,7 @@
     "moment": "^2.30.1",
     "next-themes": "^0.4.4",
     "pptxgenjs": "^3.12.0",
+    "pdfjs-dist": "^5.4.149",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
@@ -88,6 +99,8 @@
     "autoprefixer": "^10.4.20",
     "baseline-browser-mapping": "^2.8.32",
     "eslint": "^9.19.0",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.0.12",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
@@ -97,5 +110,41 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
     "vite": "^6.1.0"
+  },
+  "build": {
+    "appId": "org.strategicdatafusion.desktop",
+    "productName": "Strategic Data Fusion",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "server/**/*",
+      "!**/*.test.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/ai",
+        "to": "ai",
+        "filter": ["**/*", "!*.gguf"]
+      }
+    ],
+    "asarUnpack": ["node_modules/pdfjs-dist/**/*"],
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "include": "build/installer.nsh",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
+    }
   }
 }

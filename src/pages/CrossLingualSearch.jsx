@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Languages, Search, Loader2, AlertTriangle, FileText, ArrowLeftRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 export default function CrossLingualSearch() {
   const [query, setQuery] = useState('');
@@ -16,7 +16,7 @@ export default function CrossLingualSearch() {
     setError('');
     setResult(null);
     try {
-      const res = await base44.functions.invoke('crossLingualSearch', { query: query.trim() });
+      const res = await localClient.functions.invoke('crossLingualSearch', { query: query.trim() });
       setResult(res.data);
     } catch (err) {
       setError(err.message || 'فشل البحث');

@@ -1,0 +1,49 @@
+{
+  "name": "RiskProfile",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "الاسم"
+    },
+    "description": {
+      "type": "string",
+      "title": "الوصف"
+    },
+    "rule_type": {
+      "type": "string",
+      "enum": [
+        "risk_threshold",
+        "watchlist",
+        "hub",
+        "co_occurrence",
+        "cluster_size"
+      ],
+      "title": "نوع القاعدة"
+    },
+    "conditions": {
+      "type": "object",
+      "title": "الشروط"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "خطورة التنبيه",
+      "default": "medium"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "title": "مفعّل"
+    }
+  },
+  "required": [
+    "name",
+    "rule_type"
+  ]
+}

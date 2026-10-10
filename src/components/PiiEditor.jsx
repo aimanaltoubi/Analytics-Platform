@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Save, Plus, X, User, Building2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Image as UIImage } from '@/components/ui/image';
 
@@ -61,7 +61,7 @@ export default function PiiEditor({ entity, onSaved }) {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await localClient.integrations.Core.UploadPublicFile({ file });
       setPhotoUrl(file_url);
     } catch (err) {
       toast({ title: 'فشل رفع الصورة', description: err.message, variant: 'destructive' });
@@ -83,7 +83,7 @@ export default function PiiEditor({ entity, onSaved }) {
     setSaving(true);
     try {
       const aliasArr = aliases.split('،').map((a) => a.trim()).filter(Boolean);
-      const updated = await base44.entities.Entity.update(entity.id, {
+      const updated = await localClient.entities.Entity.update(entity.id, {
         name: name.trim() || entity.name,
         type: etype,
         aliases: aliasArr,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Database as DatabaseIcon, Users, Building2, Building, Search, ArrowLeft, RefreshCw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import PiiEditor from '@/components/PiiEditor';
 import { Image as UIImage } from '@/components/ui/image';
 
@@ -15,7 +15,7 @@ export default function Database() {
 
   const load = async () => {
     try {
-      const all = await base44.entities.Entity.list('-mention_count', 1000);
+      const all = await localClient.entities.Entity.list('-mention_count', 1000);
       setEntities(all.filter((e) => e.type === 'person' || e.type === 'company' || e.type === 'organization'));
     } catch (e) {} finally { setLoading(false); setRefreshing(false); }
   };

@@ -1,0 +1,80 @@
+{
+  "name": "Entity",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "الاسم"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "person",
+        "organization",
+        "company",
+        "phone",
+        "email",
+        "location",
+        "account",
+        "date",
+        "event",
+        "other"
+      ],
+      "title": "نوع الكيان",
+      "default": "person"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "الأسماء البديلة"
+    },
+    "attributes": {
+      "type": "object",
+      "title": "سمات إضافية"
+    },
+    "notes": {
+      "type": "string",
+      "title": "ملاحظات المراجعة"
+    },
+    "photo_url": {
+      "type": "string",
+      "title": "صورة الكيان"
+    },
+    "latitude": {
+      "type": "number",
+      "title": "خط العرض"
+    },
+    "longitude": {
+      "type": "number",
+      "title": "خط الطول"
+    },
+    "mention_count": {
+      "type": "number",
+      "default": 1,
+      "title": "عدد الذكر"
+    },
+    "risk_score": {
+      "type": "number",
+      "default": 0,
+      "title": "درجة الخطورة"
+    },
+    "watchlist": {
+      "type": "boolean",
+      "default": false,
+      "title": "قائمة المراقبة"
+    },
+    "document_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "المستندات المرتبطة"
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ]
+}

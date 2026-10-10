@@ -1,0 +1,68 @@
+{
+  "name": "Document",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "العنوان"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "phone_log",
+        "financial_transaction",
+        "police_report",
+        "intelligence_report",
+        "other"
+      ],
+      "title": "نوع المستند",
+      "default": "other"
+    },
+    "file_url": {
+      "type": "string",
+      "title": "رابط الملف"
+    },
+    "raw_text": {
+      "type": "string",
+      "title": "النص المستخرج"
+    },
+    "summary": {
+      "type": "string",
+      "title": "الملخص"
+    },
+    "reference_date": {
+      "type": "string",
+      "format": "date",
+      "title": "التاريخ المرجعي"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "processed",
+        "failed"
+      ],
+      "title": "الحالة",
+      "default": "pending"
+    },
+    "entity_count": {
+      "type": "number",
+      "default": 0,
+      "title": "عدد الكيانات"
+    },
+    "connection_count": {
+      "type": "number",
+      "default": 0,
+      "title": "عدد الروابط"
+    },
+    "error_message": {
+      "type": "string",
+      "title": "رسالة الخطأ"
+    }
+  },
+  "required": [
+    "title",
+    "document_type"
+  ]
+}

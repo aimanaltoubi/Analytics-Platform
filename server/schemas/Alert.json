@@ -1,0 +1,74 @@
+{
+  "name": "Alert",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "العنوان"
+    },
+    "description": {
+      "type": "string",
+      "title": "الوصف"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "الخطورة",
+      "default": "medium"
+    },
+    "rule_id": {
+      "type": "string",
+      "title": "معرّف القاعدة"
+    },
+    "rule_name": {
+      "type": "string",
+      "title": "اسم القاعدة"
+    },
+    "rule_type": {
+      "type": "string",
+      "title": "نوع القاعدة"
+    },
+    "entity_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "الكيانات المرتبطة"
+    },
+    "entity_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "أسماء الكيانات"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "acknowledged",
+        "resolved"
+      ],
+      "title": "الحالة",
+      "default": "new"
+    },
+    "triggered_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "وقت التفعيل"
+    },
+    "details": {
+      "type": "object",
+      "title": "تفاصيل إضافية"
+    }
+  },
+  "required": [
+    "title",
+    "severity"
+  ]
+}

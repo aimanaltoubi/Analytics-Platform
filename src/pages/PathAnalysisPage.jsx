@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GitFork } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import PathAnalysis from '@/components/PathAnalysis';
 
 export default function PathAnalysisPage() {
@@ -10,7 +10,7 @@ export default function PathAnalysisPage() {
   useEffect(() => {
     (async () => {
       try {
-        const ents = await base44.entities.Entity.list('-mention_count', 1000);
+        const ents = await localClient.entities.Entity.list('-mention_count', 1000);
         setEntities(ents);
       } catch (e) {} finally { setLoading(false); }
     })();

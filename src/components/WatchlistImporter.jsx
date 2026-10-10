@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, Flag, Loader2, X, ListChecks } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 function parseCsv(text) {
@@ -50,7 +50,7 @@ export default function WatchlistImporter() {
     }
     setBusy(true);
     try {
-      const res = await base44.functions.invoke('importWatchlist', { names, risk_score: risk });
+      const res = await localClient.functions.invoke('importWatchlist', { names, risk_score: risk });
       const r = res.data || {};
       toast({
         title: 'تم استيراد قائمة المراقبة',

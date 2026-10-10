@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Share2, Calendar, Clock } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import NetworkGraph from '@/components/NetworkGraph';
 
 function parseDate(str) {
@@ -32,10 +32,10 @@ export default function WorkspaceNetwork({ workspace }) {
       setLoading(true);
       try {
         const [allEnts, mentions, conns, allDocs] = await Promise.all([
-          base44.entities.Entity.list('-mention_count', 300),
-          base44.entities.Mention.list('-created_date', 500),
-          base44.entities.Connection.list('-created_date', 500),
-          base44.entities.Document.list('-created_date', 100)
+          localClient.entities.Entity.list('-mention_count', 300),
+          localClient.entities.Mention.list('-created_date', 500),
+          localClient.entities.Connection.list('-created_date', 500),
+          localClient.entities.Document.list('-created_date', 100)
         ]);
         const selectedIds = new Set(workspace.entity_ids || []);
         const docIds = new Set(workspace.document_ids || []);

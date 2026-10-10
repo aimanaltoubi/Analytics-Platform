@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Search, GitMerge, AlertTriangle, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -25,7 +25,7 @@ export default function EntityMergeDialog({ open, onOpenChange, primaryEntity, o
     (async () => {
       setLoading(true);
       try {
-        const list = await base44.entities.Entity.list('-mention_count', 1000);
+        const list = await localClient.entities.Entity.list('-mention_count', 1000);
         setAll(list.filter((e) => e.id !== primaryEntity.id));
       } catch (e) {} finally { setLoading(false); }
     })();
@@ -39,7 +39,7 @@ export default function EntityMergeDialog({ open, onOpenChange, primaryEntity, o
     if (!duplicate) return;
     setMerging(true);
     try {
-      const res = await base44.functions.invoke('mergeEntities', { primary_id: primaryEntity.id, duplicate_id: duplicate.id });
+      const res = await localClient.functions.invoke('mergeEntities', { primary_id: primaryEntity.id, duplicate_id: duplicate.id });
       const d = res.data || res;
       toast({ title: 'تم الدمج بنجاح', description: `إعادة توجيه ${d.repointed_connections || 0} رابط • ${d.merged_documents || 0} مستند` });
       onMerged && onMerged(primaryEntity.id);

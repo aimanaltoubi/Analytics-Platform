@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Send } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const emptyPassenger = { name: '', passport_number: '', nationality: '', dob: '', seat: '' };
@@ -36,9 +36,9 @@ export default function ManifestForm({ onSubmitted }) {
         passengers: type === 'passenger' ? passengers.filter((p) => p.name.trim()) : [],
         cargo: type === 'cargo' ? cargo.filter((c) => c.description.trim() || c.consignee.trim()) : []
       };
-      const created = await base44.entities.Manifest.create(payload);
+      const created = await localClient.entities.Manifest.create(payload);
       // فحص فوري (إضافةً إلى الـ workflow الذي يعمل عند الإنشاء)
-      try { await base44.functions.invoke('screenManifest', { manifest_id: created.id }); } catch (e) {}
+      try { await localClient.functions.invoke('screenManifest', { manifest_id: created.id }); } catch (e) {}
       toast({ title: 'تم تقديم البيان وفحصه' });
       setCarrier(''); setVoyage(''); setDep(''); setDest(''); setDatetime('');
       setPassengers([{ ...emptyPassenger }]); setCargo([{ ...emptyCargo }]);

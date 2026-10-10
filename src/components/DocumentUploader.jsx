@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { UploadCloud, FileText, Loader2, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_LABELS = {
@@ -45,9 +45,9 @@ export default function DocumentUploader({ onUploaded }) {
     setBusy(true);
     setStage('رفع الملف...');
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await localClient.integrations.Core.UploadFile({ file });
       setStage('إنشاء سجل المستند...');
-      const doc = await base44.entities.Document.create({
+      const doc = await localClient.entities.Document.create({
         title: title || file.name,
         document_type: docType,
         file_url,
@@ -56,7 +56,7 @@ export default function DocumentUploader({ onUploaded }) {
       });
 
       setStage('استخراج النص وتحليل الكيانات...');
-      const res = await base44.functions.invoke('processDocument', { document_id: doc.id });
+      const res = await localClient.functions.invoke('processDocument', { document_id: doc.id });
       const result = res.data || {};
 
       toast({

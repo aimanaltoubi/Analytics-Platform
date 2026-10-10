@@ -1,0 +1,33 @@
+{
+  "name": "Workspace",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "الاسم"
+    },
+    "description": {
+      "type": "string",
+      "title": "الوصف"
+    },
+    "entity_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "الكيانات المختارة",
+      "default": []
+    },
+    "document_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "المستندات المحمّلة",
+      "default": []
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

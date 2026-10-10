@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Plus, Trash2, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function Workspaces() {
@@ -16,7 +16,7 @@ export default function Workspaces() {
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.Workspace.list('-created_date', 100);
+      const list = await localClient.entities.Workspace.list('-created_date', 100);
       setWorkspaces(list);
     } catch (e) {} finally { setLoading(false); }
   };
@@ -27,7 +27,7 @@ export default function Workspaces() {
     if (!name.trim()) { toast({ title: 'أدخل اسماً', variant: 'destructive' }); return; }
     setBusy(true);
     try {
-      await base44.entities.Workspace.create({ name: name.trim(), description: description.trim(), entity_ids: [], document_ids: [] });
+      await localClient.entities.Workspace.create({ name: name.trim(), description: description.trim(), entity_ids: [], document_ids: [] });
       setName(''); setDescription(''); setShowCreate(false);
       load();
       toast({ title: 'تم إنشاء مساحة العمل' });
@@ -39,7 +39,7 @@ export default function Workspaces() {
   const remove = async (id) => {
     if (!confirm('حذف مساحة العمل؟')) return;
     try {
-      await base44.entities.Workspace.delete(id);
+      await localClient.entities.Workspace.delete(id);
       load();
     } catch (e) { toast({ title: 'فشل الحذف', description: e.message, variant: 'destructive' }); }
   };

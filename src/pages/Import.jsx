@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, FileSpreadsheet, Loader2, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import WatchlistImporter from '@/components/WatchlistImporter';
 
@@ -46,9 +46,9 @@ export default function Import() {
     setBusy(true);
     setStage('رفع الملف...');
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await localClient.integrations.Core.UploadFile({ file });
       setStage('استخراج الصفوف وإنشاء الكيانات...');
-      const res = await base44.functions.invoke('importCsv', {
+      const res = await localClient.functions.invoke('importCsv', {
         file_url,
         title: title || file.name,
         document_type: docType

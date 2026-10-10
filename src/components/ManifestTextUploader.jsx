@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, FileText, Loader2, X, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function ManifestTextUploader({ onExtracted }) {
@@ -46,7 +46,7 @@ export default function ManifestTextUploader({ onExtracted }) {
     setBusy(true);
     setStage('استخراج الحقول التحقيقية بالذكاء الاصطناعي...');
     try {
-      const res = await base44.functions.invoke('extractManifestFromText', {
+      const res = await localClient.functions.invoke('extractManifestFromText', {
         text: content,
         filename: file?.name || ''
       });

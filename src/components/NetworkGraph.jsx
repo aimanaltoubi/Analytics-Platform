@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Image } from '@/components/ui/image';
 
@@ -216,7 +216,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     const attrs = { ...(selectedEntity.attributes || {}) };
     attrs[k] = v;
     try {
-      await base44.entities.Entity.update(selectedEntity.id, { attributes: attrs });
+      await localClient.entities.Entity.update(selectedEntity.id, { attributes: attrs });
       const merged = { ...selectedEntity, attributes: attrs };
       if (onEntityUpdated) onEntityUpdated(selectedEntity.id, merged);
       toast({ title: 'تم حفظ المعلومة' });
@@ -233,7 +233,7 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     const attrs = { ...(selectedEntity.attributes || {}) };
     delete attrs[k];
     try {
-      await base44.entities.Entity.update(selectedEntity.id, { attributes: attrs });
+      await localClient.entities.Entity.update(selectedEntity.id, { attributes: attrs });
       if (onEntityUpdated) onEntityUpdated(selectedEntity.id, { ...selectedEntity, attributes: attrs });
       toast({ title: 'تم حذف المعلومة' });
     } catch (e) {
@@ -246,8 +246,8 @@ export default function NetworkGraph({ entities = [], connections = [], height =
     if (!file || !selectedEntity) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      await base44.entities.Entity.update(selectedEntity.id, { photo_url: file_url });
+      const { file_url } = await localClient.integrations.Core.UploadFile({ file });
+      await localClient.entities.Entity.update(selectedEntity.id, { photo_url: file_url });
       const merged = { ...selectedEntity, photo_url: file_url };
       if (onEntityUpdated) onEntityUpdated(selectedEntity.id, merged);
       toast({ title: 'تم حفظ الصورة' });

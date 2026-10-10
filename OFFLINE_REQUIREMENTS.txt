@@ -105,10 +105,10 @@ B. SOFTWARE STACK
                  recharts lucide-react html2canvas jspdf (all already in use)
 
 ================================================================================
-C. DATA MODEL (SQLite schema — ported 1:1 from current Base44 entities)
+C. DATA MODEL (SQLite schema — ported 1:1 from current previous entity schemas)
 ================================================================================
   Tables (built-in columns id, created_date, updated_date, created_by_id added):
-    users            — local auth (replaces Base44 User entity)
+    users            — local auth (replaces local User entity)
     documents        — title, type, file_url, raw_text, summary, status, counts
     entities         — name, type, aliases(JSON), attributes(JSON), risk_score,
                        watchlist, lat/long, mention_count, document_ids(JSON)
@@ -131,11 +131,11 @@ C. DATA MODEL (SQLite schema — ported 1:1 from current Base44 entities)
 ================================================================================
 D. CORE LOGIC PORTS (shared TypeScript → Node.js)
 ================================================================================
-  D.1 entityResolution.js — copy base44/shared/entityResolution.ts VERBATIM
+  D.1 entityResolution.js — copy legacy/shared/entityResolution.ts VERBATIM
       (norm, arabicToLatin, isArabic, jaroWinkler, soundex, nameSimilarity)
       Pure functions, zero platform deps, no changes needed.
 
-  D.2 nerPipeline.js — port of base44/shared/nerPipeline.ts
+  D.2 nerPipeline.js — port of legacy/shared/nerPipeline.ts
       Only change: LLM call swaps from cloud InvokeLLM → local Ollama HTTP.
       - ANALYSIS_SCHEMA and ANALYSIS_PROMPT preserved exactly (Arabic prompt,
         entity/relationship extraction, dialect handling, org unification,
@@ -146,7 +146,7 @@ D. CORE LOGIC PORTS (shared TypeScript → Node.js)
         entities → create mentions → create connections → update document →
         evaluate immediate alerts → create in-app notifications.
 
-  D.3 alertEngine.js — port of base44/shared/alertEngine.ts
+  D.3 alertEngine.js — port of legacy/shared/alertEngine.ts
       Changes: DB calls → SQLite; created_by_id passed explicitly.
       - Default profiles: risk_threshold, watchlist, hub, co_occurrence, cluster_size.
       - evaluateImmediateAlerts() runs after each document; dedupes by signature.
@@ -192,7 +192,7 @@ F. LOCAL AUTH
 ================================================================================
 G. FRONTEND PORT (React + Tailwind — ~90% reused)
 ================================================================================
-  G.1 Replace @/api/base44Client with a local fetch wrapper (client/src/api/client.js):
+  G.1 Replace @/api/localClient with a local fetch wrapper (client/src/api/client.js):
       - request() helper: GET/POST/PUT/DELETE to http://localhost:3001/api
       - makeEntity(name): list/get/filter/create/update/delete/bulkCreate/
         bulkUpdate/updateMany/deleteMany/subscribe
@@ -201,11 +201,11 @@ G. FRONTEND PORT (React + Tailwind — ~90% reused)
       - api.functions.invoke(name, payload)
 
   G.2 Find-and-replace across frontend:
-      @/api/base44Client → @/api/client
-      base44.entities.X  → api.entities.X
-      base44.auth.me()   → api.auth.me()
-      base44.auth.logout() → api.auth.logout()
-      base44.integrations.Core.UploadFile → POST /api/upload (returns local path)
+      @/api/localClient → @/api/client
+      api.entities.X  → api.entities.X
+      api.auth.me()   → api.auth.me()
+      api.auth.logout() → api.auth.logout()
+      localApi.integrations.Core.UploadFile → POST /api/upload (returns local path)
       Remove ProtectedRoute/AuthProvider cloud wrappers → local JWT check.
 
   G.3 Uploads: POST /api/upload saves to ./data/uploads/ and returns { file_url }.
@@ -269,7 +269,7 @@ I. DESIGN SYSTEM — "Strategic Command Center" (must be preserved)
       Documents, Entities, EntityDetail, Workspaces, WorkspaceDetail, GraphIndex,
       Alerts, TransitSecurity, Search, CrossLingualSearch, Import.
 
-  I.8 Components to port as-is (swap base44 → api imports only):
+  I.8 Components to port as-is (swap local API client imports only):
       Layout, SystemStatus, NotificationsBell, SecurityWatchPanel, BarList,
       NetworkGraph/GraphCanvas, GeoTemporalMap, InvestigationReport,
       EntityMergeDialog, EntityTimeline, EntityCorrector, DocumentUploader,
@@ -358,7 +358,7 @@ M. FINAL CHECKLIST
   [ ] pdfExtract.js working on sample PDFs
   [ ] Express routes wired for all entities
   [ ] Local auth (bcrypt + JWT) + admin user created
-  [ ] Frontend ported (base44 → api client)
+  [ ] Frontend ported (local API client client)
   [ ] Leaflet pointed at local tile server
   [ ] OSM .mbtiles downloaded + tileserver-gl running
   [ ] Notifications polling working

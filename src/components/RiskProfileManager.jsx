@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Shield, Plus, Trash2, Power } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { Shield, Plus, Trash2 } from 'lucide-react';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const RULE_TYPES = {
@@ -26,17 +26,17 @@ export default function RiskProfileManager() {
 
   const load = async () => {
     setLoading(true);
-    try { setProfiles(await base44.entities.RiskProfile.list('-created_date', 100)); }
+    try { setProfiles(await localClient.entities.RiskProfile.list('-created_date', 100)); }
     catch (e) {} finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
 
   const toggle = async (p) => {
-    try { await base44.entities.RiskProfile.update(p.id, { enabled: !p.enabled }); await load(); }
+    try { await localClient.entities.RiskProfile.update(p.id, { enabled: !p.enabled }); await load(); }
     catch (e) { toast({ variant: 'destructive', title: 'فشل التحديث' }); }
   };
   const remove = async (p) => {
-    try { await base44.entities.RiskProfile.delete(p.id); await load(); }
+    try { await localClient.entities.RiskProfile.delete(p.id); await load(); }
     catch (e) { toast({ variant: 'destructive', title: 'فشل الحذف' }); }
   };
 
@@ -51,7 +51,7 @@ export default function RiskProfileManager() {
     }
     if (form.rule_type === 'cluster_size') conditions.min_size = Number(form.min_size) || 5;
     try {
-      await base44.entities.RiskProfile.create({
+      await localClient.entities.RiskProfile.create({
         name: form.name.trim(),
         description: form.description.trim(),
         rule_type: form.rule_type,

@@ -1,0 +1,17 @@
+{
+  "name": "Setting",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "title": "المفتاح"
+    },
+    "value": {
+      "type": "string",
+      "title": "القيمة"
+    }
+  },
+  "required": [
+    "key"
+  ]
+}

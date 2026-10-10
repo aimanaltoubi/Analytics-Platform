@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plane, Ship, AlertTriangle, CheckCircle2, ChevronDown, RefreshCw } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 
 const STATUS = {
@@ -20,14 +20,14 @@ export default function ManifestList() {
 
   const load = async () => {
     setLoading(true);
-    try { setManifests(await base44.entities.Manifest.list('-created_date', 100)); }
+    try { setManifests(await localClient.entities.Manifest.list('-created_date', 100)); }
     catch (e) {} finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
 
   const rescreen = async (id) => {
     setRescreening(id);
-    try { await base44.functions.invoke('screenManifest', { manifest_id: id }); await load(); toast({ title: 'تم إعادة الفحص' }); }
+    try { await localClient.functions.invoke('screenManifest', { manifest_id: id }); await load(); toast({ title: 'تم إعادة الفحص' }); }
     catch (e) { toast({ variant: 'destructive', title: 'فشل الفحص' }); }
     finally { setRescreening(null); }
   };

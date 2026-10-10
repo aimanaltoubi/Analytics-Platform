@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Network, Building2, RefreshCw, Share2, Users, ChevronDown } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import GraphCanvas from '@/components/GraphCanvas';
 import { buildAdjacencyFromEdges, degreeCentrality, betweennessCentrality, labelPropagation, communities, companySubgraph } from '@/lib/networkAnalysis';
 
@@ -16,8 +16,8 @@ export default function CompanyNetwork() {
     setLoading(true);
     try {
       const [ents, conns] = await Promise.all([
-        base44.entities.Entity.list('-mention_count', 2000),
-        base44.entities.Connection.list('-created_date', 2000)
+        localClient.entities.Entity.list('-mention_count', 2000),
+        localClient.entities.Connection.list('-created_date', 2000)
       ]);
       setEntities(ents);
       setConnections(conns);

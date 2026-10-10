@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, FileText, Share2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 function fmt(s) {
   if (!s) return '';
@@ -18,9 +18,9 @@ export default function EntityTimeline({ entityId }) {
       setLoading(true);
       try {
         const [conns, ment, docs] = await Promise.all([
-          base44.entities.Connection.list('-created_date', 500),
-          base44.entities.Mention.filter({ entity_id: entityId }, '-created_date', 100),
-          base44.entities.Document.list('-created_date', 200)
+          localClient.entities.Connection.list('-created_date', 500),
+          localClient.entities.Mention.filter({ entity_id: entityId }, '-created_date', 100),
+          localClient.entities.Document.list('-created_date', 200)
         ]);
         const docDate = {};
         docs.forEach((d) => { docDate[d.id] = d.created_date; });

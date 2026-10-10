@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GitFork, ArrowLeft, Users, Loader2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 
 const TYPE_LABELS = {
   person: 'شخص', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
@@ -19,7 +19,7 @@ export default function PathAnalysis({ entities }) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await base44.functions.invoke('findEntityPath', { source_id: source, target_id: target });
+      const res = await localClient.functions.invoke('findEntityPath', { source_id: source, target_id: target });
       setResult(res.data);
     } catch (e) {} finally { setLoading(false); }
   };
