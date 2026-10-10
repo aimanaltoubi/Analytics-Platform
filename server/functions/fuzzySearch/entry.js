@@ -34,7 +34,7 @@ export default async function(req) {
     if (!query) return Response.json({ results: [], total: 0 });
 
     const [ents, docs, conns] = await Promise.all([
-      localClient.entities.Entity.list('-mention_count', 1000),
+      localClient.entities.Entity.list('-mention_count', 10000),
       localClient.entities.Document.list('-created_date', 500),
       localClient.entities.Connection.list('-created_date', 2000)
     ]);

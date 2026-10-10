@@ -27,6 +27,32 @@ const normalize = (s) => stripParticles(
     .toLowerCase()
 );
 
+const entityKey = (name, type = 'other') => `${String(type || 'other')}::${normalize(name)}`;
+
+const hasGroundedName = (fullText, name, aliases = []) => {
+  const hay = normalize(fullText || '');
+  const variants = [name, ...aliases].map((value) => normalize(value)).filter(Boolean);
+  return variants.some((variant) => variant && hay.includes(variant));
+};
+
+const sanitizeExtractedData = (entities, relationships, fullText) => {
+  const groundedEntities = (Array.isArray(entities) ? entities : []).filter((ent) => {
+    if (!ent || !ent.name) return false;
+    return hasGroundedName(fullText, ent.name, ent.aliases || []);
+  });
+
+  const groundedRelationships = (Array.isArray(relationships) ? relationships : []).filter((rel) => {
+    if (!rel || !rel.source || !rel.target) return false;
+    const sourceGrounded = groundedEntities.some((ent) => normalize(ent.name) === normalize(rel.source) || (ent.aliases || []).some((alias) => normalize(alias) === normalize(rel.source)));
+    const targetGrounded = groundedEntities.some((ent) => normalize(ent.name) === normalize(rel.target) || (ent.aliases || []).some((alias) => normalize(alias) === normalize(rel.target)));
+    if (!sourceGrounded || !targetGrounded) return false;
+    const evidenceText = rel.evidence || '';
+    return evidenceText.trim().length > 0 || Boolean(rel.type);
+  });
+
+  return { entities: groundedEntities, relationships: groundedRelationships };
+};
+
 const ANALYSIS_SCHEMA = {
   type: 'object',
   properties: {
@@ -151,7 +177,7 @@ export async function runNer(localClient, doc, document_id, fullText) {
   let llmResult;
   try {
     llmResult = await localClient.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: ANALYSIS_PROMPT.replace('__TEXT__', fullText.slice(0, 12000)),
+      prompt: ANALYSIS_PROMPT.replace('__TEXT__', fullText),
       response_json_schema: ANALYSIS_SCHEMA
     });
   } catch (error) {
@@ -163,64 +189,91 @@ export async function runNer(localClient, doc, document_id, fullText) {
   await localClient.asServiceRole.entities.Connection.deleteMany({ document_id });
 
   const summary = llmResult.summary || '';
-  const entities = Array.isArray(llmResult.entities) ? llmResult.entities : [];
-  const relationships = Array.isArray(llmResult.relationships) ? llmResult.relationships : [];
+  const { entities, relationships } = sanitizeExtractedData(
+    Array.isArray(llmResult.entities) ? llmResult.entities : [],
+    Array.isArray(llmResult.relationships) ? llmResult.relationships : [],
+    fullText
+  );
 
   // حلّ الكيانات
   const existing = await localClient.entities.Entity.filter({});
   const byKey = Object.create(null);
-  for (const e of existing) {
-    byKey[normalize(e.name)] = e;
-    for (const a of (e.aliases || [])) byKey[normalize(a)] = e;
-  }
+  const registerEntityIndex = (entity) => {
+    if (!entity || !entity.name) return;
+    byKey[entityKey(entity.name, entity.type || 'other')] = entity;
+    for (const alias of (entity.aliases || [])) {
+      byKey[entityKey(alias, entity.type || 'other')] = entity;
+    }
+  };
+  for (const e of existing) registerEntityIndex(e);
 
   const resolved = Object.create(null);
+  const resolveEntityHandle = (name, fallbackType = 'other') => {
+    if (!name) return undefined;
+    const direct = resolved[entityKey(name, fallbackType)] || resolved[entityKey(name, 'other')];
+    if (direct) return direct;
+    const normalized = normalize(name);
+    const matches = Object.values(resolved).filter((candidate) =>
+      candidate && (
+        normalize(candidate.name) === normalized ||
+        (candidate.aliases || []).some((alias) => normalize(alias) === normalized)
+      )
+    );
+    return matches[0];
+  };
   const ensureEntity = async (ent) => {
-    const key = normalize(ent.name);
-    if (resolved[key]) return resolved[key];
-    let match = byKey[key];
-    if (!match && ent.aliases) {
-      for (const a of ent.aliases) {
-        if (byKey[normalize(a)]) { match = byKey[normalize(a)]; break; }
+    if (!ent || !ent.name) return null;
+    const targetType = ent.type || 'other';
+    const primaryKey = entityKey(ent.name, targetType);
+    if (resolved[primaryKey]) return resolved[primaryKey];
+
+    let match = byKey[primaryKey];
+    if (!match && Array.isArray(ent.aliases)) {
+      for (const alias of ent.aliases) {
+        match = byKey[entityKey(alias, targetType)];
+        if (match) break;
       }
     }
+
     if (match) {
       const aliases = new Set(match.aliases || []);
       if (ent.aliases) ent.aliases.forEach((a) => aliases.add(a));
       if (ent.name && ent.name !== match.name) aliases.add(ent.name);
       const documentIds = new Set(match.document_ids || []);
+      const alreadySeen = documentIds.has(document_id);
       documentIds.add(document_id);
       const attrs = { ...(match.attributes || {}), ...(ent.attributes || {}) };
       const updated = await localClient.entities.Entity.update(match.id, {
         aliases: Array.from(aliases),
         document_ids: Array.from(documentIds),
         attributes: attrs,
-        mention_count: (match.mention_count || 1) + 1
+        mention_count: alreadySeen ? (match.mention_count || 1) : (match.mention_count || 1) + 1
       });
-      byKey[normalize(updated.name)] = updated;
-      for (const a of updated.aliases || []) byKey[normalize(a)] = updated;
-      resolved[normalize(updated.name)] = updated;
-      resolved[key] = updated;
+      registerEntityIndex(updated);
+      resolved[primaryKey] = updated;
+      resolved[entityKey(updated.name, updated.type || 'other')] = updated;
       return updated;
     }
+
     const created = await localClient.entities.Entity.create({
       name: ent.name,
-      type: ent.type || 'other',
+      type: targetType,
       aliases: ent.aliases || [],
       attributes: ent.attributes || {},
       mention_count: 1,
       risk_score: 0,
       document_ids: [document_id]
     });
-    byKey[normalize(created.name)] = created;
-    resolved[normalize(created.name)] = created;
-    resolved[key] = created;
+    registerEntityIndex(created);
+    resolved[primaryKey] = created;
+    resolved[entityKey(created.name, created.type || 'other')] = created;
     return created;
   };
 
   for (const ent of entities) {
     if (!ent.name) continue;
     const rec = await ensureEntity(ent);
+    if (!rec) continue;
     await localClient.entities.Mention.create({
       entity_id: rec.id,
       entity_name: rec.name,
@@ -234,8 +287,8 @@ export async function runNer(localClient, doc, document_id, fullText) {
   let connectionCount = 0;
   const seenLinks = new Set();
   for (const rel of relationships) {
-    const src = resolved[normalize(rel.source)];
-    const tgt = resolved[normalize(rel.target)];
+    const src = resolveEntityHandle(rel.source, 'other');
+    const tgt = resolveEntityHandle(rel.target, 'other');
     if (!src || !tgt || src.id === tgt.id) continue;
     const linkKey = [src.id, tgt.id].sort().join('|') + '|' + normalize(rel.type);
     if (seenLinks.has(linkKey)) continue;

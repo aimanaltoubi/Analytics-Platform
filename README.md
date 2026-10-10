@@ -126,6 +126,65 @@ npm run check:offline
 
 `check:offline` scans the complete repository, including hidden files and path names, for prohibited platform references and known remote asset hosts.
 
+## Evaluation before deployment
+
+Run these commands from a source checkout with dependencies installed:
+
+```bat
+npm test
+node scripts/evaluate.js --mock --output "%TEMP%\strategic-mock-evaluation.json"
+```
+
+The mock runner starts a disposable loopback AI server and the actual local API,
+uses isolated temporary SQLite data, and removes that data afterward. Six English,
+Arabic, bilingual, contact, negation, and empty-template fixtures are scored against
+known entity types and directed relationships. Additional probes cover search,
+graph paths, reprocessing, restart, backup, failure handling, hallucinated output,
+type collisions, long documents, and a 1000-record bulk operation.
+
+**Mock accuracy is pipeline preservation, not model accuracy.** The JSON report
+retains inputs, extracted records, summaries, precision/recall/F1, timings, and
+individual failures. A failed probe returns a nonzero exit code; it is not silently
+treated as success. Choose a new output filename for each run because the runner
+does not overwrite reports.
+
+The initial evaluation identified pipeline issues with invented entities,
+reprocessing mention counts, same-name entities of different types, long-document
+truncation, and fuzzy-search candidate limits. The current pipeline rejects names
+not grounded in document text, does not recount a document's entities on reprocessing,
+keeps entity identity type-aware, passes full document text to the model, and searches
+beyond the first 1000 entities. The mock checks exercise these regressions, but do
+not establish real-model accuracy or production readiness.
+
+For a **real-model** smoke benchmark, use the intended Windows x64 test PC with
+at least 32 GB RAM and the supplied runtime/model in `resources/ai/`. In one CMD
+window start the model:
+
+```bat
+resources\ai\llama-server.exe --model resources\ai\Qwen2.5-14B-Instruct-Q4_K_M.gguf --host 127.0.0.1 --port 8081 --ctx-size 8192 --jinja
+```
+
+Wait until the server has loaded the model, then in a second CMD window:
+
+```bat
+curl --fail http://127.0.0.1:8081/health
+node scripts/evaluate.js --ai-url http://127.0.0.1:8081 --output "%TEMP%\strategic-real-evaluation.json"
+```
+
+The real mode does not substitute mock completions. Review all summaries and
+unmatched entities/relationships manually: label paraphrases can fail the strict
+scorer even when reasonable, and a verbatim evidence snippet is not proof that a
+relationship is true. Six short synthetic documents are not a production accuracy
+estimate. Use a larger independently annotated, representative corpus and agreed
+acceptance thresholds before deployment; measure actual model latency and memory
+on the destination hardware.
+
+Also install the released executable on a clean, disconnected Windows PC and
+check registration, uploads, AI analysis, search, alerts, backup/restore, restart,
+and installation with the sidecar present and missing. Scanned PDFs/images require
+OCR, which is not bundled. This source-level evaluation does not certify native
+Windows installation, GUI behavior, or real-model performance.
+
 ## Build a Windows executable
 
 After adding the local AI resources, run on Windows:

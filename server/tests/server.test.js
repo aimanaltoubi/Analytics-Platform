@@ -284,9 +284,10 @@ test('shared NER resolves local entities, links, dossiers and high-risk in-app n
       entities: [
         { name: 'Known person', type: 'person', aliases: ['Alias'], attributes: { nationality: 'Local' } },
         { name: '__proto__', type: 'organization', aliases: [], attributes: {} },
+        { name: 'organization', type: 'organization', aliases: [], attributes: {} },
         { name: '2024-01-02', type: 'date' }
       ],
-      relationships: [{ source: 'Known person', target: '__proto__', type: 'met', evidence: 'Document evidence' }]
+      relationships: [{ source: 'Known person', target: 'organization', type: 'met', evidence: 'Known person met an organization' }]
     };
     return sample(schema);
   });
@@ -297,6 +298,8 @@ test('shared NER resolves local entities, links, dossiers and high-risk in-app n
   assert.equal(result.status, 200, JSON.stringify(result.data));
   assert.equal(result.data.entity_count, 3);
   assert.equal(result.data.connection_count, 1);
+  const extracted = (await app.request('/api/entities/Entity', { token: app.token })).data;
+  assert.equal(extracted.some((row) => row.name === '__proto__'), false);
   const knownResult = (await app.request(`/api/entities/Entity/${known.id}`, { token: app.token })).data;
   assert.deepEqual(knownResult.document_ids, [doc.id]);
   assert.equal(knownResult.mention_count, 2);
