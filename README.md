@@ -1,6 +1,6 @@
 # Strategic Data Fusion
 
-Strategic Data Fusion is a local-first document and entity analysis application. The React interface, Node.js API, SQLite database, uploaded files, authentication, and optional AI model all run on the same computer. The application does not require a hosted backend.
+Strategic Data Fusion is a fully local document and entity analysis application. The React interface, Node.js API, SQLite database, uploaded files, authentication, and optional AI model all run on the same computer.
 
 ## Requirements
 
@@ -72,7 +72,7 @@ npm run build
 npm run check:offline
 ```
 
-`check:offline` scans source and production assets for the removed retired hosted SDK and known remote asset hosts.
+`check:offline` scans the complete repository, including hidden files and path names, for prohibited platform references and known remote asset hosts.
 
 ## Build a Windows executable
 

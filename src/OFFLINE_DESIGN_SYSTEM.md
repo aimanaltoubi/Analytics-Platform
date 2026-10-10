@@ -23,8 +23,11 @@ The current app has a deliberate visual identity that must be preserved in the o
 ## 2. Color tokens (port verbatim into `client/src/index.css`)
 
 ```css
-/* ⚠ Offline: download Cairo .woff2 files and @font-face them locally instead of the Google import. */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+@import '@fontsource/cairo/400.css';
+@import '@fontsource/cairo/500.css';
+@import '@fontsource/cairo/600.css';
+@import '@fontsource/cairo/700.css';
+@import '@fontsource/cairo/800.css';
 
 @layer base {
   :root {
