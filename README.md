@@ -14,7 +14,7 @@ Open **Command Prompt (CMD)** and run:
 ```bat
 mkdir "%USERPROFILE%\Downloads\StrategicDataFusion-Offline"
 cd /d "%USERPROFILE%\Downloads\StrategicDataFusion-Offline"
-curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.0.0-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/Strategic%20Data%20Fusion-Setup-1.0.0-x64.exe" && curl --fail --location --retry 5 --continue-at - --output "Qwen2.5-14B-Instruct-Q4_K_M.gguf" "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/05244aa5d871c661c80082a15d3bce44714d068d/Qwen2.5-14B-Instruct-Q4_K_M.gguf" && curl --fail --location --retry 5 --output "SHA256SUMS.txt" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/SHA256SUMS.txt"
+curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.0.0-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/Strategic.Data.Fusion-Setup-1.0.0-x64.exe" && curl --fail --location --retry 5 --continue-at - --output "Qwen2.5-14B-Instruct-Q4_K_M.gguf" "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/05244aa5d871c661c80082a15d3bce44714d068d/Qwen2.5-14B-Instruct-Q4_K_M.gguf" && curl --fail --location --retry 5 --output "SHA256SUMS.txt" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/SHA256SUMS.txt"
 ```
 
 The long third line is **one command**. The installer is approximately 140 MB;
