@@ -2,11 +2,13 @@
 
 Strategic Data Fusion is a fully local document and entity analysis application. The React interface, Node.js API, SQLite database, uploaded files, authentication, and optional AI model all run on the same computer.
 
-## Download for an offline Windows PC
+## Current download for an offline Windows PC
 
-**Important:** The published v1.0.0 download below is the older two-file package:
-the installer and the `.gguf` model must stay together. It is not the planned
-single-file installer, which has not yet been built and published.
+**What is available now:** the published v1.0.0 release is a two-file package.
+Download both the installer and the `.gguf` model, keep them in the same folder,
+and run the installer from that folder to enable AI offline. The installer alone
+does not include the model. The planned single-file installer is not published,
+so do not expect the current download link to provide one EXE containing everything.
 
 Use an internet-connected Windows PC to download the installer and local AI model.
 The destination PC needs Windows 10/11 **x64**, at least **32 GB RAM** for the supplied
@@ -222,10 +224,15 @@ and installation with the sidecar present and missing. Scanned PDFs/images requi
 OCR, which is not bundled. This source-level evaluation does not certify native
 Windows installation, GUI behavior, or real-model performance.
 
-## Build a Windows executable
+## For maintainers: build the single-file installer
 
-After adding the local AI resources, install Inno Setup 6 on the Windows build PC
-and make `ISCC.exe` available on `PATH`. Then run:
+These are build instructions, not download or install instructions for end users.
+The command below creates a new installer from a Windows build PC; it does not
+download the installer and this build has not been published as a GitHub release.
+
+On a Windows build PC, first add the complete Windows llama.cpp runtime and one
+GGUF model to `resources/ai/`. Install Inno Setup 6 and make `ISCC.exe` available
+on `PATH`. Then, from the repository folder, run:
 
 ```bash
 npm run package:win
