@@ -4,6 +4,10 @@ Strategic Data Fusion is a fully local document and entity analysis application.
 
 ## Download for an offline Windows PC
 
+**Important:** The published v1.0.0 download below is the older two-file package:
+the installer and the `.gguf` model must stay together. It is not the planned
+single-file installer, which has not yet been built and published.
+
 Use an internet-connected Windows PC to download the installer and local AI model.
 The destination PC needs Windows 10/11 **x64**, at least **32 GB RAM** for the supplied
 model, and preferably **30 GB free disk space** during installation. It does not
