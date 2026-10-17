@@ -93,7 +93,13 @@ uploads too, export a backup from **Settings** on the source installation and
 restore it through **Settings** on the destination. Backups do not transfer accounts,
 passwords, sessions, or recovery keys.
 
-## Requirements
+## Developer requirements (not needed to install the release)
+
+Node.js and npm are only for developers building or running the application from
+source. End users do not need to install or download them: the published Windows
+installer includes the application runtime, and the offline PC needs no Node.js,
+npm, or internet connection. The CMD download steps above only download the
+installer, model, and checksums.
 
 - Node.js 22.13 or newer
 - npm
