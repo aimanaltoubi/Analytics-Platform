@@ -19,7 +19,7 @@
     "desktop": "npm run build && electron .",
     "test": "node --test server/tests/*.test.js electron/*.test.js",
     "check:offline": "node scripts/check-offline.js",
-    "package:win": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win nsis --x64 && node scripts/stage-model.js",
+    "package:win": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win dir --x64 && node scripts/check-packaged-ai.js && iscc /DAppVersion=%npm_package_version% build/offline-installer.iss",
     "package:portable": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win portable --x64 && node scripts/stage-model.js"
   },
   "dependencies": {

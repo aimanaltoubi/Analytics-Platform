@@ -187,13 +187,16 @@ Windows installation, GUI behavior, or real-model performance.
 
 ## Build a Windows executable
 
-After adding the local AI resources, run on Windows:
+After adding the local AI resources, install Inno Setup 6 on the Windows build PC
+and make `ISCC.exe` available on `PATH`. Then run:
 
 ```bash
 npm run package:win
 ```
 
-The NSIS installer and GGUF model sidecar are written to `release/`. Keep both files in the same directory when installing. Because NSIS installers have a 2 GB size limit, the installer copies the model from beside itself into the application rather than embedding the model in the `.exe`. If the sidecar is missing, installation succeeds with a warning and AI analysis remains unavailable.
+The build creates one self-contained installer in `release/`. It includes the local llama.cpp runtime and GGUF model, and installs both into the application directory. The model is read directly from `resources/ai/` during installer compilation, avoiding an extra staged model copy. The installer is several gigabytes; use exFAT or NTFS when transferring it by USB. The destination PC needs about 30 GB free during installation, and 32 GB RAM is recommended for the bundled model.
+
+The offline installer includes all required AI files, so the destination PC needs no internet access or separate model download. This large single-file installer uses Inno Setup; the regular NSIS installer format remains limited to smaller packages.
 
 A portable executable can be built with:
 
