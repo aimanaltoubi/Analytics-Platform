@@ -360,10 +360,18 @@ function textPdf(text) {
 test('local PDF extracts text without cloud or AI', async (t) => {
   const app = await fixture(t);
   const file = await app.upload('report.pdf', textPdf('Offline PDF evidence'));
-  const result = await app.request('/api/integrations/Core/ExtractDataFromUploadedFile', { method: 'POST', token: app.token, body: { file_url: file.file_url, json_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } } });
-  assert.equal(result.status, 200, JSON.stringify(result.data));
-  assert.match(result.data.output.text, /Offline PDF evidence/);
-  assert.equal(result.data.output.pages.length, 1);
+  const nativeDOMMatrix = globalThis.DOMMatrix;
+  try {
+    delete globalThis.DOMMatrix;
+    const result = await app.request('/api/integrations/Core/ExtractDataFromUploadedFile', { method: 'POST', token: app.token, body: { file_url: file.file_url, json_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } } });
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.match(result.data.output.text, /Offline PDF evidence/);
+    assert.equal(result.data.output.pages.length, 1);
+    assert.equal(typeof globalThis.DOMMatrix, 'function');
+  } finally {
+    if (nativeDOMMatrix === undefined) delete globalThis.DOMMatrix;
+    else globalThis.DOMMatrix = nativeDOMMatrix;
+  }
 });
 
 test('backup roundtrip preserves IDs, references and files but never exports credentials or sessions', async (t) => {

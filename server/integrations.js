@@ -152,6 +152,10 @@ export class Integrations {
     const bytes = readFileSync(path);
     let text, pages;
     if (extension === '.pdf') {
+      if (!globalThis.DOMMatrix) {
+        const { default: DOMMatrix } = await import('@thednp/dommatrix');
+        globalThis.DOMMatrix = DOMMatrix;
+      }
       let pdfjs;
       try { pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs'); } catch (error) {
         if (error.code === 'ERR_MODULE_NOT_FOUND') throw new HttpError(503, 'Local PDF extraction requires pdfjs-dist', 'PDF_UNAVAILABLE');
