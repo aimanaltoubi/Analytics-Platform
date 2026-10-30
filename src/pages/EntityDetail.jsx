@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
 import InvestigationReport from '@/components/InvestigationReport';
 import EntityMergeDialog from '@/components/EntityMergeDialog';
+import FieldSource from '@/components/FieldSource';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -97,6 +98,7 @@ export default function EntityDetail() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="font-heading text-2xl font-bold">{entity.name}</h1>
+            <FieldSource source={entity.field_sources?.__name} />
             <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs bg-primary text-primary-foreground">
               {TYPE_LABELS[entity.type] || 'أخرى'}
             </span>
@@ -148,6 +150,7 @@ export default function EntityDetail() {
                 <div key={k} className="rounded-lg bg-accent/40 p-2.5">
                   <div className="text-[11px] text-muted-foreground">{k}</div>
                   <div className="text-sm font-medium">{String(attrs[k])}</div>
+                  <FieldSource source={entity.field_sources?.[k]} />
                 </div>
               ))}
             </div>

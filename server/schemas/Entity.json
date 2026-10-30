@@ -34,6 +34,10 @@
       "type": "object",
       "title": "سمات إضافية"
     },
+    "field_sources": {
+      "type": "object",
+      "title": "مصدر كل حقل"
+    },
     "notes": {
       "type": "string",
       "title": "ملاحظات المراجعة"

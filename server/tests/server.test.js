@@ -465,6 +465,41 @@ test('shared NER resolves local entities, links, dossiers and high-risk in-app n
   assert.equal((await app.request('/api/entities/Workspace', { token: app.token })).data.length, 1);
 });
 
+test('extracted fields retain source page quotes and reprocessing preserves manual edits', async (t) => {
+  const aiBaseUrl = await fakeAI(t, (schema) => schema.properties?.entities ? ({
+    summary: 'A source-backed person record.',
+    entities: [{ name: 'Nora Hassan', type: 'person', attributes: { 'رقم الجواز': 'A123456', 'العمر': '42' } }],
+    relationships: []
+  }) : sample(schema));
+  const app = await fixture(t, { aiBaseUrl });
+  const doc = await app.create('Document', {
+    title: 'Passport source', status: 'pending',
+    raw_text: 'Nora Hassan passport number A123456 age 42.',
+    pages: ['Nora Hassan passport number A123456 age 42.']
+  });
+  const processed = await app.call('processDocument', { document_id: doc.id });
+  assert.equal(processed.status, 200, JSON.stringify(processed.data));
+  let entity = (await app.request('/api/entities/Entity', { token: app.token })).data.find((row) => row.name === 'Nora Hassan');
+  assert.equal(entity.field_sources.__name.document_id, doc.id);
+  assert.equal(entity.field_sources.__name.page, 1);
+  assert.match(entity.field_sources['رقم الجواز'].quote, /A123456/);
+  assert.equal(entity.field_sources['رقم الجواز'].page, 1);
+
+  const manualSources = {
+    ...entity.field_sources,
+    'رقم الجواز': { kind: 'manual', entered_at: new Date().toISOString() }
+  };
+  await app.request(`/api/entities/Entity/${entity.id}`, {
+    method: 'PUT', token: app.token,
+    body: { attributes: { ...entity.attributes, 'رقم الجواز': 'MANUAL-9' }, field_sources: manualSources }
+  });
+  const reprocessed = await app.call('processDocument', { document_id: doc.id });
+  assert.equal(reprocessed.status, 200, JSON.stringify(reprocessed.data));
+  entity = (await app.request(`/api/entities/Entity/${entity.id}`, { token: app.token })).data;
+  assert.equal(entity.attributes['رقم الجواز'], 'MANUAL-9');
+  assert.equal(entity.field_sources['رقم الجواز'].kind, 'manual');
+});
+
 test('local fusion awaits reference remapping and reports failures rather than suppressing writes', async (t) => {
   const app = await fixture(t);
   const primary = await app.create('Entity', { name: 'Same Person', type: 'person', mention_count: 5 });

@@ -6,6 +6,7 @@ import { Image } from '@/components/ui/image';
 import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
 import InvestigationReport from '@/components/InvestigationReport';
+import FieldSource from '@/components/FieldSource';
 
 const TYPE_LABELS = {
   person: 'فرد', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -87,6 +88,7 @@ export default function EntityDossier() {
           )}
           <div className="flex-1 min-w-0">
             <h1 className="font-heading text-2xl font-bold">{entity.name}</h1>
+            <FieldSource source={entity.field_sources?.__name} />
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="px-3 py-1 rounded-full text-xs bg-primary text-primary-foreground">{TYPE_LABELS[entity.type] || 'أخرى'}</span>
               <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-accent ${riskColor}`}>
@@ -121,6 +123,7 @@ export default function EntityDossier() {
                 <div key={k} className="rounded-lg bg-accent/40 p-2.5">
                   <div className="text-[11px] text-muted-foreground">{k}</div>
                   <div className="text-sm font-medium break-words">{String(attrs[k])}</div>
+                  <FieldSource source={entity.field_sources?.[k]} />
                 </div>
               ))}
             </div>

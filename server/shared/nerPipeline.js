@@ -130,6 +130,40 @@ function extractReferenceDate(entities, fullText) {
   return bestYear ? `${bestYear}-01-01` : '';
 }
 
+function buildFieldSources(name, attributes, doc, fullText) {
+  const pages = Array.isArray(doc.pages) && doc.pages.length ? doc.pages : [fullText];
+  const sourceFor = (value) => {
+    if (value == null || typeof value === 'object') return null;
+    const expected = String(value).trim();
+    if (expected.length < 2) return null;
+    const expectedLower = expected.toLocaleLowerCase();
+    for (let index = 0; index < pages.length; index++) {
+      const pageText = String(pages[index] || '');
+      const matchAt = pageText.toLocaleLowerCase().indexOf(expectedLower);
+      if (matchAt < 0) continue;
+      const start = Math.max(0, matchAt - 60);
+      const end = Math.min(pageText.length, matchAt + expected.length + 60);
+      return {
+        kind: 'document',
+        document_id: doc.id,
+        document_title: doc.title || '',
+        page: Array.isArray(doc.pages) && doc.pages.length ? index + 1 : null,
+        quote: pageText.slice(start, end).trim()
+      };
+    }
+    return null;
+  };
+
+  const sources = {};
+  const nameSource = sourceFor(name);
+  if (nameSource) sources.__name = nameSource;
+  for (const [key, value] of Object.entries(attributes || {})) {
+    const source = sourceFor(value);
+    if (source) sources[key] = source;
+  }
+  return sources;
+}
+
 // يُودع المستند تلقائياً في ملف تحليلات العام المرجعي (Workspace)،
 // ويُنشئ الملف إن لم يكن موجوداً. يُضيف المستند والكيانات المستخرجة إليه.
 async function fileIntoYearDossier(localClient, document_id, referenceDate, resolvedEntities) {
@@ -235,6 +269,8 @@ export async function runNer(localClient, doc, document_id, fullText) {
       }
     }
 
+    const extractedSources = buildFieldSources(ent.name, ent.attributes, doc, fullText);
+
     if (match) {
       const aliases = new Set(match.aliases || []);
       if (ent.aliases) ent.aliases.forEach((a) => aliases.add(a));
@@ -242,11 +278,19 @@ export async function runNer(localClient, doc, document_id, fullText) {
       const documentIds = new Set(match.document_ids || []);
       const alreadySeen = documentIds.has(document_id);
       documentIds.add(document_id);
-      const attrs = { ...(match.attributes || {}), ...(ent.attributes || {}) };
+      const attrs = { ...(match.attributes || {}) };
+      const fieldSources = { ...(match.field_sources || {}) };
+      for (const [key, value] of Object.entries(ent.attributes || {})) {
+        if (fieldSources[key]?.kind === 'manual') continue;
+        attrs[key] = value;
+        if (extractedSources[key]) fieldSources[key] = extractedSources[key];
+      }
+      if (fieldSources.__name?.kind !== 'manual' && extractedSources.__name) fieldSources.__name = extractedSources.__name;
       const updated = await localClient.entities.Entity.update(match.id, {
         aliases: Array.from(aliases),
         document_ids: Array.from(documentIds),
         attributes: attrs,
+        field_sources: fieldSources,
         mention_count: alreadySeen ? (match.mention_count || 1) : (match.mention_count || 1) + 1
       });
       registerEntityIndex(updated);
@@ -260,6 +304,7 @@ export async function runNer(localClient, doc, document_id, fullText) {
       type: targetType,
       aliases: ent.aliases || [],
       attributes: ent.attributes || {},
+      field_sources: extractedSources,
       mention_count: 1,
       risk_score: 0,
       document_ids: [document_id]

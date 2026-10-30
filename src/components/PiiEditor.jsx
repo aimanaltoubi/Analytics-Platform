@@ -3,6 +3,7 @@ import { Save, Plus, X, User, Building2 } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Image as UIImage } from '@/components/ui/image';
+import FieldSource from '@/components/FieldSource';
 
 const PERSON_FIELDS = [
   { key: 'الاسم بالإنجليزية', label: 'الاسم بالإنجليزية', type: 'text' },
@@ -54,6 +55,7 @@ export default function PiiEditor({ entity, onSaved }) {
   const isCompany = etype === 'company';
   const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : etype === 'organization' ? ORG_FIELDS : [];
   const [attrs, setAttrs] = useState({ ...(entity.attributes || {}) });
+  const [fieldSources, setFieldSources] = useState({ ...(entity.field_sources || {}) });
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [photoUrl, setPhotoUrl] = useState(entity.photo_url || '');
@@ -83,6 +85,7 @@ export default function PiiEditor({ entity, onSaved }) {
 
   const removeAttr = (k) => {
     const next = { ...attrs }; delete next[k]; setAttrs(next);
+    const sources = { ...fieldSources }; delete sources[k]; setFieldSources(sources);
   };
 
   const save = async () => {
@@ -93,11 +96,22 @@ export default function PiiEditor({ entity, onSaved }) {
     setSaving(true);
     try {
       const aliasArr = aliases.split('،').map((a) => a.trim()).filter(Boolean);
+      const enteredAt = new Date().toISOString();
+      const sources = { ...fieldSources };
+      if (name.trim() !== (entity.name || '')) sources.__name = { kind: 'manual', entered_at: enteredAt };
+      for (const key of new Set([...Object.keys(entity.attributes || {}), ...Object.keys(attrs), ...Object.keys(sources)])) {
+        if (!Object.hasOwn(attrs, key) || attrs[key] === '' || attrs[key] == null) {
+          delete sources[key];
+        } else if (String(attrs[key]) !== String(entity.attributes?.[key] ?? '')) {
+          sources[key] = { kind: 'manual', entered_at: enteredAt };
+        }
+      }
       const payload = {
         name: name.trim(),
         type: etype,
         aliases: aliasArr,
         attributes: attrs,
+        field_sources: sources,
         photo_url: photoUrl,
         notes: notes
       };
@@ -105,6 +119,7 @@ export default function PiiEditor({ entity, onSaved }) {
         ? await localClient.entities.Entity.create({ ...payload, mention_count: 0, document_ids: [] })
         : await localClient.entities.Entity.update(entity.id, payload);
       toast({ title: isNew ? 'تم إنشاء سجل الكيان' : 'تم حفظ بيانات الكيان' });
+      setFieldSources(sources);
       onSaved && onSaved(saved);
     } catch (e) {
       toast({ title: 'فشل الحفظ', description: e.message, variant: 'destructive' });
@@ -144,6 +159,7 @@ export default function PiiEditor({ entity, onSaved }) {
           <div>
             <div className={labelCls}>{isPerson ? 'الاسم الكامل' : isCompany ? 'اسم الشركة' : 'اسم المنظمة'}</div>
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+            <FieldSource source={fieldSources.__name} />
           </div>
           <div>
             <div className={labelCls}>تصنيف الكيان</div>
@@ -174,6 +190,7 @@ export default function PiiEditor({ entity, onSaved }) {
                 onChange={(e) => setAttrs({ ...attrs, [f.key]: e.target.value })}
                 className={inputCls}
               />
+              <FieldSource source={fieldSources[f.key]} />
             </div>
           ))}
         </div>
@@ -192,6 +209,7 @@ export default function PiiEditor({ entity, onSaved }) {
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-muted-foreground">{k}</div>
                   <div className="text-sm font-medium truncate">{String(v)}</div>
+                  <FieldSource source={fieldSources[k]} />
                 </div>
                 <button onClick={() => removeAttr(k)} className="text-muted-foreground hover:text-destructive"><X className="w-3.5 h-3.5" /></button>
               </div>
