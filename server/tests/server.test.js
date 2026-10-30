@@ -224,9 +224,15 @@ function sample(schema) {
   return 'Local result';
 }
 
-async function fakeAI(t, completion = (schema) => sample(schema), { delayMs = 0 } = {}) {
+async function fakeAI(t, completion = (schema) => sample(schema), { delayMs = 0, loadingHealthChecks = 0 } = {}) {
+  let healthChecks = 0;
   const server = createServer(async (req, res) => {
-    if (req.url === '/health') { res.writeHead(200); res.end('{"status":"ok"}'); return; }
+    if (req.url === '/health') {
+      const loading = healthChecks++ < loadingHealthChecks;
+      res.writeHead(loading ? 503 : 200);
+      res.end(JSON.stringify({ status: loading ? 'loading' : 'ok' }));
+      return;
+    }
     assert.equal(req.url, '/v1/chat/completions');
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -268,6 +274,20 @@ test('every ported function executes against local SQLite and local compatible A
   const screening = await app.call('screenManifest', { manifest_id: manifest.id });
   assert.equal(screening.data.email_sent, 0);
   assert.equal(screening.data.notifications_sent, 0);
+});
+
+test('LLM requests wait while the local model server reports loading', async (t) => {
+  const aiBaseUrl = await fakeAI(t, () => ({ ready: true }), { loadingHealthChecks: 2 });
+  const app = await fixture(t, { aiBaseUrl });
+  const result = await app.request('/api/integrations/Core/InvokeLLM', {
+    method: 'POST', token: app.token, body: {
+      prompt: 'Wait for local model startup',
+      response_json_schema: { type: 'object', properties: { ready: { type: 'boolean' } }, required: ['ready'] }
+    }
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  assert.deepEqual(result.data, { ready: true });
+  assert.equal((await app.request('/api/status', { token: app.token })).data.ai.state, 'ready');
 });
 
 test('LLM structured output is validated locally, not accepted on trust', async (t) => {

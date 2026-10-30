@@ -109,6 +109,7 @@ export class Integrations {
     assert(typeof args.prompt === 'string' && args.prompt.length > 0 && args.prompt.length <= 150000, 400, 'Prompt must be 1–150000 characters');
     const schema = args.response_json_schema;
     if (schema) object(schema, 'response_json_schema');
+    if (this.aiState !== 'ready') await this.waitForAiReady();
     let response;
     try {
       response = await fetch(`${this.aiOrigin}/v1/chat/completions`, {
@@ -151,6 +152,38 @@ export class Integrations {
       throw new HttpError(502, `Local AI schema mismatch: ${error.message}`, 'AI_INVALID_RESPONSE');
     }
     return result;
+  }
+
+  async waitForAiReady() {
+    const deadline = Date.now() + this.aiRequestTimeoutMs;
+    while (true) {
+      let response;
+      try {
+        response = await fetch(`${this.aiOrigin}/health`, {
+          redirect: 'error', signal: AbortSignal.timeout(Math.min(2000, Math.max(1, deadline - Date.now())))
+        });
+        await limitedResponse(response, 65536);
+      } catch (error) {
+        if (error instanceof HttpError) throw error;
+        this.aiState = 'unavailable';
+        throw new HttpError(503, 'Local AI unavailable: start the bundled model server', 'AI_UNAVAILABLE');
+      }
+      if (response.ok) {
+        this.aiState = 'ready';
+        return;
+      }
+      if (response.status !== 503) {
+        this.aiState = 'unavailable';
+        throw new HttpError(503, `Local AI unavailable (health HTTP ${response.status})`, 'AI_UNAVAILABLE');
+      }
+      this.aiState = 'loading';
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        const timeoutMinutes = Math.ceil(this.aiRequestTimeoutMs / 60000);
+        throw new HttpError(503, `Local AI unavailable: model did not become ready within ${timeoutMinutes} minutes`, 'AI_UNAVAILABLE');
+      }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000, remaining)));
+    }
   }
 
   async ExtractDataFromUploadedFile({ file_url, json_schema }) {
