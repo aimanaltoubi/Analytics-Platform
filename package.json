@@ -1,7 +1,7 @@
 {
   "name": "strategic-data-fusion",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "main": "electron/main.js",
   "description": "Offline document and entity analysis for Windows",

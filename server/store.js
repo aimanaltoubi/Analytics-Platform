@@ -227,6 +227,23 @@ export class Store {
     }));
   }
 
+  countRecords(name, filters = {}) {
+    this.schema(name);
+    object(filters, 'count filters');
+    const allowed = name === 'Entity' ? new Set(['type'])
+      : name === 'Document' || name === 'Alert' ? new Set(['status'])
+        : new Set();
+    assert(Object.keys(filters).every((key) => allowed.has(key)), 400, 'Unsupported count filter');
+    const clauses = ['entity = ?'];
+    const values = [name];
+    for (const [key, value] of Object.entries(filters)) {
+      assert(typeof value === 'string', 400, 'Invalid count filter value');
+      clauses.push(`json_extract(data, '$.${key}') = ?`);
+      values.push(value);
+    }
+    return this.db.prepare(`SELECT COUNT(*) AS count FROM records WHERE ${clauses.join(' AND ')}`).get(...values).count;
+  }
+
   restore(name, record) {
     this.validateRecord(name, record);
     assert(!this.get(name, record.id), 409, 'Record already exists');

@@ -67,6 +67,7 @@ export function createLocalClient({ store, user, integrations, invoke }) {
   client.asServiceRole = {
     ...client,
     searchDocuments: async (query, limit) => store.searchDocuments(query, limit),
+    countRecords: async (name, filters) => store.countRecords(name, filters),
     transaction: (operation) => store.transaction(() => {
       assert(typeof operation === 'function', 400, 'Transaction operation required');
       const result = operation({

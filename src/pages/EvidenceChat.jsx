@@ -9,11 +9,13 @@ function ChatSources({ citations }) {
       {citations.map((citation, index) => {
         const source = citation.source;
         const pageAnchor = source.kind === 'document' && source.page ? `#page-${source.page}` : '#document-source';
-        const target = source.kind === 'document' ? `/documents/${source.document_id}${pageAnchor}` : `/entities/${source.entity_id}`;
+        const target = source.kind === 'document' ? `/documents/${source.document_id}${pageAnchor}`
+          : source.kind === 'entity' ? `/database?entity_id=${encodeURIComponent(source.entity_id)}`
+            : source.href || '/';
         const location = source.kind === 'document' && source.page ? ` · صفحة ${source.page}` : '';
         return (
           <Link key={`${citation.source_id}-${index}`} to={target} className="block border-r-2 border-emerald-500 bg-emerald-50/60 px-3 py-2 text-right hover:bg-emerald-50">
-            <span className="text-xs font-medium text-emerald-900">{source.title}{location}</span>
+            <span className="text-xs font-medium text-emerald-900">{source.kind === 'query' ? 'نتيجة استعلام من قاعدة البيانات' : source.kind === 'guide' ? 'قدرات مساعد الأدلة' : source.title}{location}</span>
             <span className="mt-1 block text-xs leading-relaxed text-emerald-950">“{citation.quote}”</span>
           </Link>
         );
@@ -103,6 +105,8 @@ export default function EvidenceChat() {
             </div>
             <div className="mb-3 flex flex-wrap justify-center gap-2">
               {[
+                'كم عدد الاشخاص في النظام؟',
+                'ما الذي تسطيع مساعدتي به؟',
                 'Which documents mention a passport number?',
                 'What is recorded about a selected person?',
                 'Which organizations are linked to an entity?'

@@ -34,6 +34,23 @@ const ANSWER_SCHEMA = {
 };
 
 const STOP_WORDS = new Set(['من', 'في', 'على', 'عن', 'الى', 'إلى', 'ما', 'هل', 'هو', 'هي', 'هذا', 'هذه', 'ذلك', 'تلك', 'كان', 'كانت', 'مع', 'the', 'and', 'for', 'with', 'what', 'who', 'when', 'where', 'was', 'were', 'are', 'is', 'a', 'an', 'of', 'to', 'in', 'on', 'by', 'as', 'at']);
+const COUNT_TARGETS = [
+  { words: ['الاشخاص', 'اشخاص', 'شخص', 'الافراد', 'افراد', 'فرد', 'people', 'person', 'persons', 'individual', 'individuals'], name: 'Entity', filters: { type: 'person' }, label: 'سجلات الأفراد', href: '/entities?type=person' },
+  { words: ['الشركات', 'شركة', 'company', 'companies', 'business', 'businesses'], name: 'Entity', filters: { type: 'company' }, label: 'سجلات الشركات', href: '/entities?type=company' },
+  { words: ['المنظمات', 'منظمة', 'المؤسسات', 'مؤسسة', 'organization', 'organizations', 'institution', 'institutions'], name: 'Entity', filters: { type: 'organization' }, label: 'سجلات المنظمات والمؤسسات', href: '/entities?type=organization' },
+  { words: ['الكيانات', 'كيانات', 'كيان', 'entities', 'entity', 'records', 'records'], name: 'Entity', filters: {}, label: 'سجلات الكيانات', href: '/entities' },
+  { words: ['المستندات', 'مستندات', 'مستند', 'الوثائق', 'وثائق', 'وثيقة', 'documents', 'document', 'files', 'file'], name: 'Document', filters: {}, label: 'المستندات', href: '/documents' },
+  { words: ['الروابط', 'روابط', 'الرابط', 'علاقات', 'علاقة', 'connections', 'connection', 'relationships', 'relationship'], name: 'Connection', filters: {}, label: 'الروابط والعلاقات', href: '/graph' },
+  { words: ['التنبيهات', 'تنبيهات', 'تنبيه', 'alerts', 'alert'], name: 'Alert', filters: {}, label: 'التنبيهات', href: '/alerts' }
+];
+const CAPABILITY_SOURCE = {
+  id: 'system:assistant-capabilities',
+  kind: 'guide',
+  title: 'قدرات مساعد الأدلة',
+  page: null,
+  href: '/دليل_النظام_الكامل.html',
+  text: 'أستطيع البحث داخل المستندات المعالجة وصفحات PDF وسجلات الأفراد والشركات والمنظمات، وتقديم اقتباسات وروابط إلى المصدر. أستطيع أيضاً عدّ السجلات المعروفة. إذا لم أجد دليلاً محلياً كافياً فسأوضح ذلك بدلاً من التخمين.'
+};
 
 function normalize(value) {
   return String(value || '')
@@ -49,6 +66,32 @@ function normalize(value) {
 
 function terms(value) {
   return [...new Set(normalize(value).split(' ').filter((term) => term.length > 1 && !STOP_WORDS.has(term)))];
+}
+
+function requestedCountTarget(question) {
+  const normalized = normalize(question);
+  const countQuestion = ['كم', 'عدد', 'how many', 'how much', 'count', 'number of', 'total'].some((phrase) => normalized.includes(normalize(phrase)));
+  if (!countQuestion) return null;
+  return COUNT_TARGETS.find((target) => target.words.some((word) => normalized.includes(normalize(word)))) || null;
+}
+
+function asksAboutCapabilities(question) {
+  const normalized = normalize(question);
+  return [
+    'what can you help', 'what can you do', 'how can you help',
+    'ماذا تستطيع مساعدتي', 'ما الذي تستطيع مساعدتي', 'ما الذي تسطيع مساعدتي',
+    'تستطيع مساعدتي', 'تسطيع مساعدتي', 'ما الذي يمكنك فعله', 'ما الذي يمكنني سؤالك عنه'
+  ].some((phrase) => normalized.includes(normalize(phrase)));
+}
+
+function directAnswer(source) {
+  const citation = { source_id: source.id, quote: source.text, source };
+  return Response.json({
+    abstained: false,
+    reason: '',
+    claims: [{ text: source.text, citations: [citation] }],
+    sources: [source]
+  });
 }
 
 function chunkText(text, maxLength = 1200, overlap = 160) {
@@ -135,6 +178,20 @@ export default async function(req) {
     const question = typeof body.question === 'string' ? body.question.trim() : '';
     if (!question || question.length > 1500) {
       return Response.json({ error: 'Enter a question of 1 to 1500 characters' }, { status: 400 });
+    }
+    if (asksAboutCapabilities(question)) return directAnswer(CAPABILITY_SOURCE);
+    const countTarget = requestedCountTarget(question);
+    if (countTarget) {
+      const count = await localClient.asServiceRole.countRecords(countTarget.name, countTarget.filters);
+      const source = {
+        id: `query:count:${countTarget.name}:${countTarget.filters.type || 'all'}`,
+        kind: 'query',
+        title: 'قاعدة البيانات المحلية',
+        page: null,
+        href: countTarget.href,
+        text: `عدد ${countTarget.label} في قاعدة البيانات المحلية: ${count}.`
+      };
+      return directAnswer(source);
     }
     const history = Array.isArray(body.history) ? body.history.slice(-6).filter((turn) =>
       turn && ['user', 'assistant'].includes(turn.role) && typeof turn.content === 'string'

@@ -407,6 +407,26 @@ test('local evidence answers cite stored passages and reject fabricated quotatio
   assert.equal(mismatchedClaim.data.claims.length, 0);
 });
 
+test('assistant answers Arabic count and capability questions from local system data', async (t) => {
+  const app = await fixture(t);
+  await app.create('Entity', { name: 'Nora Hassan', type: 'person' });
+  await app.create('Entity', { name: 'Sami Ali', type: 'person' });
+  await app.create('Entity', { name: 'Harbor Group', type: 'organization' });
+
+  const count = await app.call('askEvidence', { question: 'كم عدد الاشخاص في النظام؟' });
+  assert.equal(count.status, 200, JSON.stringify(count.data));
+  assert.equal(count.data.abstained, false);
+  assert.match(count.data.claims[0].text, /2/);
+  assert.equal(count.data.claims[0].citations[0].source.kind, 'query');
+  assert.equal(count.data.claims[0].citations[0].source.href, '/entities?type=person');
+
+  const capabilities = await app.call('askEvidence', { question: 'ما الذي تسطيع مساعدتي به؟' });
+  assert.equal(capabilities.status, 200, JSON.stringify(capabilities.data));
+  assert.equal(capabilities.data.abstained, false);
+  assert.match(capabilities.data.claims[0].text, /المستندات المعالجة/);
+  assert.equal(capabilities.data.claims[0].citations[0].source.kind, 'guide');
+});
+
 test('LLM structured output is validated locally, not accepted on trust', async (t) => {
   const aiBaseUrl = await fakeAI(t, () => ({ count: 'not-a-number' }));
   const app = await fixture(t, { aiBaseUrl });
