@@ -29,7 +29,7 @@ test('packaging check requires runtime files and exactly one valid source model'
   try {
     for (const name of runtimeFiles) writeFileSync(join(runtime, name), name.endsWith('.exe') ? 'MZ' : 'runtime');
     writeFileSync(join(model, 'model.gguf'), Buffer.concat([Buffer.from('GGUF'), Buffer.alloc(1_000_000)]));
-    writeFileSync(installer, 'Source: "{#SourcePath}\\..\\resources\\ai\\*.gguf"; DestDir: "{app}\\resources\\ai"');
+    writeFileSync(installer, 'IfFileExists "$EXEDIR\\Qwen2.5-14B-Instruct-Q4_K_M.gguf" model_found model_missing\nCopyFiles /SILENT "$EXEDIR\\Qwen2.5-14B-Instruct-Q4_K_M.gguf" "$INSTDIR\\resources\\ai"');
     assert.deepEqual(checkPackagedAi(runtime, model, installer), { errors: [], model: 'model.gguf' });
 
     writeFileSync(join(runtime, 'duplicate.gguf'), 'model');
@@ -40,7 +40,7 @@ test('packaging check requires runtime files and exactly one valid source model'
     assert.match(checkPackagedAi(runtime, model, installer).errors.join('\n'), /exactly one source GGUF/);
 
     writeFileSync(installer, 'no model source');
-    assert.match(checkPackagedAi(runtime, model, installer).errors.join('\n'), /must copy the source GGUF/);
+    assert.match(checkPackagedAi(runtime, model, installer).errors.join('\n'), /copy the adjacent GGUF/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

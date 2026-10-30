@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const runtimeDirectory = resolve('release/win-unpacked/resources/ai');
 const modelDirectory = resolve('resources/ai');
-const installerScript = resolve('build/offline-installer.iss');
+const installerScript = resolve('build/installer.nsh');
 const requiredRuntime = [
   'llama-server.exe',
   'llama-server-impl.dll',
@@ -58,8 +58,8 @@ export function checkPackagedAi(runtimePath = runtimeDirectory, modelPath = mode
     if (!regularFile(join(runtimePath, name))) errors.push(`packaged AI resources are missing ${name}`);
   }
   const installerContents = readFileSync(installerPath, 'utf8');
-  if (!installerContents.includes('Source: "{#SourcePath}\\..\\resources\\ai\\*.gguf"; DestDir: "{app}\\resources\\ai"')) {
-    errors.push('the installer must copy the source GGUF model into the installed resources/ai directory');
+  if (!installerContents.includes('IfFileExists "$EXEDIR\\Qwen2.5-14B-Instruct-Q4_K_M.gguf"') || !installerContents.includes('CopyFiles /SILENT "$EXEDIR\\Qwen2.5-14B-Instruct-Q4_K_M.gguf" "$INSTDIR\\resources\\ai"')) {
+    errors.push('the installer must copy the adjacent GGUF model into the installed resources/ai directory');
   }
 
   return { errors, model: models.length === 1 ? models[0] : null };
@@ -71,6 +71,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(`Cannot create the offline installer:\n- ${errors.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`Packaged AI payload ready: llama.cpp runtime and ${model} will be installed.`);
+    console.log(`Packaged AI payload ready: llama.cpp runtime will be installed; ${model} will be copied from beside the installer.`);
   }
 }

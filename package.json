@@ -1,7 +1,7 @@
 {
   "name": "strategic-data-fusion",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "electron/main.js",
   "description": "Offline document and entity analysis for Windows",
@@ -19,7 +19,7 @@
     "desktop": "npm run build && electron .",
     "test": "node --test server/tests/*.test.js electron/*.test.js",
     "check:offline": "node scripts/check-offline.js",
-    "package:win": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win dir --x64 && node scripts/check-packaged-ai.js && iscc /DAppVersion=%npm_package_version% build/offline-installer.iss",
+    "package:win": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win nsis --x64 && node scripts/check-packaged-ai.js",
     "package:portable": "npm run build && npm run check:offline && node scripts/check-resources.js && electron-builder --win portable --x64 && node scripts/stage-model.js"
   },
   "dependencies": {
@@ -137,7 +137,7 @@
       "target": ["nsis"]
     },
     "nsis": {
-      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "artifactName": "Strategic.Data.Fusion-Setup-${version}-${arch}.${ext}",
       "include": "build/installer.nsh",
       "oneClick": false,
       "perMachine": false,

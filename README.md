@@ -4,7 +4,7 @@ Strategic Data Fusion is a fully local document and entity analysis application.
 
 ## Current download for an offline Windows PC
 
-**What is available now:** the published v1.0.0 release is a two-file package.
+**What is available now:** the published v1.0.1 release is a two-file package.
 Download both the installer and the `.gguf` model, keep them in the same folder,
 and run the installer from that folder to enable AI offline. The installer alone
 does not include the model. The planned single-file installer is not published,
@@ -33,7 +33,7 @@ step in order. Each step has its own command; do not combine them.
 3. Download the installer:
 
    ```bat
-   curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.0.0-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/Strategic.Data.Fusion-Setup-1.0.0-x64.exe"
+   curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.0.1-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.1/Strategic.Data.Fusion-Setup-1.0.1-x64.exe"
    ```
 
 4. Download the AI model. This is approximately 9 GB and may take a while:
@@ -47,13 +47,13 @@ step in order. Each step has its own command; do not combine them.
 5. Download the checksum file:
 
    ```bat
-   curl --fail --location --retry 5 --output "SHA256SUMS.txt" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.0/SHA256SUMS.txt"
+   curl --fail --location --retry 5 --output "SHA256SUMS.txt" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.0.1/SHA256SUMS.txt"
    ```
 
 6. Confirm all three files are present and the model download is complete:
 
    ```bat
-   dir "Strategic Data Fusion-Setup-1.0.0-x64.exe"
+   dir "Strategic Data Fusion-Setup-1.0.1-x64.exe"
    dir "Qwen2.5-14B-Instruct-Q4_K_M.gguf"
    dir "SHA256SUMS.txt"
    ```
@@ -61,7 +61,7 @@ step in order. Each step has its own command; do not combine them.
 7. Verify the installer and model checksums:
 
    ```bat
-   certutil -hashfile "Strategic Data Fusion-Setup-1.0.0-x64.exe" SHA256
+   certutil -hashfile "Strategic Data Fusion-Setup-1.0.1-x64.exe" SHA256
    certutil -hashfile "Qwen2.5-14B-Instruct-Q4_K_M.gguf" SHA256
    type SHA256SUMS.txt
    ```
@@ -74,7 +74,7 @@ step in order. Each step has its own command; do not combine them.
    model together, with their exact filenames.
 
 9. On the offline PC, copy the folder onto its local disk. Open that folder and
-   double-click `Strategic Data Fusion-Setup-1.0.0-x64.exe`. The installer reads
+   double-click `Strategic Data Fusion-Setup-1.0.1-x64.exe`. The installer reads
    the model beside itself and copies it into the application; it does not
    download the model. If setup warns that the model is missing, close setup,
    put the `.gguf` beside the installer, and run the installer again.
