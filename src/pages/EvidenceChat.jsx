@@ -50,6 +50,32 @@ export default function EvidenceChat() {
     }
   };
 
+  const composer = (
+    <form onSubmit={ask} className="border-t border-border bg-background/95 py-4 backdrop-blur">
+      <label htmlFor="evidence-question" className="sr-only">Ask a question / اكتب سؤالك</label>
+      <div className="flex items-end gap-2">
+        <textarea
+          id="evidence-question"
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+          rows={2}
+          maxLength={1500}
+          placeholder="Ask a question about your records… / اسأل عن معلومة في سجلاتك..."
+          className="min-h-12 flex-1 resize-y rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button type="submit" disabled={busy || !question.trim()} title="Ask / إرسال السؤال" aria-label="Ask / إرسال السؤال" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col px-4 py-6 sm:px-6">
       <header className="mb-5 flex items-center justify-between gap-4 border-b border-border pb-4">
@@ -57,8 +83,8 @@ export default function EvidenceChat() {
           <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
             <BookOpen className="h-4 w-4" /> مصادر النظام المحلية
           </div>
-          <h1 className="font-heading text-2xl font-bold">مساعد الأدلة</h1>
-          <p className="mt-1 text-sm text-muted-foreground">تُعرض الإجابات مع اقتباسات قابلة للتحقق من المستندات أو ملفات الكيانات.</p>
+          <h1 className="font-heading text-2xl font-bold">مساعد الأدلة <span className="text-base font-medium text-muted-foreground">· Evidence Chat</span></h1>
+          <p className="mt-1 text-sm text-muted-foreground">Ask questions about processed local records. Answers include clickable source quotes. / اسأل عن سجلاتك المحلية، وستتضمن الإجابات روابط للمصادر.</p>
         </div>
         {messages.length > 0 && (
           <button onClick={() => setMessages([])} title="محادثة جديدة" aria-label="محادثة جديدة" className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent">
@@ -67,11 +93,26 @@ export default function EvidenceChat() {
         )}
       </header>
 
-      <div className="flex-1 space-y-5 pb-6" aria-live="polite">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pb-6" aria-live="polite">
         {messages.length === 0 ? (
-          <div className="flex min-h-64 flex-col items-center justify-center text-center text-muted-foreground">
-            <MessageCircle className="mb-3 h-9 w-9 opacity-50" />
-            <p className="text-sm">اسأل عن معلومة في المستندات أو ملفات الأفراد والشركات والمنظمات.</p>
+          <div className="mx-auto flex min-h-64 max-w-2xl flex-col justify-center">
+            <div className="mb-4 text-center text-muted-foreground">
+              <MessageCircle className="mx-auto mb-3 h-9 w-9 opacity-50" />
+              <p className="text-sm">Ask about processed documents and entity profiles. / اسأل عن المستندات المعالجة وملفات الكيانات.</p>
+              <p className="mt-1 text-xs">The assistant will say when it cannot verify an answer from a source. / سيخبرك المساعد عندما لا يجد مصدراً يؤكد الإجابة.</p>
+            </div>
+            <div className="mb-3 flex flex-wrap justify-center gap-2">
+              {[
+                'Which documents mention a passport number?',
+                'What is recorded about a selected person?',
+                'Which organizations are linked to an entity?'
+              ].map((prompt) => (
+                <button key={prompt} type="button" onClick={() => setQuestion(prompt)} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary">
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            {composer}
           </div>
         ) : messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`max-w-3xl ${message.role === 'user' ? 'mr-auto' : 'ml-auto'} ${message.role === 'error' ? 'text-destructive' : ''}`}>
@@ -101,30 +142,7 @@ export default function EvidenceChat() {
           </div>
         )}
       </div>
-
-      <form onSubmit={ask} className="sticky bottom-0 border-t border-border bg-background/95 py-4 backdrop-blur">
-        <label htmlFor="evidence-question" className="sr-only">سؤالك</label>
-        <div className="flex items-end gap-2">
-          <textarea
-            id="evidence-question"
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            rows={2}
-            maxLength={1500}
-            placeholder="اكتب سؤالاً عن سجلات النظام..."
-            className="min-h-12 flex-1 resize-y rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <button type="submit" disabled={busy || !question.trim()} title="إرسال السؤال" aria-label="إرسال السؤال" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
-          </button>
-        </div>
-      </form>
+      {messages.length > 0 && <div className="sticky bottom-0 shrink-0">{composer}</div>}
     </div>
   );
 }
