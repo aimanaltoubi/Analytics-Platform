@@ -4,7 +4,7 @@ import { resolve, join, extname, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Store } from './store.js';
 import { Auth } from './auth.js';
-import { Integrations, MAX_FILE_SIZE } from './integrations.js';
+import { AI_REQUEST_TIMEOUT_MS, Integrations, MAX_FILE_SIZE } from './integrations.js';
 import { createLocalClient, bindRequest } from './client.js';
 import { exportBackup, importBackup } from './backup.js';
 import { assert, HttpError } from './errors.js';
@@ -47,7 +47,7 @@ function queryJSON(url, key, fallback) {
   try { return JSON.parse(value); } catch { throw new HttpError(400, `Invalid ${key} query`); }
 }
 
-export async function startServer({ dataDir = '.local-data', staticDir, port = 0, aiBaseUrl = 'http://127.0.0.1:8081', allowedOrigin } = {}) {
+export async function startServer({ dataDir = '.local-data', staticDir, port = 0, aiBaseUrl = 'http://127.0.0.1:8081', aiRequestTimeoutMs = AI_REQUEST_TIMEOUT_MS, allowedOrigin } = {}) {
   assert(Number.isInteger(port) && port >= 0 && port <= 65535, 400, 'Invalid port');
   let devOrigin;
   if (allowedOrigin) {
@@ -59,7 +59,7 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
   staticDir = staticDir ? realpathSync(resolve(staticDir)) : undefined;
   const store = new Store(dataDir);
   let integrations;
-  try { integrations = new Integrations({ store, dataDir, aiBaseUrl }); } catch (error) { store.close(); throw error; }
+  try { integrations = new Integrations({ store, dataDir, aiBaseUrl, aiRequestTimeoutMs }); } catch (error) { store.close(); throw error; }
   const auth = new Auth(store);
   const functionNames = readdirSync(new URL('./functions/', import.meta.url), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   let functions;

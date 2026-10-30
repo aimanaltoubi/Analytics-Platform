@@ -224,7 +224,7 @@ function sample(schema) {
   return 'Local result';
 }
 
-async function fakeAI(t, completion = (schema) => sample(schema)) {
+async function fakeAI(t, completion = (schema) => sample(schema), { delayMs = 0 } = {}) {
   const server = createServer(async (req, res) => {
     if (req.url === '/health') { res.writeHead(200); res.end('{"status":"ok"}'); return; }
     assert.equal(req.url, '/v1/chat/completions');
@@ -232,6 +232,7 @@ async function fakeAI(t, completion = (schema) => sample(schema)) {
     for await (const chunk of req) chunks.push(chunk);
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     const content = completion(body.response_format?.json_schema?.schema, body);
+    if (delayMs) await new Promise((done) => setTimeout(done, delayMs));
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) }, finish_reason: 'stop' }] }));
   });
@@ -275,6 +276,17 @@ test('LLM structured output is validated locally, not accepted on trust', async 
   const result = await app.request('/api/integrations/Core/InvokeLLM', { method: 'POST', token: app.token, body: { prompt: 'Count', response_json_schema: { type: 'object', properties: { count: { type: 'number' } }, required: ['count'], additionalProperties: false } } });
   assert.equal(result.status, 502);
   assert.equal(result.data.code, 'AI_INVALID_RESPONSE');
+});
+
+test('slow local AI requests use the configured timeout and return a clear timeout error', async (t) => {
+  const aiBaseUrl = await fakeAI(t, () => 'slow response', { delayMs: 100 });
+  const app = await fixture(t, { aiBaseUrl, aiRequestTimeoutMs: 10 });
+  const result = await app.request('/api/integrations/Core/InvokeLLM', {
+    method: 'POST', token: app.token, body: { prompt: 'A slow local request' }
+  });
+  assert.equal(result.status, 503);
+  assert.equal(result.data.error, 'Local AI unavailable: request timed out after 1 minute');
+  assert.equal(result.data.code, 'AI_UNAVAILABLE');
 });
 
 test('shared NER resolves local entities, links, dossiers and high-risk in-app notifications', async (t) => {

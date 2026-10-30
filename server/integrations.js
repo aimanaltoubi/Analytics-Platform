@@ -5,6 +5,7 @@ import { assert, HttpError } from './errors.js';
 import { object, validateJSON } from './validation.js';
 
 export const MAX_FILE_SIZE = 32 * 1024 * 1024;
+export const AI_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 export const fileTypes = {
   '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8', '.csv': 'text/csv; charset=utf-8',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif'
@@ -57,7 +58,7 @@ async function limitedResponse(response, limit = 2 * 1024 * 1024) {
 }
 
 export class Integrations {
-  constructor({ store, dataDir, aiBaseUrl }) {
+  constructor({ store, dataDir, aiBaseUrl, aiRequestTimeoutMs = AI_REQUEST_TIMEOUT_MS }) {
     this.store = store;
     this.filesDir = join(dataDir, 'files');
     mkdirSync(this.filesDir, { recursive: true, mode: 0o700 });
@@ -65,6 +66,8 @@ export class Integrations {
     assert(endpoint.protocol === 'http:' && ['127.0.0.1', '[::1]'].includes(endpoint.hostname) && !endpoint.username && !endpoint.password && !endpoint.search && !endpoint.hash, 400, 'AI endpoint must be an HTTP loopback address');
     assert(['/', '/v1', '/v1/'].includes(endpoint.pathname), 400, 'Invalid AI endpoint path');
     this.aiOrigin = endpoint.origin;
+    assert(Number.isInteger(aiRequestTimeoutMs) && aiRequestTimeoutMs > 0, 400, 'Invalid local AI request timeout');
+    this.aiRequestTimeoutMs = aiRequestTimeoutMs;
     this.aiState = 'unknown';
     this.url = null;
   }
@@ -109,7 +112,7 @@ export class Integrations {
     let response;
     try {
       response = await fetch(`${this.aiOrigin}/v1/chat/completions`, {
-        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(120000),
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(this.aiRequestTimeoutMs),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'local', messages: [{ role: 'user', content: args.prompt }],
@@ -119,7 +122,11 @@ export class Integrations {
       });
     } catch (error) {
       this.aiState = 'unavailable';
-      throw new HttpError(503, `Local AI unavailable: ${error.name === 'TimeoutError' ? 'request timed out' : 'start the bundled model server'}`, 'AI_UNAVAILABLE');
+      const timeoutMinutes = Math.ceil(this.aiRequestTimeoutMs / 60000);
+      const reason = error.name === 'TimeoutError'
+        ? `request timed out after ${timeoutMinutes} minute${timeoutMinutes === 1 ? '' : 's'}`
+        : 'start the bundled model server';
+      throw new HttpError(503, `Local AI unavailable: ${reason}`, 'AI_UNAVAILABLE');
     }
     if (!response.ok) {
       this.aiState = 'unavailable';
