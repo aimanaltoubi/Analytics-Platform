@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -15,6 +15,7 @@ const TYPE_LABELS = {
 
 export default function DocumentDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const [doc, setDoc] = useState(null);
   const [entities, setEntities] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -37,6 +38,12 @@ export default function DocumentDetail() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (!doc || !location.hash) return;
+    const timer = setTimeout(() => document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ block: 'start' }), 0);
+    return () => clearTimeout(timer);
+  }, [doc, location.hash]);
 
   const handleReprocess = async () => {
     setReprocessing(true);
@@ -163,13 +170,20 @@ export default function DocumentDetail() {
         </div>
       </div>
 
-      {doc.raw_text && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-heading font-semibold mb-3">النص المستخرج</h3>
-          <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-body leading-relaxed max-h-96 overflow-auto">
-            {doc.raw_text}
-          </pre>
-        </div>
+      {(doc.pages?.length > 0 || doc.raw_text) && (
+        <section id="document-source" className="space-y-3 scroll-mt-4">
+          <h2 className="font-heading font-semibold">النص المستخرج</h2>
+          {doc.pages?.length > 0 ? doc.pages.map((page, index) => (
+            <article id={`page-${index + 1}`} key={index} className="scroll-mt-4 rounded-xl border border-border bg-card p-5">
+              <h3 className="mb-3 text-sm font-semibold">صفحة {index + 1}</h3>
+              <pre className="whitespace-pre-wrap font-body text-sm leading-relaxed text-muted-foreground">{page}</pre>
+            </article>
+          )) : (
+            <div className="rounded-xl border border-border bg-card p-5">
+              <pre className="max-h-96 overflow-auto whitespace-pre-wrap font-body text-sm leading-relaxed text-muted-foreground">{doc.raw_text}</pre>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

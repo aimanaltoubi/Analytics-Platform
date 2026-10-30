@@ -1,0 +1,15 @@
+{
+  "name": "DuplicateReview",
+  "type": "object",
+  "properties": {
+    "left_id": { "type": "string" },
+    "right_id": { "type": "string" },
+    "left_name": { "type": "string" },
+    "right_name": { "type": "string" },
+    "entity_type": { "type": "string" },
+    "reason": { "type": "string" },
+    "status": { "type": "string", "enum": ["pending", "dismissed", "merged"] },
+    "merge_history_id": { "type": "string" }
+  },
+  "required": ["left_id", "right_id", "left_name", "right_name", "entity_type", "reason", "status"]
+}

@@ -58,7 +58,7 @@ test('health and setup are minimal; all data and functions require authenticatio
   for (const name of app.server.functionNames) {
     assert.equal((await app.request(`/api/functions/${name}`, { method: 'POST', body: {} })).status, 401);
   }
-  assert.equal(app.server.functionNames.length, 14);
+  assert.equal(app.server.functionNames.length, 17);
   assert.equal((await app.request('/api/functions/notRegistered', { method: 'POST', body: {}, token: app.token })).status, 404);
 });
 
@@ -224,11 +224,16 @@ function sample(schema) {
   return 'Local result';
 }
 
-async function fakeAI(t, completion = (schema) => sample(schema), { delayMs = 0, loadingHealthChecks = 0 } = {}) {
+async function fakeAI(t, completion = (schema) => sample(schema), { delayMs = 0, loadingHealthChecks = 0, connectionFailures = 0 } = {}) {
   let healthChecks = 0;
   const server = createServer(async (req, res) => {
     if (req.url === '/health') {
-      const loading = healthChecks++ < loadingHealthChecks;
+      const currentCheck = healthChecks++;
+      if (currentCheck < connectionFailures) {
+        req.socket.destroy();
+        return;
+      }
+      const loading = currentCheck < connectionFailures + loadingHealthChecks;
       res.writeHead(loading ? 503 : 200);
       res.end(JSON.stringify({ status: loading ? 'loading' : 'ok' }));
       return;
@@ -276,9 +281,69 @@ test('every ported function executes against local SQLite and local compatible A
   assert.equal(screening.data.notifications_sent, 0);
 });
 
+test('duplicate review scans matching aliases and merge undo restores IDs and references', async (t) => {
+  const app = await fixture(t);
+  const primary = await app.create('Entity', { name: 'Nora Hassan', type: 'person', aliases: ['Nora H.'], mention_count: 2 });
+  const duplicate = await app.create('Entity', { name: 'N. Hassan', type: 'person', aliases: ['Nora H.'], mention_count: 1 });
+  const other = await app.create('Entity', { name: 'Harbor Group', type: 'organization' });
+  const doc = await app.create('Document', { title: 'Source note' });
+  const connection = await app.create('Connection', {
+    source_entity_id: duplicate.id, target_entity_id: other.id,
+    source_entity_name: duplicate.name, target_entity_name: other.name,
+    relationship_type: 'met', document_id: doc.id
+  });
+  const mention = await app.create('Mention', {
+    entity_id: duplicate.id, entity_name: duplicate.name, document_id: doc.id, document_title: doc.title, context: 'Nora H.'
+  });
+  const workspace = await app.create('Workspace', { name: 'Review workspace', entity_ids: [duplicate.id] });
+  const alert = await app.create('Alert', { title: 'Review alert', severity: 'high', entity_ids: [duplicate.id], entity_names: [duplicate.name] });
+  const notification = await app.create('Notification', { title: 'Review notification', entity_id: duplicate.id, entity_name: duplicate.name });
+
+  const scan = await app.call('scanDuplicates');
+  assert.equal(scan.status, 200, JSON.stringify(scan.data));
+  assert.equal(scan.data.added, 1);
+  const review = (await app.request('/api/entities/DuplicateReview', { token: app.token })).data[0];
+  assert.deepEqual(new Set([review.left_id, review.right_id]), new Set([primary.id, duplicate.id]));
+
+  const merged = await app.call('mergeEntities', {
+    primary_id: primary.id, duplicate_id: duplicate.id, review_id: review.id
+  });
+  assert.equal(merged.status, 200, JSON.stringify(merged.data));
+  assert.equal((await app.request(`/api/entities/Entity/${duplicate.id}`, { token: app.token })).status, 404);
+  assert.equal((await app.request(`/api/entities/DuplicateReview/${review.id}`, { token: app.token })).data.status, 'merged');
+  assert.deepEqual((await app.request(`/api/entities/Workspace/${workspace.id}`, { token: app.token })).data.entity_ids, [primary.id]);
+  assert.deepEqual((await app.request(`/api/entities/Alert/${alert.id}`, { token: app.token })).data.entity_ids, [primary.id]);
+  assert.equal((await app.request(`/api/entities/Notification/${notification.id}`, { token: app.token })).data.entity_id, primary.id);
+
+  const undone = await app.call('undoMerge', { merge_history_id: merged.data.merge_history_id });
+  assert.equal(undone.status, 200, JSON.stringify(undone.data));
+  assert.equal((await app.request(`/api/entities/Entity/${duplicate.id}`, { token: app.token })).data.name, duplicate.name);
+  assert.equal((await app.request(`/api/entities/Connection/${connection.id}`, { token: app.token })).data.source_entity_id, duplicate.id);
+  assert.equal((await app.request(`/api/entities/Mention/${mention.id}`, { token: app.token })).data.entity_id, duplicate.id);
+  assert.deepEqual((await app.request(`/api/entities/Workspace/${workspace.id}`, { token: app.token })).data.entity_ids, [duplicate.id]);
+  assert.deepEqual((await app.request(`/api/entities/Alert/${alert.id}`, { token: app.token })).data.entity_ids, [duplicate.id]);
+  assert.equal((await app.request(`/api/entities/Notification/${notification.id}`, { token: app.token })).data.entity_id, duplicate.id);
+  assert.equal((await app.request(`/api/entities/DuplicateReview/${review.id}`, { token: app.token })).data.status, 'pending');
+});
+
+test('merge undo refuses to overwrite a primary entity changed after merge', async (t) => {
+  const app = await fixture(t);
+  const primary = await app.create('Entity', { name: 'Same Person', type: 'person' });
+  const duplicate = await app.create('Entity', { name: 'Same Person Alias', type: 'person' });
+  const merged = await app.call('mergeEntities', { primary_id: primary.id, duplicate_id: duplicate.id });
+  assert.equal(merged.status, 200, JSON.stringify(merged.data));
+  await app.request(`/api/entities/Entity/${primary.id}`, { method: 'PUT', token: app.token, body: { notes: 'Reviewed after merge' } });
+  const undone = await app.call('undoMerge', { merge_history_id: merged.data.merge_history_id });
+  assert.equal(undone.status, 409);
+  assert.equal((await app.request(`/api/entities/Entity/${duplicate.id}`, { token: app.token })).status, 404);
+});
+
 test('LLM requests wait while the local model server reports loading', async (t) => {
   const aiBaseUrl = await fakeAI(t, () => ({ ready: true }), { loadingHealthChecks: 2 });
   const app = await fixture(t, { aiBaseUrl });
+  const starting = await app.request('/api/status', { token: app.token });
+  assert.equal(starting.data.ai.state, 'loading');
+  assert.equal(starting.data.ai.available, false);
   const result = await app.request('/api/integrations/Core/InvokeLLM', {
     method: 'POST', token: app.token, body: {
       prompt: 'Wait for local model startup',
@@ -288,6 +353,58 @@ test('LLM requests wait while the local model server reports loading', async (t)
   assert.equal(result.status, 200, JSON.stringify(result.data));
   assert.deepEqual(result.data, { ready: true });
   assert.equal((await app.request('/api/status', { token: app.token })).data.ai.state, 'ready');
+});
+
+test('LLM requests retry connection failures while the local model server starts', async (t) => {
+  const aiBaseUrl = await fakeAI(t, () => ({ ready: true }), { connectionFailures: 2 });
+  const app = await fixture(t, { aiBaseUrl, aiRuntime: { state: 'starting', error: '', detail: '', startedAt: Date.now() } });
+  const result = await app.request('/api/integrations/Core/InvokeLLM', {
+    method: 'POST', token: app.token, body: {
+      prompt: 'Wait for local model startup',
+      response_json_schema: { type: 'object', properties: { ready: { type: 'boolean' } }, required: ['ready'] }
+    }
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  assert.deepEqual(result.data, { ready: true });
+});
+
+test('local evidence answers cite stored passages and reject fabricated quotations', async (t) => {
+  const aiBaseUrl = await fakeAI(t, (_schema, body) => {
+    const marker = 'مصادر الأدلة المحلية:\n';
+    const sourceStart = body.messages[0].content.lastIndexOf(marker) + marker.length;
+    const sources = JSON.parse(body.messages[0].content.slice(sourceStart));
+    const unsupportedCitation = body.messages[0].content.includes('unsupported citation');
+    const unsupportedClaim = body.messages[0].content.includes('unsupported statement');
+    const quote = unsupportedCitation ? 'This invented text is not in the source' : 'passport number is A123456';
+    return {
+      claims: [{
+        text: unsupportedClaim ? 'Nora works for Blue Harbor Group.' : 'The passport number is A123456.',
+        citations: [{ source_id: sources[0].id, quote }]
+      }]
+    };
+  });
+  const app = await fixture(t, { aiBaseUrl });
+  await app.create('Document', {
+    title: 'Passport report', status: 'processed',
+    raw_text: 'Name Nora. passport number is A123456.',
+    pages: ['Name Nora. passport number is A123456.']
+  });
+
+  const grounded = await app.call('askEvidence', { question: 'What passport number is listed for Nora?' });
+  assert.equal(grounded.status, 200, JSON.stringify(grounded.data));
+  assert.equal(grounded.data.abstained, false);
+  assert.equal(grounded.data.claims[0].citations[0].source.page, 1);
+  assert.equal(grounded.data.claims[0].citations[0].quote, 'passport number is A123456');
+
+  const unsupported = await app.call('askEvidence', { question: 'unsupported citation for the passport number' });
+  assert.equal(unsupported.status, 200, JSON.stringify(unsupported.data));
+  assert.equal(unsupported.data.abstained, true);
+  assert.equal(unsupported.data.claims.length, 0);
+
+  const mismatchedClaim = await app.call('askEvidence', { question: 'unsupported statement about Nora' });
+  assert.equal(mismatchedClaim.status, 200, JSON.stringify(mismatchedClaim.data));
+  assert.equal(mismatchedClaim.data.abstained, true);
+  assert.equal(mismatchedClaim.data.claims.length, 0);
 });
 
 test('LLM structured output is validated locally, not accepted on trust', async (t) => {

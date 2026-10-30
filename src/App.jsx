@@ -37,6 +37,8 @@ import PeriodComparison from '@/pages/PeriodComparison';
 import Settings from '@/pages/Settings';
 import CompanyNetwork from '@/pages/CompanyNetwork';
 import PresentationPage from '@/pages/PresentationPage';
+import EvidenceChat from '@/pages/EvidenceChat';
+import DuplicateReview from '@/pages/DuplicateReview';
 
 
 const AuthenticatedApp = () => {
@@ -60,8 +62,10 @@ const AuthenticatedApp = () => {
         <Route path="/graph" element={<GraphIndex />} />
         <Route path="/company-network" element={<CompanyNetwork />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/assistant" element={<EvidenceChat />} />
         <Route path="/clir" element={<CrossLingualSearch />} />
         <Route path="/database" element={<Database />} />
+        <Route path="/duplicates" element={<DuplicateReview />} />
         <Route path="/yearly-stats" element={<YearlyStats />} />
         <Route path="/path-analysis" element={<PathAnalysisPage />} />
         <Route path="/changes" element={<ChangeTracking />} />

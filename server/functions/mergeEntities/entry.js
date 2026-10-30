@@ -3,85 +3,114 @@ import { createClientFromRequest } from '../../client.js';
 export default async function(req) {
   try {
     const localClient = createClientFromRequest(req);
-
     const body = await req.json();
-    const primaryId = body.primary_id;
-    const duplicateId = body.duplicate_id;
+    const { primary_id: primaryId, duplicate_id: duplicateId } = body;
     if (!primaryId || !duplicateId) return Response.json({ error: 'primary_id and duplicate_id required' }, { status: 400 });
     if (primaryId === duplicateId) return Response.json({ error: 'cannot merge an entity with itself' }, { status: 400 });
 
-    const primary = await localClient.entities.Entity.get(primaryId);
-    const duplicate = await localClient.entities.Entity.get(duplicateId);
-    if (!primary || !duplicate) return Response.json({ error: 'entity not found' }, { status: 404 });
+    const result = localClient.asServiceRole.transaction((db) => {
+      const primary = db.get('Entity', primaryId);
+      const duplicate = db.get('Entity', duplicateId);
+      if (!primary || !duplicate) return { error: 'entity not found', status: 404 };
+      if (primary.type !== duplicate.type) return { error: 'Entities must have the same type to merge', status: 422 };
 
-    // 1) إعادة توجيه الروابط التي تشير إلى الكيان المكرر
-    const [srcConns, tgtConns] = await Promise.all([
-      localClient.asServiceRole.entities.Connection.filter({ source_entity_id: duplicateId }, '-created_date', 3000),
-      localClient.asServiceRole.entities.Connection.filter({ target_entity_id: duplicateId }, '-created_date', 3000)
-    ]);
-    const seen = new Set();
-    const patches = [];
-    const selfLoopIds = [];
-    for (const c of [...srcConns, ...tgtConns]) {
-      if (seen.has(c.id)) continue;
-      seen.add(c.id);
-      const patch = { id: c.id };
-      let newSrc = c.source_entity_id;
-      let newTgt = c.target_entity_id;
-      if (c.source_entity_id === duplicateId) { patch.source_entity_id = primaryId; patch.source_entity_name = primary.name; newSrc = primaryId; }
-      if (c.target_entity_id === duplicateId) { patch.target_entity_id = primaryId; patch.target_entity_name = primary.name; newTgt = primaryId; }
-      if (newSrc === newTgt) { selfLoopIds.push(c.id); continue; }
-      patches.push(patch);
-    }
-    if (patches.length > 0) await localClient.asServiceRole.entities.Connection.bulkUpdate(patches);
-    if (selfLoopIds.length > 0) await localClient.asServiceRole.entities.Connection.deleteMany({ id: { $in: selfLoopIds } });
+      const connectionsBefore = db.list('Connection', {
+        $or: [{ source_entity_id: duplicateId }, { target_entity_id: duplicateId }]
+      });
+      const mentionsBefore = db.list('Mention', { entity_id: duplicateId });
+      const workspacesBefore = db.list('Workspace', { entity_ids: duplicateId });
+      const alertsBefore = db.list('Alert', { entity_ids: duplicateId });
+      const notificationsBefore = db.list('Notification', { entity_id: duplicateId });
+      const connectionsAfter = [];
+      const deletedConnectionIds = [];
 
-    // 2) إعادة توجيه الذكر إلى الكيان الأساسي
-    await localClient.asServiceRole.entities.Mention.updateMany(
-      { entity_id: duplicateId },
-      { $set: { entity_id: primaryId, entity_name: primary.name } }
-    );
+      for (const connection of connectionsBefore) {
+        const sourceId = connection.source_entity_id === duplicateId ? primaryId : connection.source_entity_id;
+        const targetId = connection.target_entity_id === duplicateId ? primaryId : connection.target_entity_id;
+        if (sourceId === targetId) {
+          db.delete('Connection', connection.id);
+          deletedConnectionIds.push(connection.id);
+          continue;
+        }
+        connectionsAfter.push(db.update('Connection', connection.id, {
+          source_entity_id: sourceId,
+          target_entity_id: targetId,
+          source_entity_name: sourceId === primaryId ? primary.name : connection.source_entity_name,
+          target_entity_name: targetId === primaryId ? primary.name : connection.target_entity_name
+        }));
+      }
 
-    // 3) دمج الحقول على الكيان الأساسي
-    const mergedAliases = Array.from(new Set([
-      ...(primary.aliases || []),
-      duplicate.name,
-      ...(duplicate.aliases || [])
-    ].filter(Boolean))).filter((a) => a && a !== primary.name);
+      const mentionsAfter = mentionsBefore.map((mention) => db.update('Mention', mention.id, {
+        entity_id: primaryId,
+        entity_name: primary.name
+      }));
+      const workspacesAfter = workspacesBefore.map((workspace) => db.update('Workspace', workspace.id, {
+        entity_ids: [...new Set((workspace.entity_ids || []).map((id) => id === duplicateId ? primaryId : id))]
+      }));
+      const alertsAfter = alertsBefore.map((alert) => db.update('Alert', alert.id, {
+        entity_ids: [...new Set((alert.entity_ids || []).map((id) => id === duplicateId ? primaryId : id))],
+        entity_names: [...new Set((alert.entity_names || []).map((name) => name === duplicate.name ? primary.name : name))]
+      }));
+      const notificationsAfter = notificationsBefore.map((notification) => db.update('Notification', notification.id, {
+        entity_id: primaryId,
+        entity_name: primary.name
+      }));
+      const mergedAliases = Array.from(new Set([...(primary.aliases || []), duplicate.name, ...(duplicate.aliases || [])]
+        .filter((alias) => alias && alias !== primary.name)));
+      const mergedDocIds = Array.from(new Set([...(primary.document_ids || []), ...(duplicate.document_ids || [])]));
+      const primaryAfter = db.update('Entity', primaryId, {
+        aliases: mergedAliases,
+        attributes: { ...(duplicate.attributes || {}), ...(primary.attributes || {}) },
+        document_ids: mergedDocIds,
+        risk_score: Math.max(primary.risk_score || 0, duplicate.risk_score || 0),
+        watchlist: !!(primary.watchlist || duplicate.watchlist),
+        mention_count: (primary.mention_count || 0) + (duplicate.mention_count || 0),
+        ...(primary.latitude == null && duplicate.latitude != null ? { latitude: duplicate.latitude, longitude: duplicate.longitude } : {}),
+        ...(!primary.photo_url && duplicate.photo_url ? { photo_url: duplicate.photo_url } : {})
+      });
+      db.delete('Entity', duplicateId);
 
-    const mergedAttrs = Object.assign({}, duplicate.attributes || {}, primary.attributes || {});
-    const mergedDocIds = Array.from(new Set([
-      ...(primary.document_ids || []),
-      ...(duplicate.document_ids || [])
-    ]));
-    const patch = {
-      aliases: mergedAliases,
-      attributes: mergedAttrs,
-      document_ids: mergedDocIds,
-      risk_score: Math.max(primary.risk_score || 0, duplicate.risk_score || 0),
-      watchlist: !!(primary.watchlist || duplicate.watchlist),
-      mention_count: (primary.mention_count || 0) + (duplicate.mention_count || 0)
-    };
-    if (primary.latitude == null && duplicate.latitude != null) {
-      patch.latitude = duplicate.latitude;
-      patch.longitude = duplicate.longitude;
-    }
-    if (!primary.photo_url && duplicate.photo_url) patch.photo_url = duplicate.photo_url;
+      const history = db.create('MergeHistory', {
+        primary_id: primaryId,
+        duplicate_id: duplicateId,
+        ...(body.review_id ? { review_id: body.review_id } : {}),
+        status: 'active',
+        primary_before: primary,
+        primary_after: primaryAfter,
+        duplicate_before: duplicate,
+        connections_before: connectionsBefore,
+        connections_after: connectionsAfter,
+        deleted_connection_ids: deletedConnectionIds,
+        mentions_before: mentionsBefore,
+        mentions_after: mentionsAfter,
+        workspaces_before: workspacesBefore,
+        workspaces_after: workspacesAfter,
+        alerts_before: alertsBefore,
+        alerts_after: alertsAfter,
+        notifications_before: notificationsBefore,
+        notifications_after: notificationsAfter
+      });
 
-    await localClient.entities.Entity.update(primaryId, patch);
+      if (body.review_id) {
+        const review = db.get('DuplicateReview', body.review_id);
+        if (!review || review.status !== 'pending' || ![review.left_id, review.right_id].includes(primaryId) || ![review.left_id, review.right_id].includes(duplicateId)) {
+          throw Object.assign(new Error('Duplicate review is no longer pending'), { status: 409 });
+        }
+        db.update('DuplicateReview', body.review_id, { status: 'merged', merge_history_id: history.id });
+      }
 
-    // 4) حذف الكيان المكرر
-    await localClient.entities.Entity.delete(duplicateId);
-
-    return Response.json({
-      ok: true,
-      primary_id: primaryId,
-      repointed_connections: patches.length,
-      removed_self_loops: selfLoopIds.length,
-      merged_aliases: mergedAliases.length,
-      merged_documents: mergedDocIds.length,
-      mention_count: patch.mention_count
+      return {
+        ok: true,
+        merge_history_id: history.id,
+        primary_id: primaryId,
+        repointed_connections: connectionsAfter.length,
+        removed_self_loops: deletedConnectionIds.length,
+        merged_documents: mergedDocIds.length,
+        mention_count: primaryAfter.mention_count
+      };
     });
+    if (result.error) return Response.json({ error: result.error }, { status: result.status });
+    return Response.json(result);
   } catch (error) {
     return Response.json({ error: error.message, code: error.code }, { status: error.status || 500 });
   }

@@ -41,6 +41,7 @@ const COMPANY_FIELDS = [
 ];
 
 export default function PiiEditor({ entity, onSaved }) {
+  const isNew = !entity.id;
   const [name, setName] = useState(entity.name || '');
   const [etype, setEtype] = useState(entity.type || 'person');
   const [aliases, setAliases] = useState((entity.aliases || []).join('، '));
@@ -80,19 +81,26 @@ export default function PiiEditor({ entity, onSaved }) {
   };
 
   const save = async () => {
+    if (!name.trim()) {
+      toast({ title: 'أدخل اسم الكيان أولاً', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     try {
       const aliasArr = aliases.split('،').map((a) => a.trim()).filter(Boolean);
-      const updated = await localClient.entities.Entity.update(entity.id, {
-        name: name.trim() || entity.name,
+      const payload = {
+        name: name.trim(),
         type: etype,
         aliases: aliasArr,
         attributes: attrs,
         photo_url: photoUrl,
         notes: notes
-      });
-      toast({ title: 'تم حفظ بيانات الكيان' });
-      onSaved && onSaved(updated);
+      };
+      const saved = isNew
+        ? await localClient.entities.Entity.create({ ...payload, mention_count: 0, document_ids: [] })
+        : await localClient.entities.Entity.update(entity.id, payload);
+      toast({ title: isNew ? 'تم إنشاء سجل الكيان' : 'تم حفظ بيانات الكيان' });
+      onSaved && onSaved(saved);
     } catch (e) {
       toast({ title: 'فشل الحفظ', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
@@ -214,10 +222,10 @@ export default function PiiEditor({ entity, onSaved }) {
       <div className="flex justify-end pt-2 border-t border-border">
         <button
           onClick={save}
-          disabled={saving}
+          disabled={saving || !name.trim()}
           className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" /> {saving ? 'جارٍ الحفظ...' : 'حفظ البيانات'}
+          <Save className="w-4 h-4" /> {saving ? 'جارٍ الحفظ...' : isNew ? 'إنشاء سجل' : 'حفظ البيانات'}
         </button>
       </div>
     </div>

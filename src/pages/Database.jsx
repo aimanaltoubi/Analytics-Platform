@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Database as DatabaseIcon, Users, Building2, Building, Search, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Database as DatabaseIcon, Users, Building2, Building, Search, ArrowLeft, RefreshCw, Plus, X } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import PiiEditor from '@/components/PiiEditor';
 import { Image as UIImage } from '@/components/ui/image';
@@ -12,6 +12,7 @@ export default function Database() {
   const [tab, setTab] = useState('person');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const load = async () => {
     try {
@@ -54,9 +55,14 @@ export default function Database() {
             <h1 className="font-heading text-2xl font-bold leading-tight">قاعدة بيانات الكيانات</h1>
             <p className="text-sm text-muted-foreground mt-1">سجل منظّم لجميع الأفراد والشركات والمنظمات المستخرجة من المستندات — أضف وأكمل البيانات الشخصية والتعريفية لكل كيان.</p>
           </div>
-          <button onClick={() => { setRefreshing(true); load(); }} disabled={refreshing} className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent disabled:opacity-50">
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} /> تحديث
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setCreating(true); setSelectedId(''); }} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs hover:bg-primary/90">
+              <Plus className="w-3.5 h-3.5" /> إضافة سجل
+            </button>
+            <button onClick={() => { setRefreshing(true); load(); }} disabled={refreshing} className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent disabled:opacity-50">
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} /> تحديث
+            </button>
+          </div>
         </div>
       </div>
 
@@ -75,7 +81,7 @@ export default function Database() {
                 return (
                   <button
                     key={t.key}
-                    onClick={() => { setTab(t.key); setSelectedId(''); }}
+                    onClick={() => { setTab(t.key); setSelectedId(''); setCreating(false); }}
                     className={`flex flex-col items-center gap-1 px-1 py-2 rounded-lg border text-xs font-medium transition-colors ${active ? t.activeCls : 'border-border bg-background text-muted-foreground hover:bg-accent/50'}`}
                   >
                     <Icon className="w-4 h-4" />
@@ -151,7 +157,28 @@ export default function Database() {
 
         {/* المحرر */}
         <div className="overflow-auto">
-          {!selected ? (
+          {creating ? (
+            <div className="p-6 space-y-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-heading text-lg font-semibold">إضافة {tab === 'person' ? 'فرد' : tab === 'company' ? 'شركة' : 'منظمة'} إلى قاعدة البيانات</h2>
+                <button onClick={() => setCreating(false)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs hover:bg-accent">
+                  <X className="w-3.5 h-3.5" /> إلغاء
+                </button>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <PiiEditor
+                  key={`new-${tab}`}
+                  entity={{ name: '', type: tab, aliases: [], attributes: {}, notes: '', photo_url: '' }}
+                  onSaved={(created) => {
+                    setEntities((prev) => [created, ...prev]);
+                    setSelectedId(created.id);
+                    setTab(created.type);
+                    setCreating(false);
+                  }}
+                />
+              </div>
+            </div>
+          ) : !selected ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6 py-16">
               <DatabaseIcon className="w-12 h-12 text-muted-foreground/30 mb-3" />
               <h3 className="font-heading font-semibold text-lg">اختر كياناً لعرضه وتحريره</h3>

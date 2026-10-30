@@ -26,6 +26,13 @@
       "type": "string",
       "title": "النص المستخرج"
     },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "نص صفحات المستند"
+    },
     "summary": {
       "type": "string",
       "title": "الملخص"

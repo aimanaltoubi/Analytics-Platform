@@ -1,0 +1,26 @@
+{
+  "name": "MergeHistory",
+  "type": "object",
+  "properties": {
+    "primary_id": { "type": "string" },
+    "duplicate_id": { "type": "string" },
+    "review_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["active", "undone"] },
+    "primary_before": { "type": "object" },
+    "primary_after": { "type": "object" },
+    "duplicate_before": { "type": "object" },
+    "connections_before": { "type": "array", "items": { "type": "object" } },
+    "connections_after": { "type": "array", "items": { "type": "object" } },
+    "deleted_connection_ids": { "type": "array", "items": { "type": "string" } },
+    "mentions_before": { "type": "array", "items": { "type": "object" } },
+    "mentions_after": { "type": "array", "items": { "type": "object" } },
+    "workspaces_before": { "type": "array", "items": { "type": "object" } },
+    "workspaces_after": { "type": "array", "items": { "type": "object" } },
+    "alerts_before": { "type": "array", "items": { "type": "object" } },
+    "alerts_after": { "type": "array", "items": { "type": "object" } },
+    "notifications_before": { "type": "array", "items": { "type": "object" } },
+    "notifications_after": { "type": "array", "items": { "type": "object" } },
+    "undone_at": { "type": "string" }
+  },
+  "required": ["primary_id", "duplicate_id", "status", "primary_before", "primary_after", "duplicate_before", "connections_before", "connections_after", "deleted_connection_ids", "mentions_before", "mentions_after", "workspaces_before", "workspaces_after", "alerts_before", "alerts_after", "notifications_before", "notifications_after"]
+}

@@ -58,7 +58,7 @@ async function limitedResponse(response, limit = 2 * 1024 * 1024) {
 }
 
 export class Integrations {
-  constructor({ store, dataDir, aiBaseUrl, aiRequestTimeoutMs = AI_REQUEST_TIMEOUT_MS }) {
+  constructor({ store, dataDir, aiBaseUrl, aiRequestTimeoutMs = AI_REQUEST_TIMEOUT_MS, aiRuntime }) {
     this.store = store;
     this.filesDir = join(dataDir, 'files');
     mkdirSync(this.filesDir, { recursive: true, mode: 0o700 });
@@ -68,7 +68,10 @@ export class Integrations {
     this.aiOrigin = endpoint.origin;
     assert(Number.isInteger(aiRequestTimeoutMs) && aiRequestTimeoutMs > 0, 400, 'Invalid local AI request timeout');
     this.aiRequestTimeoutMs = aiRequestTimeoutMs;
+    this.aiRuntime = aiRuntime;
     this.aiState = 'unknown';
+    this.aiError = '';
+    this.aiLoadingSince = Date.now();
     this.url = null;
   }
 
@@ -123,6 +126,7 @@ export class Integrations {
       });
     } catch (error) {
       this.aiState = 'unavailable';
+      this.aiError = error.message;
       const timeoutMinutes = Math.ceil(this.aiRequestTimeoutMs / 60000);
       const reason = error.name === 'TimeoutError'
         ? `request timed out after ${timeoutMinutes} minute${timeoutMinutes === 1 ? '' : 's'}`
@@ -131,8 +135,8 @@ export class Integrations {
     }
     if (!response.ok) {
       this.aiState = 'unavailable';
-      await limitedResponse(response);
-      throw new HttpError(503, `Local AI unavailable (HTTP ${response.status})`, 'AI_UNAVAILABLE');
+      this.aiError = (await limitedResponse(response)).slice(0, 500);
+      throw new HttpError(503, `Local AI unavailable (HTTP ${response.status})${this.aiError ? `: ${this.aiError}` : ''}`, 'AI_UNAVAILABLE');
     }
     let envelope;
     try { envelope = JSON.parse(await limitedResponse(response)); } catch (error) {
@@ -143,6 +147,7 @@ export class Integrations {
     assert(typeof content === 'string', 502, 'Local AI returned no completion', 'AI_INVALID_RESPONSE');
     assert(envelope.choices[0].finish_reason !== 'length', 502, 'Local AI response was truncated', 'AI_INVALID_RESPONSE');
     this.aiState = 'ready';
+    this.aiError = '';
     if (!schema) return content;
     let result;
     try { result = JSON.parse(content); } catch {
@@ -165,21 +170,40 @@ export class Integrations {
         await limitedResponse(response, 65536);
       } catch (error) {
         if (error instanceof HttpError) throw error;
-        this.aiState = 'unavailable';
-        throw new HttpError(503, 'Local AI unavailable: start the bundled model server', 'AI_UNAVAILABLE');
+        if (this.aiRuntime?.state !== 'starting') {
+          this.aiState = 'unavailable';
+          this.aiError = this.aiRuntime?.error || 'Local model server is not running';
+          throw new HttpError(503, `Local AI unavailable: ${this.aiError}`, 'AI_UNAVAILABLE');
+        }
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
+          const timeoutMinutes = Math.ceil(this.aiRequestTimeoutMs / 60000);
+          this.aiState = 'unavailable';
+          this.aiError = `Model server did not start within ${timeoutMinutes} minutes`;
+          throw new HttpError(503, `Local AI unavailable: ${this.aiError}`, 'AI_UNAVAILABLE');
+        }
+        this.aiState = 'starting';
+        this.aiError = 'Waiting for the local model server to start';
+        await new Promise((resolve) => setTimeout(resolve, Math.min(1000, remaining)));
+        continue;
       }
       if (response.ok) {
         this.aiState = 'ready';
+        this.aiError = '';
         return;
       }
       if (response.status !== 503) {
         this.aiState = 'unavailable';
+        this.aiError = `Health check returned HTTP ${response.status}`;
         throw new HttpError(503, `Local AI unavailable (health HTTP ${response.status})`, 'AI_UNAVAILABLE');
       }
       this.aiState = 'loading';
+      if (!this.aiLoadingSince) this.aiLoadingSince = Date.now();
       const remaining = deadline - Date.now();
       if (remaining <= 0) {
         const timeoutMinutes = Math.ceil(this.aiRequestTimeoutMs / 60000);
+        this.aiState = 'unavailable';
+        this.aiError = `Model did not become ready within ${timeoutMinutes} minutes`;
         throw new HttpError(503, `Local AI unavailable: model did not become ready within ${timeoutMinutes} minutes`, 'AI_UNAVAILABLE');
       }
       await new Promise((resolve) => setTimeout(resolve, Math.min(1000, remaining)));
@@ -241,11 +265,25 @@ export class Integrations {
       const response = await fetch(`${this.aiOrigin}/health`, { redirect: 'error', signal: AbortSignal.timeout(2000) });
       await limitedResponse(response, 65536);
       this.aiState = response.ok ? 'ready' : response.status === 503 ? 'loading' : 'unavailable';
+      this.aiError = response.ok || response.status === 503 ? '' : `Health check returned HTTP ${response.status}`;
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      this.aiState = 'unavailable';
+      const runtimeState = this.aiRuntime?.state;
+      this.aiState = runtimeState === 'starting' ? 'starting' : 'unavailable';
+      this.aiError = this.aiRuntime?.error || 'Local model server did not respond';
     }
-    return { offline: true, ai: { state: this.aiState, available: this.aiState === 'ready' } };
+    return {
+      offline: true,
+      ai: {
+        state: this.aiState,
+        available: this.aiState === 'ready',
+        error: this.aiRuntime?.error || this.aiError || '',
+        detail: this.aiRuntime?.detail || '',
+        loading_seconds: this.aiState === 'starting' || this.aiState === 'loading'
+          ? Math.max(0, Math.floor((Date.now() - (this.aiRuntime?.startedAt || this.aiLoadingSince)) / 1000))
+          : 0
+      }
+    };
   }
 
   core() {

@@ -27,6 +27,7 @@ export default async function(req) {
 
     // 1) الحصول على النص: إن وُجد raw_text مسبقاً (مستند نصي) استخدمه، وإلا استخرج من الملف
     let fullText = '';
+    let pages = Array.isArray(doc.pages) ? doc.pages : [];
     if (doc.raw_text && doc.raw_text.trim()) {
       fullText = doc.raw_text;
     } else if (doc.file_url) {
@@ -42,8 +43,9 @@ export default async function(req) {
       }
       const output = extraction && extraction.output;
       if (output) {
+        if (Array.isArray(output.pages)) pages = output.pages;
         if (typeof output.text === 'string' && output.text.trim()) fullText = output.text;
-        else if (Array.isArray(output.pages)) fullText = output.pages.join('\n\n');
+        else if (pages.length) fullText = pages.join('\n\n');
         else if (typeof output === 'string') fullText = output;
       }
     }
@@ -55,6 +57,8 @@ export default async function(req) {
       });
       return Response.json({ error: 'تعذّر استخراج النص من المستند' }, { status: 422 });
     }
+
+    if (pages.length) await localClient.entities.Document.update(document_id, { pages });
 
     // 2) تحليل NER مشترك
     const result = await runNer(localClient, doc, document_id, fullText);

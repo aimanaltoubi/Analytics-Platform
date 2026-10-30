@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, Bell, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon, BookOpen, Presentation } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut, Network as NetworkIcon, Search, Upload, FolderOpen, Bell, GitFork, Languages, Database as DatabaseIcon, BarChart3, TrendingUp, GitCompare, Unlink, Settings as SettingsIcon, BookOpen, Presentation, MessageCircle, CopyCheck } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import SystemStatus from '@/components/SystemStatus';
 import NotificationsBell from '@/components/NotificationsBell';
@@ -21,6 +21,7 @@ const navGroups = [
     items: [
       { to: '/entities', label: 'الكيانات', icon: Users },
       { to: '/database', label: 'قاعدة البيانات', icon: DatabaseIcon },
+      { to: '/duplicates', label: 'مراجعة التكرارات', icon: CopyCheck },
       { to: '/graph', label: 'فهرس العلاقات', icon: GitFork },
       { to: '/company-network', label: 'شبكة الشركات', icon: NetworkIcon },
       { to: '/workspaces', label: 'مساحات العمل', icon: FolderOpen },
@@ -31,6 +32,7 @@ const navGroups = [
     section: 'البحث',
     items: [
       { to: '/search', label: 'البحث', icon: Search },
+      { to: '/assistant', label: 'مساعد الأدلة', icon: MessageCircle },
       { to: '/clir', label: 'بحث عبر اللغات', icon: Languages }
     ]
   },

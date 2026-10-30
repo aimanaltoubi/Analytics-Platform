@@ -8,6 +8,7 @@ let mainWindow;
 let localServer;
 let aiProcess;
 let shuttingDown = false;
+const aiRuntime = { state: 'starting', error: '', detail: '', startedAt: 0 };
 
 const hasLock = app.requestSingleInstanceLock();
 if (!hasLock) app.quit();
@@ -20,6 +21,7 @@ function aiDirectory() {
 }
 
 async function createWindow() {
+  Object.assign(aiRuntime, { state: 'starting', error: '', detail: '', startedAt: Date.now() });
   const runtimeDirectory = aiDirectory();
   const bundle = findAiBundle(runtimeDirectory, process.platform, [
     runtimeDirectory,
@@ -31,11 +33,27 @@ async function createWindow() {
     const port = await reserveLoopbackPort();
     aiBaseUrl = `http://127.0.0.1:${port}`;
     aiProcess = launchAiServer(bundle, port);
-    aiProcess.once('error', (error) => console.error('Could not start the local AI server:', error));
-    aiProcess.once('exit', (code, signal) => {
-      if (!shuttingDown) console.error(`Local AI server exited (${signal || code})`);
+    aiProcess.once('error', (error) => {
+      aiRuntime.state = 'unavailable';
+      aiRuntime.error = error.message;
+      console.error('Could not start the local AI server:', error);
     });
+    aiProcess.once('exit', (code, signal) => {
+      if (!shuttingDown) {
+        aiRuntime.state = 'unavailable';
+        aiRuntime.error = `Local AI server exited (${signal || code})`;
+        console.error(aiRuntime.error);
+      }
+    });
+    const recordOutput = (chunk) => {
+      const lines = String(chunk).trim().split(/\r?\n/).filter(Boolean);
+      if (lines.length) aiRuntime.detail = lines.at(-1).slice(0, 240);
+    };
+    aiProcess.stdout?.on('data', recordOutput);
+    aiProcess.stderr?.on('data', recordOutput);
   } else {
+    aiRuntime.state = 'unavailable';
+    aiRuntime.error = `AI runtime or GGUF model not found in ${runtimeDirectory}`;
     console.warn(`Local AI resources were not found in ${aiDirectory()}`);
   }
 
@@ -46,7 +64,8 @@ async function createWindow() {
   localServer = await startServer({
     dataDir: join(app.getPath('userData'), 'data'),
     staticDir,
-    aiBaseUrl
+    aiBaseUrl,
+    aiRuntime
   });
   console.log(`Local desktop server listening at ${localServer.url}`);
 

@@ -66,6 +66,20 @@ export function createLocalClient({ store, user, integrations, invoke }) {
   const client = { entities, integrations: { Core: integrations }, auth: { me: async () => user }, functions: { invoke } };
   client.asServiceRole = {
     ...client,
+    searchDocuments: async (query, limit) => store.searchDocuments(query, limit),
+    transaction: (operation) => store.transaction(() => {
+      assert(typeof operation === 'function', 400, 'Transaction operation required');
+      const result = operation({
+        list: (name, filter = {}, sort = '-created_date', limit = 10000, skip = 0) => store.list(name, filter, sort, limit, skip),
+        get: (name, id) => store.get(name, id),
+        create: (name, data) => store.create(name, data, user),
+        update: (name, id, data) => store.update(name, id, data),
+        delete: (name, id) => store.delete(name, id),
+        restore: (name, record) => store.restore(name, record)
+      });
+      assert(!result || typeof result.then !== 'function', 500, 'Database transactions must be synchronous');
+      return result;
+    }),
     entities: {
       ...entities,
       User: {

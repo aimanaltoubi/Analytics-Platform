@@ -76,7 +76,39 @@ export class Store {
       CREATE TABLE IF NOT EXISTS credentials (user_id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, recovery_hash TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS files (name TEXT PRIMARY KEY, mime TEXT NOT NULL, size INTEGER NOT NULL, original_name TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS index_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE VIRTUAL TABLE IF NOT EXISTS document_search USING fts5(document_id UNINDEXED, title, page UNINDEXED, content, tokenize='unicode61 remove_diacritics 2');
+      CREATE TRIGGER IF NOT EXISTS index_document_after_insert AFTER INSERT ON records WHEN NEW.entity = 'Document' BEGIN
+        DELETE FROM document_search WHERE document_id = NEW.id;
+        INSERT INTO document_search
+          SELECT NEW.id, json_extract(NEW.data, '$.title'), CAST(page.key AS INTEGER) + 1, page.value
+          FROM json_each(NEW.data, '$.pages') AS page
+          WHERE json_type(NEW.data, '$.pages') = 'array' AND typeof(page.value) = 'text' AND length(trim(page.value)) > 0;
+        INSERT INTO document_search
+          SELECT NEW.id, json_extract(NEW.data, '$.title'), '', json_extract(NEW.data, '$.raw_text')
+          WHERE COALESCE(json_array_length(NEW.data, '$.pages'), 0) = 0 AND length(COALESCE(json_extract(NEW.data, '$.raw_text'), '')) > 0;
+      END;
+      CREATE TRIGGER IF NOT EXISTS index_document_after_update AFTER UPDATE ON records WHEN NEW.entity = 'Document' BEGIN
+        DELETE FROM document_search WHERE document_id = NEW.id;
+        INSERT INTO document_search
+          SELECT NEW.id, json_extract(NEW.data, '$.title'), CAST(page.key AS INTEGER) + 1, page.value
+          FROM json_each(NEW.data, '$.pages') AS page
+          WHERE json_type(NEW.data, '$.pages') = 'array' AND typeof(page.value) = 'text' AND length(trim(page.value)) > 0;
+        INSERT INTO document_search
+          SELECT NEW.id, json_extract(NEW.data, '$.title'), '', json_extract(NEW.data, '$.raw_text')
+          WHERE COALESCE(json_array_length(NEW.data, '$.pages'), 0) = 0 AND length(COALESCE(json_extract(NEW.data, '$.raw_text'), '')) > 0;
+      END;
+      CREATE TRIGGER IF NOT EXISTS remove_document_after_delete AFTER DELETE ON records WHEN OLD.entity = 'Document' BEGIN
+        DELETE FROM document_search WHERE document_id = OLD.id;
+      END;
     `);
+    const indexVersion = this.db.prepare('SELECT value FROM index_metadata WHERE key = ?').get('document_search_version')?.value;
+    if (indexVersion !== '1') {
+      this.transaction(() => {
+        this.db.prepare("UPDATE records SET data = data WHERE entity = 'Document'").run();
+        this.db.prepare('INSERT OR REPLACE INTO index_metadata(key, value) VALUES (?, ?)').run('document_search_version', '1');
+      });
+    }
   }
 
   schema(name) {
@@ -164,6 +196,42 @@ export class Store {
     assert(this.get(name, id), 404, 'Record not found');
     this.db.prepare('DELETE FROM records WHERE entity = ? AND id = ?').run(name, id);
     return { id, deleted: true };
+  }
+
+  searchDocuments(query, limit = 80) {
+    assert(typeof query === 'string' && query.length <= 5000, 400, 'Invalid document search query');
+    assert(Number.isInteger(limit) && limit >= 1 && limit <= 200, 400, 'Invalid document search limit');
+    const tokens = [...new Set(query.normalize('NFD')
+      .replace(/[\u0300-\u036f\u064B-\u065F\u0670\u0640]/g, '')
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) || [])].filter((token) => token.length > 1);
+    if (!tokens.length) return [];
+    const match = tokens.map((token) => `"${token.replace(/"/g, '""')}"*`).join(' OR ');
+    return this.db.prepare(`
+      SELECT document_search.document_id, document_search.title, document_search.page,
+        document_search.content, bm25(document_search) AS rank
+      FROM document_search
+      JOIN records ON records.entity = 'Document' AND records.id = document_search.document_id
+      WHERE document_search MATCH ? AND json_extract(records.data, '$.status') = 'processed'
+      ORDER BY rank
+      LIMIT ?
+    `).all(match, limit).map((row) => ({
+      document_id: row.document_id,
+      title: row.title,
+      page: row.page ? Number(row.page) : null,
+      text: row.content,
+      rank: row.rank
+    }));
+  }
+
+  restore(name, record) {
+    this.validateRecord(name, record);
+    assert(!this.get(name, record.id), 409, 'Record already exists');
+    this.db.prepare('INSERT INTO records(entity,id,data) VALUES (?,?,?)').run(name, record.id, JSON.stringify(record));
+    return record;
   }
 
   exportRecords() {
