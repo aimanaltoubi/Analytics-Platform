@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Users, Search, Flag, Calendar } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import { getNationality, hasPassport, hasPhone, hasEmail, hasCoordinates, riskTier } from '@/lib/entityClassify';
+import { yearDocIdSet } from '@/lib/yearFilter';
 
 const TYPE_LABELS = {
   person: 'شخص',
@@ -32,27 +33,40 @@ const TYPE_COLORS = {
 };
 
 export default function Entities() {
+  const [searchParams] = useSearchParams();
+  const requestedType = searchParams.get('type') || 'all';
+  const yearFilter = searchParams.get('year') || '';
+  const requestedRisk = searchParams.get('risk') || 'all';
   const [entities, setEntities] = useState([]);
+  const [yearDocIds, setYearDocIds] = useState(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [watchOnly, setWatchOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState(requestedType);
+  const [watchOnly, setWatchOnly] = useState(searchParams.get('watchlist') === '1');
   const [sort, setSort] = useState('mentions');
   const [nationality, setNationality] = useState('all');
-  const [riskFilter, setRiskFilter] = useState('all');
+  const [riskFilter, setRiskFilter] = useState(requestedRisk);
   const [attrFilters, setAttrFilters] = useState({ passport: false, phone: false, email: false, coords: false });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  useEffect(() => { setTypeFilter(requestedType); }, [requestedType]);
+  useEffect(() => { setWatchOnly(searchParams.get('watchlist') === '1'); }, [searchParams]);
+  useEffect(() => { setRiskFilter(requestedRisk); }, [requestedRisk]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const list = await localClient.entities.Entity.list('-mention_count', 300);
+        const [list, docs] = await Promise.all([
+          localClient.entities.Entity.list('-mention_count', 10000),
+          yearFilter ? localClient.entities.Document.list('-created_date', 500) : Promise.resolve([])
+        ]);
         setEntities(list);
+        setYearDocIds(yearFilter ? yearDocIdSet(docs, yearFilter) : null);
       } catch (e) {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [yearFilter]);
 
   const types = ['all', ...new Set(entities.map((e) => e.type))];
   const nationalities = [...new Set(entities.map(getNationality).filter(Boolean))].sort();
@@ -62,6 +76,7 @@ export default function Entities() {
   const filtered = entities.filter((e) => {
     if (query && !matchesEntityQuery(e, query)) return false;
     if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+    if (yearDocIds && !(e.document_ids || []).some((id) => yearDocIds.has(id))) return false;
     if (watchOnly && !e.watchlist) return false;
     if (nationality !== 'all' && getNationality(e) !== nationality) return false;
     if (attrFilters.passport && !hasPassport(e)) return false;
@@ -84,8 +99,8 @@ export default function Entities() {
     return (b.mention_count || 0) - (a.mention_count || 0);
   });
 
-  const hasActiveFilters = nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
-  const resetFilters = () => { setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
+  const hasActiveFilters = watchOnly || nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
+  const resetFilters = () => { setWatchOnly(false); setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
 
   return (
     <div className="p-6 space-y-6">

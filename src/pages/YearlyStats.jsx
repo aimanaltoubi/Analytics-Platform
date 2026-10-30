@@ -133,28 +133,28 @@ export default function YearlyStats() {
 
   const typeDist = useMemo(() => Object.entries(
     entities.reduce((acc, e) => { const t = e.type || 'other'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: TYPE_LABELS[k] || k, values: [{ label: '', value: v, color: '#8b5cf6' }] }))
-    .sort((a, b) => b.values[0].value - a.values[0].value).slice(0, 8), [entities]);
+  ).map(([k, v]) => ({ name: TYPE_LABELS[k] || k, to: `/entities?type=${encodeURIComponent(k)}${year ? `&year=${encodeURIComponent(year)}` : ''}`, values: [{ label: '', value: v, color: '#8b5cf6' }] }))
+    .sort((a, b) => b.values[0].value - a.values[0].value).slice(0, 8), [entities, year]);
 
   const relDist = useMemo(() => Object.entries(
     conns.reduce((acc, c) => { const t = c.relationship_type || 'غير محدد'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: k, values: [{ label: '', value: v, color: '#10b981' }] }))
+  ).map(([k, v]) => ({ name: k, to: `/graph?relationship=${encodeURIComponent(k)}`, values: [{ label: '', value: v, color: '#10b981' }] }))
     .sort((a, b) => b.values[0].value - a.values[0].value).slice(0, 8), [conns]);
 
   const alertBySeverity = useMemo(() => Object.entries(
     alerts.reduce((acc, a) => { const s = a.severity || 'medium'; acc[s] = (acc[s] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: SEVERITY_LABELS[k] || k, values: [{ label: '', value: v, color: SEVERITY_COLORS[k] || '#94a3b8' }] }))
-    .sort((a, b) => b.values[0].value - a.values[0].value), [alerts]);
+  ).map(([k, v]) => ({ name: SEVERITY_LABELS[k] || k, to: `/alerts?severity=${encodeURIComponent(k)}${year ? `&year=${encodeURIComponent(year)}` : ''}`, values: [{ label: '', value: v, color: SEVERITY_COLORS[k] || '#94a3b8' }] }))
+    .sort((a, b) => b.values[0].value - a.values[0].value), [alerts, year]);
 
   const alertByRule = useMemo(() => Object.entries(
     alerts.reduce((acc, a) => { const r = a.rule_name || 'غير مصنف'; acc[r] = (acc[r] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: k, values: [{ label: '', value: v, color: '#ef4444' }] }))
-    .sort((a, b) => b.values[0].value - a.values[0].value).slice(0, 6), [alerts]);
+  ).map(([k, v]) => ({ name: k, to: `/alerts?rule=${encodeURIComponent(k)}${year ? `&year=${encodeURIComponent(year)}` : ''}`, values: [{ label: '', value: v, color: '#ef4444' }] }))
+    .sort((a, b) => b.values[0].value - a.values[0].value).slice(0, 6), [alerts, year]);
 
   const monthlyRef = useMemo(() => {
     const m = new Array(12).fill(0);
     docs.forEach((d) => { if (d.reference_date) { const mo = Number(String(d.reference_date).slice(5, 7)) - 1; if (mo >= 0 && mo < 12) m[mo]++; } });
-    return m.map((v, i) => ({ name: MONTHS[i], values: [{ label: '', value: v, color: '#3b82f6' }] }));
+    return m.map((v, i) => ({ name: MONTHS[i], to: `/documents?month=${year ? `${year}-` : ''}${String(i + 1).padStart(2, '0')}`, values: [{ label: '', value: v, color: '#3b82f6' }] }));
   }, [docs]);
 
   const processingStats = useMemo(() => ({
@@ -167,6 +167,7 @@ export default function YearlyStats() {
   const highRisk = entities.filter((e) => (e.risk_score || 0) >= 70).length;
   const watchlist = entities.filter((e) => e.watchlist).length;
   const docsNoEntities = docs.filter((d) => !d.entity_count).length;
+  const yearQuery = year ? `&year=${encodeURIComponent(year)}` : '';
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ تحميل الإحصاءات التنفيذية...</div>;
 
@@ -212,13 +213,13 @@ export default function YearlyStats() {
             <h2 className="font-heading font-semibold text-sm">مؤشرات الأداء التنفيذية</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-            <StatTile icon={FileText} label="المستندات" value={docs.length} to="/documents" tint="text-blue-600" bg="bg-blue-50" />
-            <StatTile icon={Users} label="الكيانات المذكورة" value={entities.length} to="/entities" tint="text-violet-600" bg="bg-violet-50" />
+            <StatTile icon={FileText} label="المستندات" value={docs.length} to={year ? `/documents?year=${encodeURIComponent(year)}` : '/documents'} tint="text-blue-600" bg="bg-blue-50" />
+            <StatTile icon={Users} label="الكيانات المذكورة" value={entities.length} to={year ? `/entities?year=${encodeURIComponent(year)}` : '/entities'} tint="text-violet-600" bg="bg-violet-50" />
             <StatTile icon={Share2} label="الروابط" value={conns.length} to="/graph" tint="text-emerald-600" bg="bg-emerald-50" />
-            <StatTile icon={Bell} label="التنبيهات" value={alerts.length} to="/alerts" tint="text-red-600" bg="bg-red-50" />
+            <StatTile icon={Bell} label="التنبيهات" value={alerts.length} to={year ? `/alerts?year=${encodeURIComponent(year)}` : '/alerts'} tint="text-red-600" bg="bg-red-50" />
             <StatTile icon={ShieldAlert} label="البيانات المُفرغة" value={manifests.length} to="/transit" tint="text-amber-600" bg="bg-amber-50" />
-            <StatTile icon={AlertTriangle} label="كيانات عالية المخاطر" value={highRisk} to="/entities" tint="text-orange-600" bg="bg-orange-50" />
-            <StatTile icon={Flag} label="قائمة المراقبة" value={watchlist} to="/entities" tint="text-rose-600" bg="bg-rose-50" />
+            <StatTile icon={AlertTriangle} label="كيانات عالية المخاطر" value={highRisk} to={`/entities?risk=high${yearQuery}`} tint="text-orange-600" bg="bg-orange-50" />
+            <StatTile icon={Flag} label="قائمة المراقبة" value={watchlist} to={`/entities?watchlist=1${yearQuery}`} tint="text-rose-600" bg="bg-rose-50" />
           </div>
         </div>
 
@@ -227,18 +228,18 @@ export default function YearlyStats() {
           <SectionCard icon={Activity} title="جودة الاستيعاب والمعالجة">
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5">
+                <Link to={`/documents?status=processed${yearQuery}`} className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 hover:bg-emerald-100">
                   <div className="font-mono text-xl font-bold text-emerald-700">{processingStats.processed}</div>
                   <div className="text-[10px] text-emerald-700/70">معالَج</div>
-                </div>
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5">
+                </Link>
+                <Link to={`/documents?status=processing${yearQuery}`} className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 hover:bg-amber-100">
                   <div className="font-mono text-xl font-bold text-amber-700">{processingStats.pending}</div>
                   <div className="text-[10px] text-amber-700/70">معلّق</div>
-                </div>
-                <div className="rounded-lg bg-red-50 border border-red-200 p-2.5">
+                </Link>
+                <Link to={`/documents?status=failed${yearQuery}`} className="rounded-lg bg-red-50 border border-red-200 p-2.5 hover:bg-red-100">
                   <div className="font-mono text-xl font-bold text-red-700">{processingStats.failed}</div>
                   <div className="text-[10px] text-red-700/70">فشل</div>
-                </div>
+                </Link>
               </div>
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
@@ -275,10 +276,10 @@ export default function YearlyStats() {
 
           <SectionCard icon={Unlink} title="جودة البيانات والتغطية">
             <div className="space-y-2.5 text-sm">
-              <div className="flex items-center justify-between">
+              <Link to={`/documents?no_entities=1${yearQuery}`} className="flex items-center justify-between rounded-md hover:bg-accent/50 -mx-2 px-2 py-1">
                 <span className="text-muted-foreground">مستندات بلا كيانات مستخرجة</span>
                 <span className="font-mono font-semibold">{docsNoEntities}</span>
-              </div>
+              </Link>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">كيانات بلا روابط</span>
                 <span className="font-mono font-semibold">{net.orphans}</span>

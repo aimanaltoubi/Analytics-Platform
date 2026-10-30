@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -47,6 +47,7 @@ const ChartTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardAnalytics({ year }) {
+  const navigate = useNavigate();
   const [allEntities, setAllEntities] = useState([]);
   const [allConnections, setAllConnections] = useState([]);
   const [allDocuments, setAllDocuments] = useState([]);
@@ -91,16 +92,16 @@ export default function DashboardAnalytics({ year }) {
 
   const relDistribution = Object.entries(
     connections.reduce((acc, c) => { const t = c.relationship_type || 'غير محدد'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 8);
+  ).map(([k, v]) => ({ name: k, value: v, to: `/graph?relationship=${encodeURIComponent(k)}` })).sort((a, b) => b.value - a.value).slice(0, 8);
 
   const docDistribution = Object.entries(
     documents.reduce((acc, d) => { const t = d.document_type || 'other'; acc[t] = (acc[t] || 0) + 1; return acc; }, {})
-  ).map(([k, v]) => ({ name: TYPE_LABELS_DOC[k] || k, value: v }));
+  ).map(([k, v]) => ({ name: TYPE_LABELS_DOC[k] || k, value: v, key: k }));
 
   const summaryCards = [
-    { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500', to: '/entities' },
+    { label: 'إجمالي الكيانات', value: entities.length, icon: Users, color: 'bg-violet-500', to: `/entities${year ? `?year=${encodeURIComponent(year)}` : ''}` },
     { label: 'إجمالي الروابط', value: connections.length, icon: Share2, color: 'bg-emerald-500', to: '/graph' },
-    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500', to: '/documents' }
+    { label: 'إجمالي المستندات', value: documents.length, icon: FileText, color: 'bg-blue-500', to: year ? `/documents?year=${encodeURIComponent(year)}` : '/documents' }
   ];
 
   return (
@@ -140,7 +141,7 @@ export default function DashboardAnalytics({ year }) {
               <PieChart>
                 <Pie data={typeDistribution} dataKey="value" nameKey="name" cx="50%" cy="46%" innerRadius={56} outerRadius={92} paddingAngle={2} stroke="#fff" strokeWidth={2}>
                   {typeDistribution.map((entry) => (
-                    <Cell key={entry.key} fill={TYPE_COLORS[entry.key] || '#94a3b8'} className="cursor-pointer" />
+                    <Cell key={entry.key} fill={TYPE_COLORS[entry.key] || '#94a3b8'} className="cursor-pointer" onClick={() => navigate(`/entities?type=${encodeURIComponent(entry.key)}`)} />
                   ))}
                 </Pie>
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground" style={{ fontSize: 24, fontWeight: 700 }}>{entities.length}</text>
@@ -170,7 +171,7 @@ export default function DashboardAnalytics({ year }) {
           ) : (
             <BarList
               max={Math.max(...relDistribution.map((r) => r.value), 1)}
-              items={relDistribution.map((r) => ({ name: r.name, values: [{ label: '', value: r.value, color: '#8b5cf6' }] }))}
+              items={relDistribution.map((r) => ({ name: r.name, to: r.to, values: [{ label: '', value: r.value, color: '#8b5cf6' }] }))}
             />
           )}
         </div>
@@ -183,8 +184,8 @@ export default function DashboardAnalytics({ year }) {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={docDistribution} dataKey="value" nameKey="name" cx="50%" cy="46%" innerRadius={56} outerRadius={92} paddingAngle={2} stroke="#fff" strokeWidth={2}>
-                  {docDistribution.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} className="cursor-pointer" />
+                  {docDistribution.map((entry, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} className="cursor-pointer" onClick={() => navigate(`/documents?type=${encodeURIComponent(entry.key)}`)} />
                   ))}
                 </Pie>
                 <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground" style={{ fontSize: 24, fontWeight: 700 }}>{documents.length}</text>
@@ -205,7 +206,7 @@ export default function DashboardAnalytics({ year }) {
         <h3 className="font-heading font-semibold mb-3">أكثر الكيانات تكراراً</h3>
         <div className="space-y-1">
           {[...entities].sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0)).slice(0, 15).map((e, i) => (
-            <Link key={e.id} to={`/entities/${e.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/60 transition-colors">
+            <Link key={e.id} to={`/database?entity_id=${encodeURIComponent(e.id)}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/60 transition-colors">
               <span className="w-6 h-6 rounded-full bg-accent text-xs flex items-center justify-center font-medium shrink-0">{i + 1}</span>
               {e.photo_url ? (
                 <Image src={e.photo_url} alt={e.name} className="w-8 h-8 rounded-full shrink-0 border border-border" fittingType="fill" />

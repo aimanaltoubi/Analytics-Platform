@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, Search } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import DocumentUploader from '@/components/DocumentUploader';
@@ -20,11 +20,19 @@ const STATUS_LABELS = {
 };
 
 export default function Documents() {
+  const [searchParams] = useSearchParams();
+  const yearFilter = searchParams.get('year') || '';
+  const monthFilter = searchParams.get('month') || '';
+  const statusFilter = searchParams.get('status') || 'all';
+  const noEntitiesFilter = searchParams.get('no_entities') === '1';
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
   const [showUploader, setShowUploader] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => { setTypeFilter(searchParams.get('type') || 'all'); }, [searchParams]);
 
   const load = async () => {
     setLoading(true);
@@ -37,7 +45,14 @@ export default function Documents() {
   useEffect(() => { load(); }, [refreshKey]);
 
   const filtered = docs.filter((d) =>
-    !query || d.title?.toLowerCase().includes(query.toLowerCase())
+    (!query || d.title?.toLowerCase().includes(query.toLowerCase())) &&
+    (typeFilter === 'all' || d.document_type === typeFilter) &&
+    (!yearFilter || String(d.reference_date || d.created_date || '').startsWith(yearFilter)) &&
+    (!monthFilter || (monthFilter.length === 2
+      ? String(d.reference_date || '').slice(5, 7) === monthFilter
+      : String(d.reference_date || '').startsWith(monthFilter))) &&
+    (statusFilter === 'all' || (statusFilter === 'processing' ? ['pending', 'processing'].includes(d.status) : d.status === statusFilter)) &&
+    (!noEntitiesFilter || !d.entity_count)
   );
 
   return (
@@ -68,6 +83,23 @@ export default function Documents() {
           className="w-full pr-10 pl-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
+
+      <div className="flex items-center gap-2">
+        <label htmlFor="document-type-filter" className="text-xs text-muted-foreground">نوع المستند</label>
+        <select id="document-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+          <option value="all">كل الأنواع</option>
+          {Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </div>
+
+      {(yearFilter || monthFilter || statusFilter !== 'all' || noEntitiesFilter) && (
+        <div className="flex flex-wrap gap-2 text-xs text-primary">
+          {yearFilter && <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">السنة: {yearFilter}</span>}
+          {monthFilter && <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">الشهر: {monthFilter}</span>}
+          {statusFilter !== 'all' && <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">الحالة: {STATUS_LABELS[statusFilter] || statusFilter}</span>}
+          {noEntitiesFilter && <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1">بلا كيانات مستخرجة</span>}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-sm text-muted-foreground py-12 text-center">جارٍ التحميل...</div>

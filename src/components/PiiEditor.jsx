@@ -40,6 +40,11 @@ const COMPANY_FIELDS = [
   { key: 'المدير المسؤول', label: 'المدير المسؤول', type: 'text' }
 ];
 
+const TYPE_LABELS = {
+  person: 'فرد', company: 'شركة', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
+};
+
 export default function PiiEditor({ entity, onSaved }) {
   const isNew = !entity.id;
   const [name, setName] = useState(entity.name || '');
@@ -47,7 +52,7 @@ export default function PiiEditor({ entity, onSaved }) {
   const [aliases, setAliases] = useState((entity.aliases || []).join('، '));
   const isPerson = etype === 'person';
   const isCompany = etype === 'company';
-  const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : ORG_FIELDS;
+  const fields = isPerson ? PERSON_FIELDS : isCompany ? COMPANY_FIELDS : etype === 'organization' ? ORG_FIELDS : [];
   const [attrs, setAttrs] = useState({ ...(entity.attributes || {}) });
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
@@ -143,9 +148,7 @@ export default function PiiEditor({ entity, onSaved }) {
           <div>
             <div className={labelCls}>تصنيف الكيان</div>
             <select value={etype} onChange={(e) => setEtype(e.target.value)} className={inputCls}>
-              <option value="person">فرد</option>
-              <option value="company">شركة</option>
-              <option value="organization">منظمة</option>
+              {Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           <div>

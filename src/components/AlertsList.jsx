@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { RefreshCw, CheckCircle2, XCircle, AlertOctagon, Clock } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -20,10 +20,15 @@ function fmtTime(s) {
 }
 
 export default function AlertsList() {
+  const [searchParams] = useSearchParams();
+  const requestedStatus = searchParams.get('status') || 'all';
+  const yearFilter = searchParams.get('year') || '';
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(requestedStatus);
+  const [severityFilter, setSeverityFilter] = useState(searchParams.get('severity') || 'all');
+  const [ruleFilter, setRuleFilter] = useState(searchParams.get('rule') || 'all');
   const { toast } = useToast();
 
   const load = async () => {
@@ -34,6 +39,11 @@ export default function AlertsList() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    setFilter(requestedStatus);
+    setSeverityFilter(searchParams.get('severity') || 'all');
+    setRuleFilter(searchParams.get('rule') || 'all');
+  }, [searchParams, requestedStatus]);
 
   const run = async () => {
     setRunning(true);
@@ -51,7 +61,13 @@ export default function AlertsList() {
     catch (e) { toast({ variant: 'destructive', title: 'فشل التحديث' }); }
   };
 
-  const filtered = alerts.filter((a) => filter === 'all' || a.status === filter);
+  const rules = [...new Set(alerts.map((alert) => alert.rule_name || 'غير مصنف'))].sort();
+  const filtered = alerts.filter((alert) =>
+    (filter === 'all' || alert.status === filter) &&
+    (severityFilter === 'all' || alert.severity === severityFilter) &&
+    (ruleFilter === 'all' || (alert.rule_name || 'غير مصنف') === ruleFilter) &&
+    (!yearFilter || String(alert.triggered_at || alert.created_date || '').startsWith(yearFilter))
+  );
   const counts = alerts.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
 
   return (
@@ -83,6 +99,17 @@ export default function AlertsList() {
         ))}
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        <select aria-label="تصفية حسب الخطورة" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)} className="rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+          <option value="all">كل مستويات الخطورة</option>
+          {Object.entries(SEV).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
+        </select>
+        <select aria-label="تصفية حسب القاعدة" value={ruleFilter} onChange={(event) => setRuleFilter(event.target.value)} className="max-w-xs rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+          <option value="all">كل القواعد</option>
+          {rules.map((rule) => <option key={rule} value={rule}>{rule}</option>)}
+        </select>
+      </div>
+
       {loading ? (
         <p className="text-sm text-muted-foreground py-6 text-center">جارٍ التحميل...</p>
       ) : filtered.length === 0 ? (
@@ -106,7 +133,7 @@ export default function AlertsList() {
                       {a.entity_names.slice(0, 6).map((n, i) => {
                         const id = a.entity_ids && a.entity_ids[i];
                         return id ? (
-                          <Link key={i} to={`/entities/${id}`} className="text-[11px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent/70 truncate max-w-[140px]">{n}</Link>
+                          <Link key={i} to={`/database?entity_id=${encodeURIComponent(id)}`} className="text-[11px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent/70 truncate max-w-[140px]">{n}</Link>
                         ) : (
                           <span key={i} className="text-[11px] px-2 py-0.5 rounded-md bg-accent truncate max-w-[140px]">{n}</span>
                         );

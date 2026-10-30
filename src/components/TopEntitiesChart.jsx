@@ -15,7 +15,7 @@ export default function TopEntitiesChart({ items }) {
         {items.map((it) => (
           <Link
             key={it.id}
-            to={`/entities/${it.id}`}
+            to={`/database?entity_id=${encodeURIComponent(it.id)}`}
             className="block group py-2.5 hover:bg-accent/40 -mx-2 px-2 rounded-lg transition-colors"
             title={`عرض ملف ${it.name}`}
           >

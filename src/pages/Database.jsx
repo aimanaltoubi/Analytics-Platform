@@ -1,27 +1,59 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Database as DatabaseIcon, Users, Building2, Building, Search, ArrowLeft, RefreshCw, Plus, X } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import PiiEditor from '@/components/PiiEditor';
 import { Image as UIImage } from '@/components/ui/image';
 
+const TYPE_LABELS = {
+  person: 'فرد', company: 'شركة', organization: 'منظمة', phone: 'هاتف', email: 'بريد',
+  location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
+};
+
 export default function Database() {
+  const [searchParams] = useSearchParams();
+  const requestedEntityId = searchParams.get('entity_id') || '';
   const [entities, setEntities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState('person');
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedId, setSelectedId] = useState(requestedEntityId);
   const [creating, setCreating] = useState(false);
 
   const load = async () => {
     try {
-      const all = await localClient.entities.Entity.list('-mention_count', 1000);
-      setEntities(all.filter((e) => e.type === 'person' || e.type === 'company' || e.type === 'organization'));
+      const all = await localClient.entities.Entity.list('-mention_count', 10000);
+      setEntities(all);
     } catch (e) {} finally { setLoading(false); setRefreshing(false); }
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!requestedEntityId) return;
+    const requested = entities.find((entity) => entity.id === requestedEntityId);
+    if (requested) {
+      setTab(requested.type);
+      setSelectedId(requested.id);
+      setCreating(false);
+    }
+  }, [entities, requestedEntityId]);
+
+  const tabs = useMemo(() => {
+    const types = new Set(entities.map((entity) => entity.type));
+    for (const type of ['person', 'company', 'organization']) types.add(type);
+    return [...types].map((key) => ({
+      key,
+      label: TYPE_LABELS[key] || key,
+      icon: key === 'person' ? Users : key === 'company' ? Building : key === 'organization' ? Building2 : DatabaseIcon,
+      count: entities.filter((entity) => entity.type === key).length,
+      activeCls: key === 'person' ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : key === 'company' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          : key === 'organization' ? 'bg-violet-50 text-violet-700 border-violet-200'
+            : 'bg-primary/10 text-primary border-primary/30'
+    }));
+  }, [entities]);
 
   const filtered = useMemo(() => {
     return entities
@@ -33,17 +65,11 @@ export default function Database() {
 
   const selected = entities.find((e) => e.id === selectedId) || null;
 
-  const counts = {
-    person: entities.filter((e) => e.type === 'person').length,
-    company: entities.filter((e) => e.type === 'company').length,
-    organization: entities.filter((e) => e.type === 'organization').length
-  };
-
   const summaryPii = (e) => {
     const a = e.attributes || {};
     if (e.type === 'person') return [a['تاريخ الميلاد'], a['الجنسية'], a['رقم الجواز'], a['رقم الهاتف']].filter(Boolean);
     if (e.type === 'company') return [a['رقم التسجيل'], a['السجل التجاري'], a['الدولة'], a['رقم الهاتف']].filter(Boolean);
-    return [a['رقم التسجيل'], a['الدولة'], a['رقم الهاتف']].filter(Boolean);
+    return [a['رقم التسجيل'], a['الدولة'], a['رقم الهاتف'], ...Object.values(a)].filter(Boolean).slice(0, 4);
   };
 
   return (
@@ -71,11 +97,7 @@ export default function Database() {
         <div className="border-l border-border bg-card flex flex-col min-h-0">
           <div className="p-3 border-b border-border space-y-3">
             <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { key: 'person', label: 'الأفراد', icon: Users, count: counts.person, activeCls: 'bg-blue-50 text-blue-700 border-blue-200' },
-                { key: 'company', label: 'الشركات', icon: Building, count: counts.company, activeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-                { key: 'organization', label: 'المنظمات', icon: Building2, count: counts.organization, activeCls: 'bg-violet-50 text-violet-700 border-violet-200' }
-              ].map((t) => {
+              {tabs.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.key;
                 return (
@@ -113,14 +135,14 @@ export default function Database() {
               <div className="text-sm text-muted-foreground py-10 text-center">جارٍ التحميل...</div>
             ) : filtered.length === 0 ? (
               <div className="text-sm text-muted-foreground py-10 text-center px-4">
-                {entities.length === 0 ? 'لا توجد كيانات مستخرجة بعد. عالج المستندات لاستخراج الأفراد والشركات والمنظمات.' : 'لا توجد نتائج مطابقة.'}
+                {entities.length === 0 ? 'لا توجد كيانات بعد. أضف سجلاً يدوياً أو عالج مستنداً لاستخراج الكيانات.' : 'لا توجد نتائج مطابقة.'}
               </div>
             ) : (
               <div className="divide-y divide-border/50">
                 {filtered.map((e) => {
                   const active = e.id === selectedId;
                   const pii = summaryPii(e);
-                  const typeLabel = e.type === 'person' ? 'فرد' : e.type === 'company' ? 'شركة' : 'منظمة';
+                  const typeLabel = TYPE_LABELS[e.type] || e.type;
                   return (
                     <button
                       key={e.id}
@@ -190,7 +212,7 @@ export default function Database() {
                 <Link to={`/entities/${selected.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                   <ArrowLeft className="w-4 h-4" /> صفحة الكيان الكاملة
                 </Link>
-                <span className="text-xs text-muted-foreground">{selected.type === 'person' ? 'فرد' : selected.type === 'company' ? 'شركة' : 'منظمة'} · {selected.mention_count || 0} ذكر</span>
+                <span className="text-xs text-muted-foreground">{TYPE_LABELS[selected.type] || selected.type} · {selected.mention_count || 0} ذكر</span>
               </div>
               <div className="rounded-xl border border-border bg-card p-5">
                 <PiiEditor

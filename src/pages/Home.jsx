@@ -111,11 +111,11 @@ export default function Home() {
   const topEntities = [...yearEntities].sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0)).slice(0, 8);
 
   const kpis = [
-    { label: 'المستندات', value: stats.documents, icon: FileText, to: '/documents', tint: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
-    { label: 'الكيانات', value: stats.entities, icon: Users, to: '/entities', tint: 'text-violet-600', bg: 'bg-violet-50', bar: 'bg-violet-500' },
+    { label: 'المستندات', value: stats.documents, icon: FileText, to: year ? `/documents?year=${encodeURIComponent(year)}` : '/documents', tint: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
+    { label: 'الكيانات', value: stats.entities, icon: Users, to: year ? `/entities?year=${encodeURIComponent(year)}` : '/entities', tint: 'text-violet-600', bg: 'bg-violet-50', bar: 'bg-violet-500' },
     { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph', tint: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
-    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: '/documents', tint: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
-    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: '/alerts', tint: 'text-red-600', bg: 'bg-red-50', bar: 'bg-red-500' }
+    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: `/documents?status=processing${year ? `&year=${encodeURIComponent(year)}` : ''}`, tint: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
+    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: `/alerts?status=new${year ? `&year=${encodeURIComponent(year)}` : ''}`, tint: 'text-red-600', bg: 'bg-red-50', bar: 'bg-red-500' }
   ];
 
   return (
@@ -251,7 +251,7 @@ export default function Home() {
             ) : (
               <div className="divide-y divide-border/50">
                 {topEntities.map((e, i) => (
-                  <Link key={e.id} to={`/entities/${e.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors">
+                  <Link key={e.id} to={`/database?entity_id=${encodeURIComponent(e.id)}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors">
                     <span className="font-mono text-[11px] tabular-nums text-muted-foreground w-5">{String(i + 1).padStart(2, '0')}</span>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate flex items-center gap-1.5">

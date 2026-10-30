@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Network, RefreshCw, Users, Share2, GitFork, Unlink, Search, ArrowRight } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import BarList from '@/components/BarList';
@@ -13,6 +13,8 @@ const TYPE_LABELS = {
 };
 
 export default function GraphIndex() {
+  const [searchParams] = useSearchParams();
+  const relationshipFilter = searchParams.get('relationship') || '';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [entities, setEntities] = useState([]);
@@ -103,6 +105,9 @@ export default function GraphIndex() {
   }, [gNodes, gEdges]);
 
   const companyIds = useMemo(() => new Set(gNodes.filter((n) => n.type === 'company' || n.type === 'organization').map((n) => n.id)), [gNodes]);
+  const visibleEdges = useMemo(() => relationshipFilter
+    ? gEdges.filter((edge) => relationshipFilter === 'غير محدد' ? !edge.rel : edge.rel === relationshipFilter)
+    : gEdges, [gEdges, relationshipFilter]);
 
   const filteredEntities = useMemo(() => {
     const ql = filter.trim().toLowerCase();
@@ -163,7 +168,7 @@ export default function GraphIndex() {
           ) : (
             <BarList
               max={Math.max(...data.relTypes.map((r) => r.value), 1)}
-              items={data.relTypes.map((r) => ({ name: r.name, values: [{ label: '', value: r.value, color: '#8b5cf6' }] }))}
+              items={data.relTypes.map((r) => ({ name: r.name, to: `/graph?relationship=${encodeURIComponent(r.name)}`, values: [{ label: '', value: r.value, color: '#8b5cf6' }] }))}
             />
           )}
           <div className="mt-4 pt-3 border-t border-border text-xs text-muted-foreground flex justify-between">
@@ -202,7 +207,8 @@ export default function GraphIndex() {
         <p className="text-xs text-muted-foreground">
           انقر على أي عقدة لتوسيع شبكة علاقاتها، واسحب العقد لإعادة ترتيبها. العقدة المحددة وعلاقاتها تُبرز باللون الأزرق.
         </p>
-        <GraphCanvas nodes={gNodes} edges={gEdges} focusId={focusId} onNodeClick={expandNode} clusterMap={netMetrics.clusterMap} centralityMap={netMetrics.centralityMap} companyIds={companyIds} />
+        {relationshipFilter && <p className="text-xs text-primary">نوع العلاقة: {relationshipFilter}</p>}
+        <GraphCanvas nodes={gNodes} edges={visibleEdges} focusId={focusId} onNodeClick={expandNode} clusterMap={netMetrics.clusterMap} centralityMap={netMetrics.centralityMap} companyIds={companyIds} />
       </div>
 
       {/* أدوات تحليل الشبكة */}

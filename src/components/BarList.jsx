@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function BarList({ items, max }) {
   const allVals = items.flatMap((i) => i.values.map((v) => v.value));
   const maxVal = max || Math.max(...allVals, 1);
@@ -6,8 +8,9 @@ export default function BarList({ items, max }) {
     <div className="space-y-3.5">
       {items.map((it, i) => {
         const multi = it.values.length > 1;
+        const Row = it.to ? Link : 'div';
         return (
-          <div key={i}>
+          <Row key={i} to={it.to} className={it.to ? 'block rounded-md hover:bg-accent/40 -mx-2 px-2 py-1 transition-colors' : ''}>
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-sm font-medium truncate" title={it.name}>{it.name}</span>
               {!multi && <span className="text-xs text-muted-foreground shrink-0">{it.values[0].value}</span>}
@@ -27,7 +30,7 @@ export default function BarList({ items, max }) {
                 </div>
               ))}
             </div>
-          </div>
+          </Row>
         );
       })}
     </div>

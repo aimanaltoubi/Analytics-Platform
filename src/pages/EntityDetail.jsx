@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, Users, Share2, FileText, Flag, Save, GitMerge } from 'lucide-react';
+import { ArrowRight, Users, Share2, FileText, Flag, Save, GitMerge, Pencil } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import EntityTimeline from '@/components/EntityTimeline';
@@ -107,6 +107,12 @@ export default function EntityDetail() {
               <div className="text-xs text-muted-foreground">ذكر</div>
             </div>
             <div className="flex flex-col gap-2">
+              <Link
+                to={`/database?entity_id=${encodeURIComponent(id)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" /> تحرير بيانات السجل
+              </Link>
               <button
                 onClick={() => setShowMerge(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-border bg-card hover:bg-accent transition-colors"
