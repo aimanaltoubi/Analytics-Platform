@@ -62,12 +62,12 @@ export default function FusionInsights() {
 
   const c = insights.correlation || {};
   const stats = [
-    { label: 'كيان موحّد', value: c.entities, icon: Users, color: 'text-violet-600 bg-violet-50' },
-    { label: 'رابط مترابط', value: c.connections, icon: Link2, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'عنقود شبكي', value: c.clusters, icon: Network, color: 'text-blue-600 bg-blue-50' },
-    { label: 'رابط تشارك جديد', value: c.cross_doc_links, icon: GitBranch, color: 'text-amber-600 bg-amber-50' },
-    { label: 'كيانات مدمجة', value: c.duplicates_merged, icon: Layers, color: 'text-pink-600 bg-pink-50' },
-    { label: 'مستند', value: c.documents, icon: Sparkles, color: 'text-cyan-600 bg-cyan-50' }
+    { label: 'كيان', value: c.entities, icon: Users, to: '/entities', color: 'text-violet-600 bg-violet-50' },
+    { label: 'رابط', value: c.connections, icon: Link2, to: '/graph', color: 'text-emerald-600 bg-emerald-50' },
+    { label: 'عنقود شبكي', value: c.clusters, icon: Network, to: '/graph', color: 'text-blue-600 bg-blue-50' },
+    { label: 'رابط تشارك مستندي', value: c.cross_doc_links, icon: GitBranch, to: '/graph', color: 'text-amber-600 bg-amber-50' },
+    { label: 'اقتراحات تكرار', value: c.duplicate_suggestions_pending, icon: Layers, to: '/duplicates', color: 'text-pink-600 bg-pink-50' },
+    { label: 'مستند', value: c.documents, icon: Sparkles, to: '/documents', color: 'text-cyan-600 bg-cyan-50' }
   ];
 
   return (
@@ -95,13 +95,13 @@ export default function FusionInsights() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="rounded-xl border border-border bg-card p-3.5 hover:shadow-md transition-shadow">
+            <Link key={s.label} to={s.to} className="rounded-xl border border-border bg-card p-3.5 hover:border-primary/40 hover:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${s.color}`}>
                 <Icon className="w-4 h-4" />
               </div>
               <div className="text-xl font-bold font-heading">{s.value}</div>
               <div className="text-[11px] text-muted-foreground">{s.label}</div>
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -278,22 +278,23 @@ export default function FusionInsights() {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground mt-3">
-            يدمج النظام تلقائياً السجلات التي يتجاوز احتمال تطابقها ٩٢٪ (اسم + تاريخ ميلاد + تطابق صوتي) والسجلات ذات المعرّفات القوية المتطابقة (جواز/هوية/بصمة…).
+            تظهر المطابقات المحتملة في قائمة مراجعة، ولا تُدمج السجلات أو تُحذف إلا بعد تأكيد المستخدم.
           </p>
         </div>
       )}
 
       {/* تقرير الدمج */}
-      {(insights.merge_report || []).length > 0 && (
+      {(insights.resolution?.probabilistic_sample || []).length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
-          <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><Layers className="w-4 h-4 text-pink-500" /> تقرير توحيد الكيانات ({insights.merge_report.length} مجموعة)</h4>
+          <h4 className="font-heading font-semibold mb-3 flex items-center gap-2"><Layers className="w-4 h-4 text-pink-500" /> اقتراحات تطابق للمراجعة ({insights.resolution.probabilistic_suggestions})</h4>
           <div className="space-y-2">
-            {insights.merge_report.map((g, i) => (
-              <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-accent/40">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 shrink-0">{g.merged_count} مدمج</span>
-                <div className="text-sm">
-                  <Link to={`/entities/${g.canonical_id}`} className="font-medium hover:text-primary hover:underline">{g.canonical}</Link>
-                  <span className="text-muted-foreground"> ({g.type}) دُمج مع: {g.duplicates.join('، ')}</span>
+            {insights.resolution.probabilistic_sample.map((match) => (
+              <div key={`${match.a_id}:${match.b_id}`} className="flex items-start gap-2 p-2 rounded-lg bg-accent/40 text-sm">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 shrink-0">{Math.round(match.probability * 100)}٪</span>
+                <div>
+                  <Link to={`/entities/${match.a_id}`} className="font-medium hover:text-primary hover:underline">{match.a}</Link>
+                  <span className="text-muted-foreground"> قد يتطابق مع </span>
+                  <Link to={`/entities/${match.b_id}`} className="font-medium hover:text-primary hover:underline">{match.b}</Link>
                 </div>
               </div>
             ))}

@@ -37,6 +37,19 @@
       "type": "string",
       "title": "الملخص"
     },
+    "summary_ar": {
+      "type": "string",
+      "title": "الملخص العربي الموثق"
+    },
+    "summary_points": {
+      "type": "array",
+      "items": { "type": "object" },
+      "title": "نقاط الملخص ومصادرها"
+    },
+    "summary_generated_at": {
+      "type": "string",
+      "title": "وقت إنشاء الملخص العربي"
+    },
     "reference_date": {
       "type": "string",
       "format": "date",

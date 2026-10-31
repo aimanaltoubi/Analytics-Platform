@@ -10,7 +10,7 @@ const TYPE_LABELS = {
 const th = { border: '1px solid #cbd5e1', padding: '6px 8px', textAlign: 'right', fontWeight: 600 };
 const td = { border: '1px solid #cbd5e1', padding: '6px 8px', textAlign: 'right' };
 
-export default function InvestigationReport({ title, entities = [], connections = [], documents = [], summary }) {
+export default function InvestigationReport({ title, entities = [], connections = [], documents = [], summary = '' }) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
@@ -64,7 +64,7 @@ export default function InvestigationReport({ title, entities = [], connections 
         </div>
 
         {summary && (
-          <div style={{ fontSize: '13px', lineHeight: 1.8, background: '#f1f5f9', padding: '12px 14px', borderRadius: '8px', marginBottom: '22px' }}>
+          <div style={{ fontSize: '13px', lineHeight: 1.8, whiteSpace: 'pre-line', background: '#f1f5f9', padding: '12px 14px', borderRadius: '8px', marginBottom: '22px' }}>
             {summary}
           </div>
         )}

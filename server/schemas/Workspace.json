@@ -26,6 +26,14 @@
       "title": "المستندات المحمّلة",
       "default": []
     }
+    ,"manual_graph": {
+      "type": "object",
+      "title": "مخطط الشبكة اليدوي",
+      "properties": {
+        "nodes": { "type": "array", "maxItems": 500, "items": { "type": "object" }, "default": [] },
+        "edges": { "type": "array", "maxItems": 1000, "items": { "type": "object" }, "default": [] }
+      }
+    }
   },
   "required": [
     "name"

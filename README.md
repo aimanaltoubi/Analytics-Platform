@@ -90,6 +90,7 @@ step in order. Each step has its own command; do not combine them.
 - **مساعد الأدلة:** ask questions about processed documents and entity profiles. Answers show verified quotes and open the cited record or extracted PDF page. Common Arabic/English count questions read directly from SQLite; document questions normalize common Arabic spelling variants. If evidence cannot be verified, the assistant abstains. Chat history stays in the current window.
 - **Drill-down:** dashboard and yearly-statistics cards, chart slices, and bar rows open the matching entity, document, relationship, or alert list. Entity links include a direct route to edit the local profile.
 - **Field provenance:** extracted profile values link to the exact supporting document page and quote; changed or manually entered values are marked as manual. Reprocessing preserves manually edited values.
+- **ترجمة المستندات:** translate processed documents locally into Arabic, English, Simplified Chinese, Russian, Spanish, French, German, Portuguese, Italian, or Japanese. Original pages remain intact; each saved translation links back to its source page. See [the translation model decision and evaluation limits](docs/LOCAL_TRANSLATION_MODEL_EVALUATION.md).
 
 The installer is not code-signed. Windows may display an unknown-publisher warning;
 verify the release source and checksums before deciding whether to run it.
@@ -118,6 +119,14 @@ Install dependencies:
 ```bash
 npm install
 ```
+
+Run the translation plumbing harness with deterministic mock responses:
+
+```bash
+npm run evaluate:translation:mock
+```
+
+For live local-model output, start llama.cpp on loopback and run `npm run evaluate:translation -- --ai-url http://127.0.0.1:8081 --output /tmp/translation-evaluation.json`. The harness checks script and identifier preservation and reports chrF against short references; it does not certify semantic quality. Human bilingual review remains required.
 
 ## Local browser development
 
@@ -177,7 +186,10 @@ npm test
 npm run lint
 npm run build
 npm run check:offline
+npm run evaluate:translation:mock
 ```
+
+The translation harness checks the local API, ten target routes, page mapping, target-script presence, and preservation of IDs/dates/emails. Mock mode does not measure linguistic quality. To evaluate the real local model, run `node scripts/evaluate-translation.js --ai-url http://127.0.0.1:8081 --output /tmp/translation-evaluation.json`, then have qualified bilingual reviewers assess the saved results. Do not treat script/token checks as proof of accurate translation.
 
 `check:offline` scans the complete repository, including hidden files and path names, for prohibited platform references and known remote asset hosts.
 

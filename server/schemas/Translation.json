@@ -1,0 +1,29 @@
+{
+  "name": "Translation",
+  "type": "object",
+  "properties": {
+    "document_id": { "type": "string" },
+    "document_title": { "type": "string" },
+    "source_language": { "type": "string", "default": "auto" },
+    "target_language": {
+      "type": "string",
+      "enum": ["ar", "en", "zh", "ru", "es", "fr", "de", "pt", "it", "ja"]
+    },
+    "target_name": { "type": "string" },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "page": { "type": ["integer", "null"] },
+          "part": { "type": "integer" },
+          "source_text": { "type": "string" },
+          "translated_text": { "type": "string" }
+        },
+        "required": ["page", "part", "source_text", "translated_text"]
+      }
+    },
+    "text": { "type": "string" }
+  },
+  "required": ["document_id", "document_title", "target_language", "target_name", "segments", "text"]
+}

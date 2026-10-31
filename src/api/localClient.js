@@ -97,7 +97,7 @@ async function signIn(path, body) {
 export const localClient = {
   entities: Object.fromEntries([
     'Alert', 'Connection', 'Document', 'Entity', 'Manifest', 'Mention',
-    'Notification', 'RiskProfile', 'Setting', 'User', 'Workspace'
+    'Notification', 'RiskProfile', 'Setting', 'Translation', 'User', 'Workspace'
   ].map((name) => [name, collection(name)])),
   functions: {
     invoke: async (name, body = {}) => ({

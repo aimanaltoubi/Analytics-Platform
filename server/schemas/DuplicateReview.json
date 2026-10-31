@@ -8,6 +8,7 @@
     "right_name": { "type": "string" },
     "entity_type": { "type": "string" },
     "reason": { "type": "string" },
+    "match_score": { "type": "number", "minimum": 0, "maximum": 1 },
     "status": { "type": "string", "enum": ["pending", "dismissed", "merged"] },
     "merge_history_id": { "type": "string" }
   },

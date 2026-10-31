@@ -73,6 +73,11 @@ export default function WorkspaceDetail() {
     setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };
 
+  const saveManualGraph = async (manualGraph) => {
+    await localClient.entities.Workspace.update(id, { manual_graph: manualGraph });
+    setWorkspace((current) => current ? { ...current, manual_graph: manualGraph } : current);
+  };
+
   const availableEntities = allEntities.filter((e) => !(workspace?.entity_ids || []).includes(e.id));
   const searchResults = search
     ? availableEntities.filter((e) => matchesEntityQuery(e, search)).slice(0, 50)
@@ -162,11 +167,14 @@ export default function WorkspaceDetail() {
 
         <TabsContent value="network" className="mt-4">
           <NetworkTab
+            workspaceId={workspace.id}
+            manualGraph={workspace.manual_graph}
             entities={entities}
             connections={connections}
             documents={documents}
             allEntities={allEntities}
             onAddToWorkspace={addEntity}
+            onSaveManualGraph={saveManualGraph}
             onEntityUpdated={loadAll}
           />
         </TabsContent>

@@ -98,7 +98,7 @@ export default function EntityMergeDialog({ open, onOpenChange, primaryEntity, o
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <div className="text-xs text-amber-800">
-                سيتم دمج <span className="font-medium">{duplicate.name}</span> داخل <span className="font-medium">{primaryEntity?.name}</span> وحذف المكرر نهائياً. لا يمكن التراجع.
+                سيتم دمج <span className="font-medium">{duplicate.name}</span> داخل <span className="font-medium">{primaryEntity?.name}</span>. يمكن التراجع من سجل عمليات الدمج ما دامت السجلات لم تتغير.
               </div>
             </div>
           )}

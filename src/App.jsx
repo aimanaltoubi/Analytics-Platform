@@ -39,6 +39,7 @@ import CompanyNetwork from '@/pages/CompanyNetwork';
 import PresentationPage from '@/pages/PresentationPage';
 import EvidenceChat from '@/pages/EvidenceChat';
 import DuplicateReview from '@/pages/DuplicateReview';
+import Translation from '@/pages/Translation';
 
 
 const AuthenticatedApp = () => {
@@ -53,6 +54,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Home />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/documents/:id" element={<DocumentDetail />} />
+        <Route path="/translation" element={<Translation />} />
         <Route path="/entities" element={<Entities />} />
         <Route path="/entities/:id" element={<EntityDetail />} />
         <Route path="/entities/:id/dossier" element={<EntityDossier />} />

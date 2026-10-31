@@ -109,18 +109,30 @@ export default async function(req) {
     ]);
 
     // عدد الروابط لكل كيان
-    const connCount = Object.create(null);
-    connections.forEach((c) => {
-      connCount[c.source_entity_id] = (connCount[c.source_entity_id] || 0) + 1;
-      connCount[c.target_entity_id] = (connCount[c.target_entity_id] || 0) + 1;
-    });
-
     // 1) حلّ الكيانات: مطابقة حتمية + احتمالية (Entity Resolution)
-    const uf = Object.create(null);
-    const efind = (x) => { if (uf[x] === undefined) uf[x] = x; if (uf[x] !== x) uf[x] = efind(uf[x]); return uf[x]; };
-    const eunion = (a, b) => { uf[efind(a)] = efind(b); };
+    const reviewCandidates = new Map();
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const addCandidate = (leftId, rightId, reason, probability) => {
+      const [left, right] = [entityById.get(leftId), entityById.get(rightId)];
+      if (!left || !right || left.type !== right.type || left.id === right.id) return;
+      const [first, second] = [left, right].sort((a, b) => a.id.localeCompare(b.id));
+      const pairKey = `${first.id}:${second.id}`;
+      const current = reviewCandidates.get(pairKey);
+      if (!current || probability > current.match_score) {
+        reviewCandidates.set(pairKey, {
+          left_id: first.id,
+          right_id: second.id,
+          left_name: first.name,
+          right_name: second.name,
+          entity_type: first.type,
+          reason,
+          match_score: probability,
+          status: 'pending'
+        });
+      }
+    };
 
-    // (أ) مطابقة حتمية: اسم مؤسس مطابق أو معرّف قوي متطابق (جواز/هوية/هاتف/بريد/حساب/بصمة)
+    // (أ) المطابقات الحتمية تصبح اقتراحات للمراجعة، ولا تدمج السجلات تلقائياً.
     const byKey = Object.create(null);
     entities.forEach((e) => {
       const nk = 'name|' + (e.type || 'other') + '|' + norm(e.name);
@@ -134,104 +146,44 @@ export default async function(req) {
     });
     Object.values(byKey).forEach((ids) => {
       if (ids.length < 2) return;
-      for (let i = 1; i < ids.length; i++) eunion(ids[0], ids[i]);
+      for (let i = 0; i < ids.length - 1; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          addCandidate(ids[i], ids[j], 'معرّف أو اسم موحّد متطابق', 1);
+        }
+      }
     });
 
-    // (ب) مطابقة احتمالية: Jaro-Winkler(الاسم) + تاريخ الميلاد + Soundex
+    // (ب) المطابقات الاحتمالية تظهر للمراجعة ولا توحّد المعرّفات أو المراجع.
     const byType = Object.create(null);
     entities.forEach((e) => { (byType[e.type || 'other'] = byType[e.type || 'other'] || []).push(e); });
     const probMatches = [];
     Object.values(byType).forEach((arr) => {
       for (let i = 0; i < arr.length; i++) {
         for (let j = i + 1; j < arr.length; j++) {
-          if (efind(arr[i].id) === efind(arr[j].id)) continue;
           const p = matchProb(arr[i], arr[j]);
           if (p >= RES_THRESHOLD) {
-            eunion(arr[i].id, arr[j].id);
-            probMatches.push({ a: arr[i].name, b: arr[j].name, probability: +p.toFixed(3) });
+            const probability = +p.toFixed(3);
+            probMatches.push({ a_id: arr[i].id, b_id: arr[j].id, a: arr[i].name, b: arr[j].name, probability });
+            addCandidate(arr[i].id, arr[j].id, 'تشابه احتمالي في الاسم وبيانات الميلاد', probability);
           }
         }
       }
     });
 
-    const groups = Object.create(null);
-    entities.forEach((e) => { const r = efind(e.id); (groups[r] = groups[r] || []).push(e); });
-
-    const canonMap = Object.create(null);      // dupId -> canonicalId
-    const mergedGroups = [];  // للإبلاغ
-    let duplicatesMerged = 0;
-
-    for (const grp of Object.values(groups)) {
-      if (grp.length < 2) continue;
-      // اختيار الكيان المرجعي (أعلى ذكر ثم أكثر روابط)
-      const canonical = grp.slice().sort((a, b) =>
-        ((b.mention_count || 0) - (a.mention_count || 0)) ||
-        ((connCount[b.id] || 0) - (connCount[a.id] || 0))
-      )[0];
-      const dups = grp.filter((e) => e.id !== canonical.id);
-      if (dups.length === 0) continue;
-
-      // دمج الحقول
-      const aliases = new Set(canonical.aliases || []);
-      const attributes = { ...(canonical.attributes || {}) };
-      const document_ids = new Set(canonical.document_ids || []);
-      let mentionSum = canonical.mention_count || 0;
-      let maxRisk = canonical.risk_score || 0;
-      let watchlist = canonical.watchlist || false;
-      let photo = canonical.photo_url;
-
-      dups.forEach((d) => {
-        canonMap[d.id] = canonical.id;
-        (d.aliases || []).forEach((a) => { if (a && a !== canonical.name) aliases.add(a); });
-        Object.entries(d.attributes || {}).forEach(([k, v]) => {
-          if (attributes[k] === undefined && v !== undefined && v !== '') attributes[k] = v;
-        });
-        (d.document_ids || []).forEach((id) => document_ids.add(id));
-        mentionSum += d.mention_count || 0;
-        if ((d.risk_score || 0) > maxRisk) maxRisk = d.risk_score || 0;
-        if (d.watchlist) watchlist = true;
-        if (!photo && d.photo_url) photo = d.photo_url;
-      });
-      if (canonical.name) aliases.delete(canonical.name);
-
-      mergedGroups.push({
-        canonical_id: canonical.id,
-        canonical: canonical.name,
-        type: TYPE_LABELS[canonical.type] || canonical.type,
-        merged_count: dups.length,
-        duplicates: dups.map((d) => d.name)
-      });
-      duplicatesMerged += dups.length;
-
-      // تحديث الكيان المرجعي
-      await localClient.entities.Entity.update(canonical.id, {
-        mention_count: mentionSum,
-        aliases: [...aliases],
-        attributes,
-        document_ids: [...document_ids],
-        risk_score: maxRisk,
-        watchlist,
-        photo_url: photo
-      });
-
-      for (const d of dups) {
-        await localClient.entities.Connection.updateMany(
-          { source_entity_id: d.id },
-          { $set: { source_entity_id: canonical.id } }
-        );
-        await localClient.entities.Connection.updateMany(
-          { target_entity_id: d.id },
-          { $set: { target_entity_id: canonical.id } }
-        );
-        await localClient.entities.Mention.updateMany(
-          { entity_id: d.id },
-          { $set: { entity_id: canonical.id } }
-        );
-        await localClient.entities.Entity.delete(d.id);
+    const suggestions = localClient.asServiceRole.transaction((db) => {
+      const existing = new Set(db.list('DuplicateReview', {}, '-created_date', 10000)
+        .map((review) => [review.left_id, review.right_id].sort().join(':')));
+      let added = 0;
+      for (const [pairKey, candidate] of reviewCandidates) {
+        if (existing.has(pairKey)) continue;
+        db.create('DuplicateReview', candidate);
+        existing.add(pairKey);
+        added++;
       }
-    }
+      return { added, pending: db.list('DuplicateReview', { status: 'pending' }, '-created_date', 10000).length };
+    });
 
-    const canon = (id) => canonMap[id] || id;
+    const canon = (id) => id;
 
     // 2) إعادة تمثيل الروابط بعد الدمج + تنظيف
     const remapped = connections
@@ -242,21 +194,13 @@ export default async function(req) {
       }))
       .filter((c) => c.source_entity_id && c.target_entity_id);
 
-    // حذف الروابط الذاتية (نفس الكيان) والروابط المكررة
+    // Keep source relationships intact; only use endpoint pairs to avoid duplicate co-occurrence links.
     const seenPairs = new Set();
-    const dupConnIds = [];
     remapped.forEach((c) => {
-      if (c.source_entity_id === c.target_entity_id) {
-        dupConnIds.push(c.id);
-        return;
-      }
+      if (c.source_entity_id === c.target_entity_id) return;
       const key = [c.source_entity_id, c.target_entity_id].sort().join('|');
-      if (seenPairs.has(key)) dupConnIds.push(c.id);
-      else seenPairs.add(key);
+      seenPairs.add(key);
     });
-    if (dupConnIds.length > 0) {
-      await localClient.entities.Connection.deleteMany({ id: { $in: dupConnIds } });
-    }
 
     // 3) روابط التشارك في المستندات (ارتباط تلقائي عبر المصادر)
     const docEntitySet = Object.create(null);
@@ -297,9 +241,9 @@ export default async function(req) {
       await localClient.entities.Connection.bulkCreate(newCooc.slice(0, coocCreated));
     }
 
-    // 4) حساب الرؤى على البيانات بعد الدمج
+    // 4) حساب الرؤى على السجلات الأصلية دون دمجها
     const entById = Object.create(null);
-    entities.forEach((e) => { entById[canon(e.id)] = { ...e, id: canon(e.id) }; });
+    entities.forEach((e) => { entById[e.id] = e; });
     const liveEntities = Object.values(entById);
 
     // العناقيد (Connected Components)
@@ -379,12 +323,14 @@ export default async function(req) {
       generated_at: new Date().toISOString(),
       correlation: {
         entities: liveEntities.length,
-        connections: remapped.length - dupConnIds.length + coocCreated,
+        connections: remapped.length + coocCreated,
         documents: documents.length,
         mentions: mentions.length,
         clusters: clusterList.length,
         cross_doc_links: coocCreated,
-        duplicates_merged: duplicatesMerged
+        duplicates_merged: 0,
+        duplicate_suggestions_added: suggestions.added,
+        duplicate_suggestions_pending: suggestions.pending
       },
       largest_clusters: largestClusters,
       bridge_entities: bridgeEntities,
@@ -392,11 +338,12 @@ export default async function(req) {
       top_cooccurrence: topCooc,
       risk_network: riskNetwork,
       incidents_by_type: docTypeDist,
-      merge_report: mergedGroups,
+      merge_report: [],
       resolution: {
         threshold: RES_THRESHOLD,
         weights: WEIGHTS,
-        probabilistic_merges: probMatches.length,
+        probabilistic_merges: 0,
+        probabilistic_suggestions: probMatches.length,
         probabilistic_sample: probMatches.slice(0, 12)
       }
     });

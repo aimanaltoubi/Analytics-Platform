@@ -37,6 +37,8 @@ export default function Entities() {
   const requestedType = searchParams.get('type') || 'all';
   const yearFilter = searchParams.get('year') || '';
   const requestedRisk = searchParams.get('risk') || 'all';
+  const requestedNationality = searchParams.get('has_nationality') === '1';
+  const requestedGeography = searchParams.get('has_geography') === '1';
   const [entities, setEntities] = useState([]);
   const [yearDocIds, setYearDocIds] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,8 @@ export default function Entities() {
   const [sort, setSort] = useState('mentions');
   const [nationality, setNationality] = useState('all');
   const [riskFilter, setRiskFilter] = useState(requestedRisk);
+  const [hasNationality, setHasNationality] = useState(requestedNationality);
+  const [hasGeography, setHasGeography] = useState(requestedGeography);
   const [attrFilters, setAttrFilters] = useState({ passport: false, phone: false, email: false, coords: false });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -53,6 +57,9 @@ export default function Entities() {
   useEffect(() => { setTypeFilter(requestedType); }, [requestedType]);
   useEffect(() => { setWatchOnly(searchParams.get('watchlist') === '1'); }, [searchParams]);
   useEffect(() => { setRiskFilter(requestedRisk); }, [requestedRisk]);
+  useEffect(() => { setHasNationality(requestedNationality); }, [requestedNationality]);
+  useEffect(() => { setHasGeography(requestedGeography); }, [requestedGeography]);
+  useEffect(() => { setQuery(searchParams.get('query') || ''); }, [searchParams]);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +91,8 @@ export default function Entities() {
     if (attrFilters.email && !hasEmail(e)) return false;
     if (attrFilters.coords && !hasCoordinates(e)) return false;
     if (riskFilter !== 'all' && riskTier(e) !== riskFilter) return false;
+    if (hasNationality && !getNationality(e)) return false;
+    if (hasGeography && !(e.type === 'location' || e.latitude != null && e.longitude != null || Object.entries(e.attributes || {}).some(([key, value]) => value && /مكان الميلاد|المنشأ|الأصل|العنوان|location|address|origin|birthplace|place_of_birth/i.test(key)))) return false;
     if (dateFrom || dateTo) {
       const d = new Date(e.created_date || 0);
       if (dateFrom && d < new Date(dateFrom)) return false;
@@ -99,8 +108,8 @@ export default function Entities() {
     return (b.mention_count || 0) - (a.mention_count || 0);
   });
 
-  const hasActiveFilters = watchOnly || nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
-  const resetFilters = () => { setWatchOnly(false); setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
+  const hasActiveFilters = watchOnly || hasNationality || hasGeography || nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
+  const resetFilters = () => { setWatchOnly(false); setHasNationality(false); setHasGeography(false); setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
 
   return (
     <div className="p-6 space-y-6">

@@ -51,24 +51,28 @@ export default function DemographicsOverview({ year }) {
 
     // المناطق الجغرافية للأحداث: من كيانات المواقع + أماكن ذكرت في الروابط/المستندات
     const areaMap = {};
+    const addArea = (name, entity, weight = 1) => {
+      const key = String(name || '').trim();
+      if (!key) return;
+      if (!areaMap[key]) areaMap[key] = { name: key, count: 0, entityIds: new Set() };
+      areaMap[key].count += weight;
+      areaMap[key].entityIds.add(entity.id);
+    };
     // من كيانات المواقع المسماة
     locations.forEach((e) => {
-      if (e.name && String(e.name).trim()) {
-        const k = String(e.name).trim();
-        areaMap[k] = (areaMap[k] || 0) + (e.mention_count || 1);
-      }
+      addArea(e.name, e, e.mention_count || 1);
     });
     // من أماكن الميلاد/المنشأ للأشخاص
     persons.forEach((e) => {
       const origin = firstAttr(e.attributes, ORIGIN_KEYS);
-      if (origin) areaMap[origin] = (areaMap[origin] || 0) + 1;
+      if (origin) addArea(origin, e);
     });
     // من سمة العنوان إن وُجدت
     scoped.forEach((e) => {
       const addr = firstAttr(e.attributes, ['العنوان', 'address', 'location']);
-      if (addr) areaMap[addr] = (areaMap[addr] || 0) + 1;
+      if (addr) addArea(addr, e);
     });
-    const areas = Object.entries(areaMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 12);
+    const areas = Object.values(areaMap).map((area) => ({ ...area, entityIds: [...area.entityIds] })).sort((a, b) => b.count - a.count).slice(0, 12);
 
     return { nationalities, areas, totalPersons: persons.length };
   }, [scoped]);
@@ -76,8 +80,8 @@ export default function DemographicsOverview({ year }) {
   if (loading) return <div className="text-sm text-muted-foreground py-6 text-center">جارٍ تحميل التركيبة السكانية...</div>;
 
   const kpis = [
-    { label: 'الجنسيات', value: stats.nationalities.length, icon: Flag, tint: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'المناطق الجغرافية', value: stats.areas.length, icon: MapPin, tint: 'text-emerald-600', bg: 'bg-emerald-50' }
+    { label: 'الجنسيات', value: stats.nationalities.length, icon: Flag, tint: 'text-blue-600', bg: 'bg-blue-50', to: '/entities?has_nationality=1' },
+    { label: 'المناطق الجغرافية', value: stats.areas.length, icon: MapPin, tint: 'text-emerald-600', bg: 'bg-emerald-50', to: '/entities?has_geography=1' }
   ];
 
   const maxArea = Math.max(...stats.areas.map((a) => a.count), 1);
@@ -96,7 +100,7 @@ export default function DemographicsOverview({ year }) {
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
-            <div key={k.label} className="rounded-xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all">
+            <Link key={k.label} to={k.to} className="block rounded-xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all">
               <div className="flex items-center justify-between">
                 <div className={`w-9 h-9 rounded-lg ${k.bg} ${k.tint} flex items-center justify-center`}>
                   <Icon className="w-4.5 h-4.5" />
@@ -104,7 +108,7 @@ export default function DemographicsOverview({ year }) {
                 <span className="text-2xl font-bold font-heading tabular-nums">{k.value}</span>
               </div>
               <div className="text-xs text-muted-foreground mt-2">{k.label}</div>
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -144,7 +148,7 @@ export default function DemographicsOverview({ year }) {
           ) : (
             <div className="space-y-2 max-h-64 overflow-auto">
               {stats.areas.map((a) => (
-                <div key={a.name}>
+                <Link key={a.name} to={a.entityIds.length === 1 ? `/database?entity_id=${encodeURIComponent(a.entityIds[0])}` : `/entities?has_geography=1&query=${encodeURIComponent(a.name)}`} className="block rounded-md px-2 py-1 hover:bg-accent/50">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-xs font-medium truncate">{a.name}</span>
                     <span className="text-[11px] text-muted-foreground shrink-0">{a.count}</span>
@@ -152,7 +156,7 @@ export default function DemographicsOverview({ year }) {
                   <div className="h-2 rounded-full bg-accent overflow-hidden">
                     <div className="h-full rounded-full bg-emerald-500/70" style={{ width: `${(a.count / maxArea) * 100}%` }} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

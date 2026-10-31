@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo } from 'react';
-import { Pencil, Link2, Trash2, Eraser, Search, Plus } from 'lucide-react';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { Pencil, Link2, Trash2, Eraser, Search, Plus, UserRound, Building2, Building, Phone, Mail, MapPin, CreditCard, CalendarDays, CircleHelp } from 'lucide-react';
 
 const PALETTE = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
 const TYPE_COLORS = {
@@ -10,10 +10,15 @@ const TYPE_LABELS = {
   person: 'فرد', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
   location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى'
 };
+const TYPE_ICONS = {
+  person: UserRound, company: Building, organization: Building2, phone: Phone,
+  email: Mail, location: MapPin, account: CreditCard, date: CalendarDays,
+  event: CalendarDays, other: CircleHelp
+};
 let _id = 0;
 const uid = () => `m${Date.now()}_${_id++}`;
 
-export default function ManualNetworkCanvas({ entities = [], allEntities = [], onAddToWorkspace, height = 560 }) {
+export default function ManualNetworkCanvas({ entities = [], allEntities = [], onAddToWorkspace, workspaceId, manualGraph, onSaveGraph, height = 560 }) {
   const svgRef = useRef(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -24,6 +29,27 @@ export default function ManualNetworkCanvas({ entities = [], allEntities = [], o
   const [dragOver, setDragOver] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
   const [paletteSearch, setPaletteSearch] = useState('');
+  const initializedWorkspace = useRef('');
+  const saveTimer = useRef(null);
+  const saveGraphRef = useRef(onSaveGraph);
+
+  useEffect(() => { saveGraphRef.current = onSaveGraph; }, [onSaveGraph]);
+
+  useEffect(() => {
+    if (!workspaceId || initializedWorkspace.current === workspaceId) return;
+    initializedWorkspace.current = workspaceId;
+    setNodes(Array.isArray(manualGraph?.nodes) ? manualGraph.nodes : []);
+    setEdges(Array.isArray(manualGraph?.edges) ? manualGraph.edges : []);
+  }, [workspaceId, manualGraph]);
+
+  useEffect(() => {
+    if (!workspaceId || initializedWorkspace.current !== workspaceId || !saveGraphRef.current) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void saveGraphRef.current({ nodes, edges });
+    }, 500);
+    return () => clearTimeout(saveTimer.current);
+  }, [nodes, edges, workspaceId]);
 
   const toLocal = (e) => {
     const rect = svgRef.current.getBoundingClientRect();
@@ -264,6 +290,7 @@ export default function ManualNetworkCanvas({ entities = [], allEntities = [], o
             {nodes.map((n) => {
               const isFrom = connectFrom === n.id;
               const w = Math.max(n.label.length * 7 + 24, 56);
+              const NodeIcon = TYPE_ICONS[n.type] || CircleHelp;
               return (
                 <g
                   key={n.id}
@@ -276,8 +303,9 @@ export default function ManualNetworkCanvas({ entities = [], allEntities = [], o
                 >
                   {isFrom && <circle r={26} fill={n.color} opacity={0.18} />}
                   <rect x={-w / 2} y={-15} width={w} height={30} rx={15} fill={n.color} stroke="#fff" strokeWidth={2} opacity={hover === n.id ? 1 : 0.92} />
-                  <text textAnchor="middle" y={5} style={{ fontSize: 12, fontWeight: 600, paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeOpacity: 0.6 }} fill="#fff">
-                    {n.label.length > 22 ? n.label.slice(0, 21) + '…' : n.label}
+                  <NodeIcon x={-w / 2 + 7} y={-6} width={12} height={12} stroke="#fff" strokeWidth={2} />
+                  <text textAnchor="middle" x={5} y={5} style={{ fontSize: 12, fontWeight: 600, paintOrder: 'stroke', stroke: n.color, strokeWidth: 3, strokeOpacity: 0.9 }} fill="#fff">
+                    {n.label.length > 18 ? n.label.slice(0, 17) + '…' : n.label}
                   </text>
                 </g>
               );

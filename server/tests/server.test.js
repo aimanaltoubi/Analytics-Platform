@@ -58,7 +58,7 @@ test('health and setup are minimal; all data and functions require authenticatio
   for (const name of app.server.functionNames) {
     assert.equal((await app.request(`/api/functions/${name}`, { method: 'POST', body: {} })).status, 401);
   }
-  assert.equal(app.server.functionNames.length, 17);
+  assert.equal(app.server.functionNames.length, 19);
   assert.equal((await app.request('/api/functions/notRegistered', { method: 'POST', body: {}, token: app.token })).status, 404);
 });
 
@@ -140,6 +140,20 @@ test('CRUD persists schema defaults, immutable metadata, filter operators, sorti
   assert.equal((await app.request(`/api/entities/Entity/${first.id}`, { token: app.token })).data.risk_score, 90);
   assert.equal((await app.request(`/api/entities/Entity/${first.id}`, { method: 'DELETE', token: app.token })).status, 200);
   assert.equal((await app.request(`/api/entities/Entity/${first.id}`, { token: app.token })).status, 404);
+});
+
+test('workspace manual graph layout persists across local database restart', async (t) => {
+  const app = await fixture(t);
+  const workspace = await app.create('Workspace', {
+    name: 'Persistent graph',
+    manual_graph: {
+      nodes: [{ id: 'node-1', entity_id: 'entity-1', label: 'Nora', type: 'person', x: 120, y: 80 }],
+      edges: [{ id: 'edge-1', from: 'node-1', to: 'node-2', label: 'works with' }]
+    }
+  });
+  await app.restart();
+  const restored = await app.request(`/api/entities/Workspace/${workspace.id}`, { token: app.token });
+  assert.deepEqual(restored.data.manual_graph, workspace.manual_graph);
 });
 
 test('allowlists, origin checks, IDs, schema and request limits reject unsafe requests', async (t) => {
@@ -437,6 +451,57 @@ test('local evidence answers cite stored passages and reject fabricated quotatio
     assert.equal(noArabicEvidence.data.claims.length, 0);
 });
 
+  test('Arabic document summary stores only points with verified source quotes', async (t) => {
+    const aiBaseUrl = await fakeAI(t, (schema) => schema.properties?.points ? ({
+      points: [{ text: 'تحمل نورا جواز رقم A123456.', quote: 'نورا تحمل جواز رقم A123456' }]
+    }) : sample(schema));
+    const app = await fixture(t, { aiBaseUrl });
+    const document = await app.create('Document', {
+      title: 'جواز نورا', status: 'processed',
+      raw_text: 'تسجل الوثيقة أن نورا تحمل جواز رقم A123456.',
+      pages: ['تسجل الوثيقة أن نورا تحمل جواز رقم A123456.']
+    });
+    const summary = await app.call('summarizeDocument', { document_id: document.id });
+    assert.equal(summary.status, 200, JSON.stringify(summary.data));
+    assert.match(summary.data.summary, /A123456/);
+    assert.equal(summary.data.points[0].source.page, 1);
+    assert.equal(summary.data.points[0].source.document_id, document.id);
+    const saved = (await app.request(`/api/entities/Document/${document.id}`, { token: app.token })).data;
+    assert.equal(saved.summary_ar, summary.data.summary);
+    assert.equal(saved.summary_points[0].source.quote, 'نورا تحمل جواز رقم A123456');
+  });
+
+  test('document translation preserves page mapping and protected identifiers', async (t) => {
+    const aiBaseUrl = await fakeAI(t, (_schema, body) => {
+      const source = body.messages[0].content.split('Source text:\n').at(-1);
+      return { text: source.includes('ZX-99999') ? 'تمت معالجة الفاتورة.' : `ترجمة عربية: ${source}` };
+    });
+    const app = await fixture(t, { aiBaseUrl });
+    const document = await app.create('Document', {
+      title: 'Passport and appointment', status: 'processed',
+      raw_text: 'Nora passport ZX-418-902 email nora@example.com appointment 2025-04-17.',
+      pages: ['Nora passport ZX-418-902 email nora@example.com.', 'Appointment 2025-04-17.']
+    });
+    const translated = await app.call('translateDocument', { document_id: document.id, target_language: 'ar' });
+    assert.equal(translated.status, 200, JSON.stringify(translated.data));
+    assert.equal(translated.data.segments.length, 2);
+    assert.deepEqual(translated.data.segments.map((segment) => segment.page), [1, 2]);
+    assert.match(translated.data.text, /ZX-418-902/);
+    assert.match(translated.data.text, /nora@example.com/);
+    assert.match(translated.data.text, /2025-04-17/);
+    const stored = (await app.request('/api/entities/Translation', { token: app.token })).data[0];
+    assert.equal(stored.document_id, document.id);
+    assert.equal(stored.target_language, 'ar');
+
+    const badDocument = await app.create('Document', {
+      title: 'Invoice', status: 'processed', raw_text: 'Invoice ZX-99999 total 50.', pages: ['Invoice ZX-99999 total 50.']
+    });
+    const rejected = await app.call('translateDocument', { document_id: badDocument.id, target_language: 'ru' });
+    assert.equal(rejected.status, 422);
+    assert.equal(rejected.data.code, 'TRANSLATION_IDENTIFIER_MISMATCH');
+    assert.equal((await app.request('/api/entities/Translation', { token: app.token })).data.length, 1);
+  });
+
 test('assistant answers Arabic count and capability questions from local system data', async (t) => {
   const app = await fixture(t);
   const nora = await app.create('Entity', { name: 'Nora Hassan', type: 'person' });
@@ -594,20 +659,29 @@ test('extracted fields retain source page quotes and reprocessing preserves manu
   assert.equal(entity.field_sources['رقم الجواز'].kind, 'manual');
 });
 
-test('local fusion awaits reference remapping and reports failures rather than suppressing writes', async (t) => {
+test('local fusion queues duplicate suggestions without changing entities or references', async (t) => {
   const app = await fixture(t);
   const primary = await app.create('Entity', { name: 'Same Person', type: 'person', mention_count: 5 });
   const duplicate = await app.create('Entity', { name: 'Same Person', type: 'person', mention_count: 2 });
   const other = await app.create('Entity', { name: 'Other Organization', type: 'organization' });
   const doc = await app.create('Document', { title: 'Reference' });
   await app.create('Connection', { source_entity_id: duplicate.id, target_entity_id: other.id, relationship_type: 'knows', document_id: doc.id });
+  await app.create('Connection', { source_entity_id: primary.id, target_entity_id: other.id, relationship_type: 'owns', document_id: doc.id });
   await app.create('Mention', { entity_id: duplicate.id, entity_name: duplicate.name, document_id: doc.id });
   const result = await app.call('runFusion');
   assert.equal(result.status, 200, JSON.stringify(result.data));
-  assert.equal((await app.request(`/api/entities/Entity/${duplicate.id}`, { token: app.token })).status, 404);
-  assert.equal((await app.request(`/api/entities/Entity/${primary.id}`, { token: app.token })).data.mention_count, 7);
-  assert.equal((await app.request('/api/entities/Connection', { token: app.token })).data[0].source_entity_id, primary.id);
-  assert.equal((await app.request('/api/entities/Mention', { token: app.token })).data[0].entity_id, primary.id);
+  assert.equal((await app.request(`/api/entities/Entity/${duplicate.id}`, { token: app.token })).status, 200);
+  assert.equal((await app.request(`/api/entities/Entity/${primary.id}`, { token: app.token })).data.mention_count, 5);
+  const connections = (await app.request('/api/entities/Connection', { token: app.token })).data;
+  assert.equal(connections.length, 2);
+  assert.deepEqual(new Set(connections.map((connection) => connection.relationship_type)), new Set(['knows', 'owns']));
+  assert.deepEqual(new Set(connections.map((connection) => connection.source_entity_id)), new Set([duplicate.id, primary.id]));
+  assert.equal((await app.request('/api/entities/Mention', { token: app.token })).data[0].entity_id, duplicate.id);
+  const reviews = (await app.request('/api/entities/DuplicateReview', { token: app.token })).data;
+  assert.equal(reviews.length, 1);
+  assert.equal(reviews[0].status, 'pending');
+  assert.equal(reviews[0].match_score, 1);
+  assert.equal(result.data.correlation.duplicates_merged, 0);
 });
 
 test('the configured AI URL cannot target a cloud endpoint or arbitrary path', async () => {

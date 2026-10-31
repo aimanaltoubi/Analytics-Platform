@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
-import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowRight, FileText, Users, Share2, AlertCircle, RefreshCw, Sparkles, Languages } from 'lucide-react';
 import { localClient } from '@/api/localClient';
 import { useToast } from '@/components/ui/use-toast';
 import EntityCorrector from '@/components/EntityCorrector';
+import FieldSource from '@/components/FieldSource';
 
 const TYPE_LABELS = {
   phone_log: 'سجل مكالمات',
@@ -21,6 +22,7 @@ export default function DocumentDetail() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reprocessing, setReprocessing] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
   const { toast } = useToast();
 
   const load = async () => {
@@ -62,6 +64,19 @@ export default function DocumentDetail() {
     }
   };
 
+  const handleSummarize = async () => {
+    setSummarizing(true);
+    try {
+      const result = await localClient.functions.invoke('summarizeDocument', { document_id: id });
+      setDoc((current) => ({ ...current, summary_ar: result.data.summary, summary_points: result.data.points, summary_generated_at: result.data.generated_at }));
+      toast({ title: 'تم إنشاء الملخص العربي', description: `نقاط مدعومة: ${result.data.points.length}` });
+    } catch (error) {
+      toast({ title: 'تعذر تلخيص المستند', description: error.message, variant: 'destructive' });
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!doc) return <div className="p-6 text-sm text-muted-foreground">المستند غير موجود.</div>;
 
@@ -81,6 +96,9 @@ export default function DocumentDetail() {
             <div className="text-sm text-muted-foreground mt-1">{TYPE_LABELS[doc.document_type] || 'أخرى'}</div>
           </div>
           <div className="flex items-center gap-3">
+            <Link to={`/translation?document_id=${encodeURIComponent(id)}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-colors">
+              <Languages className="w-3.5 h-3.5" /> ترجمة المستند
+            </Link>
             <span className={`text-xs px-3 py-1 rounded-full ${
               doc.status === 'processed' ? 'bg-emerald-100 text-emerald-700' :
               doc.status === 'failed' ? 'bg-red-100 text-red-700' :
@@ -96,6 +114,15 @@ export default function DocumentDetail() {
               <RefreshCw className={`w-3.5 h-3.5 ${reprocessing ? 'animate-spin' : ''}`} />
               {reprocessing ? 'جارٍ إعادة التحليل...' : 'إعادة التحليل'}
             </button>
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing || doc.status !== 'processed' || !(doc.raw_text || doc.pages?.length)}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+              title="إنشاء ملخص عربي مدعوم بمصادر"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${summarizing ? 'animate-pulse' : ''}`} />
+              {summarizing ? 'جارٍ إنشاء الملخص...' : 'تلخيص بالعربية'}
+            </button>
           </div>
         </div>
 
@@ -109,6 +136,23 @@ export default function DocumentDetail() {
           <div className="mt-4">
             <h3 className="text-sm font-semibold mb-1">الملخص</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{doc.summary}</p>
+          </div>
+        )}
+
+        {doc.summary_points?.length > 0 && (
+          <div className="mt-4 border-t border-border pt-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">ملخص عربي موثق</h3>
+              {doc.summary_generated_at && <span className="text-[10px] text-muted-foreground">{new Date(doc.summary_generated_at).toLocaleString()}</span>}
+            </div>
+            <div className="space-y-3">
+              {doc.summary_points.map((point, index) => (
+                <div key={`${point.source?.page || 'text'}-${index}`} className="border-r-2 border-primary/50 pr-3">
+                  <p className="text-sm leading-relaxed">{point.text}</p>
+                  <FieldSource source={point.source} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

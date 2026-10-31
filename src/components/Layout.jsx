@@ -13,6 +13,7 @@ const navGroups = [
     section: 'الاستيعاب',
     items: [
       { to: '/documents', label: 'المستندات', icon: FileText },
+      { to: '/translation', label: 'ترجمة المستندات', icon: Languages },
       { to: '/import', label: 'استيراد البيانات', icon: Upload }
     ]
   },

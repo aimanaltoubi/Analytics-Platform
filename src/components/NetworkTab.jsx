@@ -3,7 +3,7 @@ import { Network as NetworkIcon, Pencil, FileText, Info } from 'lucide-react';
 import NetworkGraph from '@/components/NetworkGraph';
 import ManualNetworkCanvas from '@/components/ManualNetworkCanvas';
 
-export default function NetworkTab({ entities, connections, documents, allEntities, onAddToWorkspace, onEntityUpdated }) {
+export default function NetworkTab({ workspaceId, manualGraph, entities, connections, documents, allEntities, onAddToWorkspace, onSaveManualGraph, onEntityUpdated }) {
   const [mode, setMode] = useState('documents'); // documents | manual
 
   const docDerivedCount = connections.length;
@@ -31,7 +31,7 @@ export default function NetworkTab({ entities, connections, documents, allEntiti
           <Info className="w-3.5 h-3.5" />
           {mode === 'documents'
             ? `${entities.length} كيان • ${docDerivedCount} رابط مستخرج من ${documents.length} مستند`
-            : 'اسحب الكيانات من السجل لبناء شبكة يدوية'}
+            : 'اسحب الكيانات من السجل لبناء شبكة يدوية — تُحفظ العقد والروابط تلقائياً في مساحة العمل'}
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export default function NetworkTab({ entities, connections, documents, allEntiti
 
       {/* الرسم الحر */}
       {mode === 'manual' && (
-        <ManualNetworkCanvas entities={entities} allEntities={allEntities} onAddToWorkspace={onAddToWorkspace} height={620} />
+        <ManualNetworkCanvas workspaceId={workspaceId} manualGraph={manualGraph} entities={entities} allEntities={allEntities} onAddToWorkspace={onAddToWorkspace} onSaveGraph={onSaveManualGraph} height={620} />
       )}
     </div>
   );

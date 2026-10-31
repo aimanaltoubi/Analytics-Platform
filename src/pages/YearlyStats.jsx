@@ -9,6 +9,7 @@ import { localClient } from '@/api/localClient';
 import { availableYears, docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
 import TopEntitiesChart from '@/components/TopEntitiesChart';
 import BarList from '@/components/BarList';
+import InvestigationReport from '@/components/InvestigationReport';
 
 const TYPE_LABELS = {
   person: 'فرد', organization: 'منظمة', company: 'شركة', phone: 'هاتف', email: 'بريد',
@@ -168,6 +169,15 @@ export default function YearlyStats() {
   const watchlist = entities.filter((e) => e.watchlist).length;
   const docsNoEntities = docs.filter((d) => !d.entity_count).length;
   const yearQuery = year ? `&year=${encodeURIComponent(year)}` : '';
+  const topEntity = topEntities[0];
+  const topRelationship = relDist[0]?.name;
+  const insightSummary = [
+    `نطاق التقرير: ${year ? `عام ${year}` : 'كل السنوات المتاحة'}.`,
+    `المستندات: ${docs.length}؛ المعالجة الناجحة: ${processingStats.processed} (${processingStats.successRate}٪)؛ الفاشلة: ${processingStats.failed}؛ بلا كيانات مستخرجة: ${docsNoEntities}.`,
+    `الكيانات: ${entities.length}؛ عالية المخاطر: ${highRisk}؛ على قائمة المراقبة: ${watchlist}؛ الروابط: ${conns.length}؛ التنبيهات: ${alerts.length}.`,
+    topEntity ? `أكثر كيان ذكراً: ${topEntity.name} (${topEntity.mention} ذكر، ${topEntity.connections} رابط).` : 'لا توجد كيانات كافية لتحديد كيان محوري.',
+    topRelationship ? `أكثر أنواع العلاقات ظهوراً: ${topRelationship}.` : 'لا توجد علاقات مسجلة.'
+  ].join('\n');
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ تحميل الإحصاءات التنفيذية...</div>;
 
@@ -346,6 +356,38 @@ export default function YearlyStats() {
         <SectionCard icon={Calendar} title="توزيع المستندات حسب شهر المرجع">
           {monthlyRef.some((m) => m.values[0].value > 0) ? <BarList items={monthlyRef} /> : <p className="text-sm text-muted-foreground py-8 text-center">لا توجد تواريخ مرجعية</p>}
         </SectionCard>
+
+        <section className="space-y-4 border-t border-border pt-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-lg font-semibold">تقرير الرؤى ومصادرها</h2>
+              <p className="mt-1 text-xs text-muted-foreground">ملخص محسوب مباشرة من السجلات للفترة المحددة، مع روابط إلى الكيانات والمستندات التي تكوّنه.</p>
+            </div>
+            <InvestigationReport title={`تقرير الرؤى ${year || 'الشامل'}`} entities={entities} connections={conns} documents={docs} summary={insightSummary} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="border-y border-border py-3">
+              <h3 className="mb-2 text-sm font-medium">أبرز الكيانات</h3>
+              {topEntities.slice(0, 5).map((entity) => (
+                <Link key={entity.id} to={`/entities/${encodeURIComponent(entity.id)}`} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50">
+                  <span className="truncate">{entity.name}</span><span className="shrink-0 text-xs text-muted-foreground">{entity.mention} ذكر</span>
+                </Link>
+              ))}
+            </div>
+            <div className="border-y border-border py-3">
+              <h3 className="mb-2 text-sm font-medium">مراجعة التغطية والمخاطر</h3>
+              <Link to={`/documents?no_entities=1${yearQuery}`} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent/50">
+                <span>مستندات بلا كيانات</span><span className="text-xs text-muted-foreground">{docsNoEntities}</span>
+              </Link>
+              <Link to={`/entities?risk=high${yearQuery}`} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent/50">
+                <span>كيانات عالية المخاطر</span><span className="text-xs text-muted-foreground">{highRisk}</span>
+              </Link>
+              <Link to={`/alerts?year=${encodeURIComponent(year)}`} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent/50">
+                <span>التنبيهات في الفترة</span><span className="text-xs text-muted-foreground">{alerts.length}</span>
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
