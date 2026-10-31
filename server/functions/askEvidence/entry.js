@@ -35,10 +35,10 @@ const ANSWER_SCHEMA = {
 
 const STOP_WORDS = new Set(['من', 'في', 'على', 'عن', 'الى', 'إلى', 'ما', 'هل', 'هو', 'هي', 'هذا', 'هذه', 'ذلك', 'تلك', 'كان', 'كانت', 'مع', 'the', 'and', 'for', 'with', 'what', 'who', 'when', 'where', 'was', 'were', 'are', 'is', 'a', 'an', 'of', 'to', 'in', 'on', 'by', 'as', 'at']);
 const COUNT_TARGETS = [
-  { words: ['الاشخاص', 'اشخاص', 'شخص', 'الافراد', 'افراد', 'فرد', 'people', 'person', 'persons', 'individual', 'individuals'], name: 'Entity', filters: { type: 'person' }, label: 'سجلات الأفراد', href: '/entities?type=person' },
+  { words: ['الاشخاص', 'اشخاص', 'شخص', 'الشخص', 'الافراد', 'افراد', 'فرد', 'الناس', 'ناس', 'السكان', 'سكان', 'people', 'person', 'persons', 'individual', 'individuals', 'population'], name: 'Entity', filters: { type: 'person' }, label: 'سجلات الأفراد', href: '/entities?type=person' },
   { words: ['الشركات', 'شركة', 'company', 'companies', 'business', 'businesses'], name: 'Entity', filters: { type: 'company' }, label: 'سجلات الشركات', href: '/entities?type=company' },
   { words: ['المنظمات', 'منظمة', 'المؤسسات', 'مؤسسة', 'organization', 'organizations', 'institution', 'institutions'], name: 'Entity', filters: { type: 'organization' }, label: 'سجلات المنظمات والمؤسسات', href: '/entities?type=organization' },
-  { words: ['الكيانات', 'كيانات', 'كيان', 'entities', 'entity', 'records', 'records'], name: 'Entity', filters: {}, label: 'سجلات الكيانات', href: '/entities' },
+  { words: ['الكيانات', 'كيانات', 'كيان', 'entities', 'entity', 'records'], name: 'Entity', filters: {}, label: 'سجلات الكيانات', href: '/entities' },
   { words: ['المستندات', 'مستندات', 'مستند', 'الوثائق', 'وثائق', 'وثيقة', 'documents', 'document', 'files', 'file'], name: 'Document', filters: {}, label: 'المستندات', href: '/documents' },
   { words: ['الروابط', 'روابط', 'الرابط', 'علاقات', 'علاقة', 'connections', 'connection', 'relationships', 'relationship'], name: 'Connection', filters: {}, label: 'الروابط والعلاقات', href: '/graph' },
   { words: ['التنبيهات', 'تنبيهات', 'تنبيه', 'alerts', 'alert'], name: 'Alert', filters: {}, label: 'التنبيهات', href: '/alerts' }
@@ -57,6 +57,8 @@ function normalize(value) {
     .toLowerCase()
     .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
     .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
     .replace(/ى/g, 'ي')
     .replace(/ة/g, 'ه')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
@@ -122,9 +124,10 @@ function rankSources(question, sources) {
     const normalizedText = normalize(source.text);
     const matched = queryTerms.filter((term) => normalizedText.includes(term));
     const phraseMatch = normalizedQuestion.length > 5 && normalizedText.includes(normalizedQuestion);
-    const score = matched.length / queryTerms.length + (phraseMatch ? 2 : 0);
-    return { ...source, score, matched: matched.length };
-  }).filter((source) => source.matched > 0)
+    const coverage = matched.length / queryTerms.length;
+    const score = coverage + (phraseMatch ? 2 : 0);
+    return { ...source, score, matched: matched.length, coverage, phraseMatch };
+  }).filter((source) => source.phraseMatch || source.coverage >= 0.5)
     .sort((a, b) => b.score - a.score || b.matched - a.matched)
     .slice(0, 8);
 }

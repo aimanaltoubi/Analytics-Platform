@@ -373,12 +373,16 @@ test('local evidence answers cite stored passages and reject fabricated quotatio
     const marker = 'مصادر الأدلة المحلية:\n';
     const sourceStart = body.messages[0].content.lastIndexOf(marker) + marker.length;
     const sources = JSON.parse(body.messages[0].content.slice(sourceStart));
+    const userQuestion = body.messages[0].content.match(/سؤال المستخدم:\n([\s\S]*?)\n\nمصادر الأدلة المحلية:/)?.[1] || '';
     const unsupportedCitation = body.messages[0].content.includes('unsupported citation');
     const unsupportedClaim = body.messages[0].content.includes('unsupported statement');
-    const quote = unsupportedCitation ? 'This invented text is not in the source' : 'passport number is A123456';
+    const arabicQuestion = userQuestion.includes('المنظمه');
+    const quote = unsupportedCitation ? 'This invented text is not in the source'
+      : arabicQuestion ? 'أعلنت المنظمة الوطنية أن الترخيص انتهى في 2024.'
+        : 'passport number is A123456';
     return {
       claims: [{
-        text: unsupportedClaim ? 'Nora works for Blue Harbor Group.' : 'The passport number is A123456.',
+        text: unsupportedClaim ? 'Nora works for Blue Harbor Group.' : arabicQuestion ? quote : 'The passport number is A123456.',
         citations: [{ source_id: sources[0].id, quote }]
       }]
     };
@@ -389,12 +393,28 @@ test('local evidence answers cite stored passages and reject fabricated quotatio
     raw_text: 'Name Nora. passport number is A123456.',
     pages: ['Name Nora. passport number is A123456.']
   });
+  await app.create('Document', {
+    title: 'وثيقة المنظمة الوطنية', status: 'processed',
+    raw_text: 'أعلنت المنظمة الوطنية أن الترخيص انتهى في 2024.',
+    pages: ['أعلنت المنظمة الوطنية أن الترخيص انتهى في 2024.']
+  });
+  await app.create('Document', {
+    title: 'وثيقة نورا', status: 'processed',
+    raw_text: 'نورا حسن تحمل جواز رقم A123456.',
+    pages: ['نورا حسن تحمل جواز رقم A123456.']
+  });
 
   const grounded = await app.call('askEvidence', { question: 'What passport number is listed for Nora?' });
   assert.equal(grounded.status, 200, JSON.stringify(grounded.data));
   assert.equal(grounded.data.abstained, false);
   assert.equal(grounded.data.claims[0].citations[0].source.page, 1);
   assert.equal(grounded.data.claims[0].citations[0].quote, 'passport number is A123456');
+
+  const arabic = await app.call('askEvidence', { question: 'ماذا ورد عن المنظمه الوطنيه؟' });
+  assert.equal(arabic.status, 200, JSON.stringify(arabic.data));
+  assert.equal(arabic.data.abstained, false);
+  assert.match(arabic.data.claims[0].text, /المنظمة الوطنية/);
+  assert.equal(arabic.data.claims[0].citations[0].source.page, 1);
 
   const unsupported = await app.call('askEvidence', { question: 'unsupported citation for the passport number' });
   assert.equal(unsupported.status, 200, JSON.stringify(unsupported.data));
@@ -405,26 +425,80 @@ test('local evidence answers cite stored passages and reject fabricated quotatio
   assert.equal(mismatchedClaim.status, 200, JSON.stringify(mismatchedClaim.data));
   assert.equal(mismatchedClaim.data.abstained, true);
   assert.equal(mismatchedClaim.data.claims.length, 0);
+
+    const noEvidence = await app.call('askEvidence', { question: 'What is Nora car color?' });
+    assert.equal(noEvidence.status, 200, JSON.stringify(noEvidence.data));
+    assert.equal(noEvidence.data.abstained, true);
+    assert.equal(noEvidence.data.claims.length, 0);
+
+    const noArabicEvidence = await app.call('askEvidence', { question: 'ما لون سيارة نورا؟' });
+    assert.equal(noArabicEvidence.status, 200, JSON.stringify(noArabicEvidence.data));
+    assert.equal(noArabicEvidence.data.abstained, true);
+    assert.equal(noArabicEvidence.data.claims.length, 0);
 });
 
 test('assistant answers Arabic count and capability questions from local system data', async (t) => {
   const app = await fixture(t);
-  await app.create('Entity', { name: 'Nora Hassan', type: 'person' });
+  const nora = await app.create('Entity', { name: 'Nora Hassan', type: 'person' });
   await app.create('Entity', { name: 'Sami Ali', type: 'person' });
   await app.create('Entity', { name: 'Harbor Group', type: 'organization' });
+  const company = await app.create('Entity', { name: 'North Star Trading', type: 'company' });
+  await app.create('Document', { title: 'Local note', status: 'processed', raw_text: 'Local evidence.' });
+  await app.create('Connection', { source_entity_id: nora.id, target_entity_id: company.id, relationship_type: 'owns' });
+  await app.create('Alert', { title: 'Local test alert', severity: 'medium' });
 
-  const count = await app.call('askEvidence', { question: 'كم عدد الاشخاص في النظام؟' });
-  assert.equal(count.status, 200, JSON.stringify(count.data));
-  assert.equal(count.data.abstained, false);
-  assert.match(count.data.claims[0].text, /2/);
-  assert.equal(count.data.claims[0].citations[0].source.kind, 'query');
-  assert.equal(count.data.claims[0].citations[0].source.href, '/entities?type=person');
+  const countCases = [
+    { question: 'كم عدد الاشخاص في النظام؟', expected: '2', href: '/entities?type=person' },
+    { question: 'كم عدد الأفراد؟', expected: '2', href: '/entities?type=person' },
+    { question: 'How many people are in the system?', expected: '2', href: '/entities?type=person' },
+    { question: 'كم عدد المؤسسات؟', expected: '1', href: '/entities?type=organization' },
+    { question: 'كم عدد الشركات؟', expected: '1', href: '/entities?type=company' },
+    { question: 'كم عدد الكيانات؟', expected: '4', href: '/entities' },
+    { question: 'كم عدد الوثائق؟', expected: '1', href: '/documents' },
+    { question: 'كم عدد الروابط؟', expected: '1', href: '/graph' },
+    { question: 'كم عدد التنبيهات؟', expected: '1', href: '/alerts' }
+  ];
+  for (const testCase of countCases) {
+    const count = await app.call('askEvidence', { question: testCase.question });
+    assert.equal(count.status, 200, JSON.stringify(count.data));
+    assert.equal(count.data.abstained, false);
+    assert.ok(count.data.claims[0].text.includes(testCase.expected), JSON.stringify(count.data));
+    assert.equal(count.data.claims[0].citations[0].source.kind, 'query');
+    assert.equal(count.data.claims[0].citations[0].source.href, testCase.href);
+  }
 
   const capabilities = await app.call('askEvidence', { question: 'ما الذي تسطيع مساعدتي به؟' });
   assert.equal(capabilities.status, 200, JSON.stringify(capabilities.data));
   assert.equal(capabilities.data.abstained, false);
   assert.match(capabilities.data.claims[0].text, /المستندات المعالجة/);
   assert.equal(capabilities.data.claims[0].citations[0].source.kind, 'guide');
+
+  const englishCapabilities = await app.call('askEvidence', { question: 'What can you help me with?' });
+  assert.equal(englishCapabilities.status, 200, JSON.stringify(englishCapabilities.data));
+  assert.equal(englishCapabilities.data.abstained, false);
+  assert.equal(englishCapabilities.data.claims[0].citations[0].source.kind, 'guide');
+});
+
+test('Arabic evidence retrieval matches hamza, ta marbuta, and optional article variants', async (t) => {
+  const aiBaseUrl = await fakeAI(t, (_schema, body) => {
+    const marker = 'مصادر الأدلة المحلية:\n';
+    const sourceStart = body.messages[0].content.lastIndexOf(marker) + marker.length;
+    const sources = JSON.parse(body.messages[0].content.slice(sourceStart));
+    const source = sources[0];
+    return { claims: [{ text: source.text, citations: [{ source_id: source.id, quote: source.text }] }] };
+  });
+  const app = await fixture(t, { aiBaseUrl });
+  await app.create('Document', {
+    title: 'وثيقة المؤسسة الوطنية', status: 'processed',
+    raw_text: 'أعلنت المؤسسة الوطنية عن فتح الحساب.',
+    pages: ['أعلنت المؤسسة الوطنية عن فتح الحساب.']
+  });
+
+  const result = await app.call('askEvidence', { question: 'ماذا ورد عن مؤسسه وطنيه؟' });
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  assert.equal(result.data.abstained, false);
+  assert.equal(result.data.claims[0].citations[0].source.page, 1);
+  assert.match(result.data.claims[0].citations[0].quote, /المؤسسة الوطنية/);
 });
 
 test('LLM structured output is validated locally, not accepted on trust', async (t) => {

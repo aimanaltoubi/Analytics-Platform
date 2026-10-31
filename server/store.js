@@ -201,13 +201,22 @@ export class Store {
   searchDocuments(query, limit = 80) {
     assert(typeof query === 'string' && query.length <= 5000, 400, 'Invalid document search query');
     assert(Number.isInteger(limit) && limit >= 1 && limit <= 200, 400, 'Invalid document search limit');
-    const tokens = [...new Set(query.normalize('NFD')
+    const rawTokens = [...new Set(query.normalize('NFD')
       .replace(/[\u0300-\u036f\u064B-\u065F\u0670\u0640]/g, '')
-      .replace(/[أإآٱ]/g, 'ا')
-      .replace(/ى/g, 'ي')
-      .replace(/ة/g, 'ه')
       .toLowerCase()
       .match(/[\p{L}\p{N}]+/gu) || [])].filter((token) => token.length > 1);
+    const tokenSet = new Set();
+    for (const token of rawTokens) {
+      const folded = token.replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ى/g, 'ي');
+      const baseVariants = new Set([token, folded, folded.replace(/ة/g, 'ه'), folded.replace(/ه/g, 'ة')]);
+      for (const variant of baseVariants) {
+        if (variant.length < 2) continue;
+        tokenSet.add(variant);
+        if (variant.startsWith('ال') && variant.length > 4) tokenSet.add(variant.slice(2));
+        else if (!variant.startsWith('ال') && variant.length > 3) tokenSet.add(`ال${variant}`);
+      }
+    }
+    const tokens = [...tokenSet];
     if (!tokens.length) return [];
     const match = tokens.map((token) => `"${token.replace(/"/g, '""')}"*`).join(' OR ');
     return this.db.prepare(`
