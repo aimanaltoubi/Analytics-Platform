@@ -38,6 +38,7 @@ export default function Entities() {
   const yearFilter = searchParams.get('year') || '';
   const requestedRisk = searchParams.get('risk') || 'all';
   const requestedNationality = searchParams.get('has_nationality') === '1';
+  const requestedMissingNationality = searchParams.get('missing_nationality') === '1';
   const requestedGeography = searchParams.get('has_geography') === '1';
   const [entities, setEntities] = useState([]);
   const [yearDocIds, setYearDocIds] = useState(null);
@@ -49,6 +50,7 @@ export default function Entities() {
   const [nationality, setNationality] = useState('all');
   const [riskFilter, setRiskFilter] = useState(requestedRisk);
   const [hasNationality, setHasNationality] = useState(requestedNationality);
+  const [missingNationality, setMissingNationality] = useState(requestedMissingNationality);
   const [hasGeography, setHasGeography] = useState(requestedGeography);
   const [attrFilters, setAttrFilters] = useState({ passport: false, phone: false, email: false, coords: false });
   const [dateFrom, setDateFrom] = useState('');
@@ -58,6 +60,7 @@ export default function Entities() {
   useEffect(() => { setWatchOnly(searchParams.get('watchlist') === '1'); }, [searchParams]);
   useEffect(() => { setRiskFilter(requestedRisk); }, [requestedRisk]);
   useEffect(() => { setHasNationality(requestedNationality); }, [requestedNationality]);
+  useEffect(() => { setMissingNationality(requestedMissingNationality); }, [requestedMissingNationality]);
   useEffect(() => { setHasGeography(requestedGeography); }, [requestedGeography]);
   useEffect(() => { setQuery(searchParams.get('query') || ''); }, [searchParams]);
 
@@ -86,6 +89,7 @@ export default function Entities() {
     if (yearDocIds && !(e.document_ids || []).some((id) => yearDocIds.has(id))) return false;
     if (watchOnly && !e.watchlist) return false;
     if (nationality !== 'all' && getNationality(e) !== nationality) return false;
+    if (missingNationality && (e.type !== 'person' || getNationality(e))) return false;
     if (attrFilters.passport && !hasPassport(e)) return false;
     if (attrFilters.phone && !hasPhone(e)) return false;
     if (attrFilters.email && !hasEmail(e)) return false;
@@ -108,8 +112,8 @@ export default function Entities() {
     return (b.mention_count || 0) - (a.mention_count || 0);
   });
 
-  const hasActiveFilters = watchOnly || hasNationality || hasGeography || nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
-  const resetFilters = () => { setWatchOnly(false); setHasNationality(false); setHasGeography(false); setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
+  const hasActiveFilters = watchOnly || hasNationality || missingNationality || hasGeography || nationality !== 'all' || riskFilter !== 'all' || Object.values(attrFilters).some(Boolean) || !!dateFrom || !!dateTo;
+  const resetFilters = () => { setWatchOnly(false); setHasNationality(false); setMissingNationality(false); setHasGeography(false); setNationality('all'); setRiskFilter('all'); setAttrFilters({ passport: false, phone: false, email: false, coords: false }); setDateFrom(''); setDateTo(''); };
 
   return (
     <div className="p-6 space-y-6">
@@ -197,6 +201,15 @@ export default function Entities() {
               {f.label}
             </button>
           ))}
+          <button
+            onClick={() => setMissingNationality((missing) => !missing)}
+            aria-pressed={missingNationality}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              missingNationality ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border hover:bg-accent'
+            }`}
+          >
+            بلا جنسية مسجلة
+          </button>
           <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-border bg-card">
             <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">من</span>

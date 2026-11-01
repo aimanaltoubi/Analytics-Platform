@@ -9,7 +9,7 @@ function attrValue(e, keys) {
 }
 
 export function getNationality(e) {
-  return attrValue(e, ['الجنسية', 'جنسية', 'nationality', 'Nationality']);
+  return attrValue(e, ['الجنسية', 'الجنسية ', 'جنسية', 'nationality', 'Nationality']);
 }
 
 export function hasPassport(e) {

@@ -47,7 +47,7 @@ export default function IntelligenceGaps() {
     { label: 'كيانات معزولة (بلا روابط)', value: isolated.length, icon: Unlink, hint: 'لا تربطها علاقة بأي كيان آخر', items: isolated, tint: 'text-orange-600', bg: 'bg-orange-50' },
     { label: 'كيانات بمصدر واحد', value: singleSource.length, icon: FileQuestion, hint: 'مذكورة في مستند واحد فقط', items: singleSource, tint: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'مستندات بلا كيانات مستخرجة', value: docsNoEntities.length, icon: FileQuestion, hint: 'فشل الاستخراج أو مستند فارغ', items: docsNoEntities, tint: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'روابط بلا دليل', value: weakEvidence.length, icon: Link2Off, hint: 'علاقات دون نص داعم', items: weakEvidence, tint: 'text-violet-600', bg: 'bg-violet-50' }
+    { label: 'روابط بلا نص دليل مسجل', value: weakEvidence.length, icon: Link2Off, hint: 'تحتاج إلى مراجعة المستند المصدر', items: weakEvidence, tint: 'text-violet-600', bg: 'bg-violet-50' }
   ];
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ تحليل الفجوات...</div>;
@@ -79,7 +79,7 @@ export default function IntelligenceGaps() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {cards.filter((c) => c.items && c.items.length > 0).slice(0, 4).map((c) => (
+        {cards.filter((c) => c.items && c.items.length > 0).map((c) => (
           <div key={c.label} className="rounded-xl border border-border bg-card p-5">
             <h3 className="font-heading font-semibold mb-1">{c.label}</h3>
             <p className="text-[11px] text-muted-foreground mb-3">{c.hint}</p>
@@ -87,13 +87,19 @@ export default function IntelligenceGaps() {
               {c.items.slice(0, 40).map((it) => (
                 <Link
                   key={it.id}
-                  to={it.title ? `/documents/${it.id}` : `/entities/${it.id}`}
+                  to={it.title ? `/documents/${it.id}` : it.source_entity_id ? (it.document_id ? `/documents/${it.document_id}` : `/entities/${it.source_entity_id}`) : `/entities/${it.id}`}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   {it.title ? (
                     <>
                       <FileQuestion className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-sm truncate flex-1">{it.title}</span>
+                    </>
+                  ) : it.source_entity_id ? (
+                    <>
+                      <Link2Off className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate flex-1">{it.source_entity_name || 'كيان'} ↔ {it.target_entity_name || 'كيان'}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{it.relationship_type || 'تشارك'}</span>
                     </>
                   ) : (
                     <>

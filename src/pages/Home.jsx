@@ -1,278 +1,320 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Users, Share2, AlertTriangle, RefreshCw, Bell, TrendingUp, Flag, ChevronLeft, Calendar } from 'lucide-react';
+import {
+  Activity, AlertTriangle, Brain, CheckCircle2, ChevronLeft, Clock3, CopyCheck,
+  FileQuestion, FileText, Flag, RefreshCw, ShieldAlert, Upload, Workflow, XCircle, Zap
+} from 'lucide-react';
 import { localClient } from '@/api/localClient';
-import DashboardAnalytics from '@/components/DashboardAnalytics';
-import DemographicsOverview from '@/components/DemographicsOverview';
-import { availableYears, docsInYear, yearDocIdSet, connectionsForDocs, entitiesForDocs } from '@/lib/yearFilter';
+import { getNationality } from '@/lib/entityClassify';
 
-const TYPE_LABELS = {
-  phone_log: 'سجل مكالمات',
-  financial_transaction: 'معاملة مالية',
-  police_report: 'تقرير شرطة',
-  intelligence_report: 'تقرير تحليلي',
-  other: 'أخرى'
-};
+const VISIT_KEY = 'sdf-dashboard-last-visit';
 
 const STATUS_LABELS = {
-  pending: 'بانتظار',
+  pending: 'بانتظار المعالجة',
   processing: 'قيد المعالجة',
   processed: 'تمت المعالجة',
-  failed: 'فشل'
+  failed: 'فشلت المعالجة'
 };
 
-const STATUS_STYLE = {
-  processed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  processing: 'bg-blue-50 text-blue-700 border-blue-200',
-  pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  failed: 'bg-red-50 text-red-700 border-red-200'
+const STATUS_STYLES = {
+  pending: 'bg-amber-50 text-amber-700',
+  processing: 'bg-blue-50 text-blue-700',
+  processed: 'bg-emerald-50 text-emerald-700',
+  failed: 'bg-red-50 text-red-700'
 };
 
-const ENTITY_TYPE_LABELS = {
-  person: 'شخص',
-  organization: 'منظمة',
-  phone: 'هاتف',
-  email: 'بريد',
-  location: 'موقع',
-  account: 'حساب',
-  date: 'تاريخ',
-  event: 'حدث',
-  other: 'أخرى'
-};
-
-function timeAgo(dateStr) {
-  if (!dateStr) return '—';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'الآن';
-  if (m < 60) return `قبل ${m} د`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `قبل ${h} س`;
-  const d = Math.floor(h / 24);
-  return `قبل ${d} ي`;
+function relativeTime(value) {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return 'وقت غير محدد';
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (minutes < 1) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} د`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `قبل ${hours} س`;
+  return new Date(value).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
 }
 
 export default function Home() {
-  const [allDocs, setAllDocs] = useState([]);
-  const [allEntities, setAllEntities] = useState([]);
-  const [allConns, setAllConns] = useState([]);
-  const [allAlerts, setAllAlerts] = useState([]);
-  const [year, setYear] = useState('');
+  const [documents, setDocuments] = useState([]);
+  const [entities, setEntities] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [duplicateReviews, setDuplicateReviews] = useState([]);
+  const [ai, setAi] = useState({ state: 'unknown', available: false, error: '', detail: '' });
+  const [lastVisitAt, setLastVisitAt] = useState(null);
+  const [hasPreviousVisit, setHasPreviousVisit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const load = async () => {
     try {
-      const [docs, ents, conns, alerts] = await Promise.all([
-        localClient.entities.Document.list('-created_date', 500),
-        localClient.entities.Entity.list('-mention_count', 500),
-        localClient.entities.Connection.list('-created_date', 500),
-        localClient.entities.Alert.filter({ status: 'new' }, '-created_date', 50)
+      const [docs, people, links, alertItems, duplicateItems] = await Promise.all([
+        localClient.entities.Document.list('-created_date', 1000),
+        localClient.entities.Entity.list('-created_date', 1000),
+        localClient.entities.Connection.list('-created_date', 1000),
+        localClient.entities.Alert.list('-created_date', 200),
+        localClient.entities.DuplicateReview.filter({ status: 'pending' }, '-created_date', 200)
       ]);
-      setAllDocs(docs);
-      setAllEntities(ents);
-      setAllConns(conns);
-      setAllAlerts(alerts);
-    } catch (e) {
-      // ignore
+      setDocuments(docs);
+      setEntities(people);
+      setConnections(links);
+      setAlerts(alertItems);
+      setDuplicateReviews(duplicateItems);
+      setLoadError('');
+    } catch (error) {
+      setLoadError(error.message || 'تعذّر تحميل بيانات لوحة العمليات.');
+    }
+
+    try {
+      const status = await localClient.status();
+      setAi(status.ai || { state: 'unknown', available: false, error: '', detail: '' });
+    } catch (error) {
+      setAi({ state: 'unavailable', available: false, error: error.message, detail: '' });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    try {
+      const previousVisit = Number(window.localStorage.getItem(VISIT_KEY));
+      if (Number.isFinite(previousVisit) && previousVisit > 0) {
+        setLastVisitAt(previousVisit);
+        setHasPreviousVisit(true);
+      }
+      window.localStorage.setItem(VISIT_KEY, String(Date.now()));
+    } catch {
+      setHasPreviousVisit(false);
+    }
+    load();
+  }, []);
+
+  const failedDocuments = documents.filter((document) => document.status === 'failed');
+  const processingDocuments = documents.filter((document) => ['pending', 'processing'].includes(document.status));
+  const newAlerts = alerts.filter((alert) => alert.status === 'new');
+  const processedWithoutEntities = documents.filter((document) => document.status === 'processed' && !(document.entity_count || 0));
+  const missingNationality = entities.filter((entity) => entity.type === 'person' && !getNationality(entity));
+  const connectionsWithoutEvidence = connections.filter((connection) => !String(connection.evidence || '').trim());
+  const repeatedTitles = useMemo(() => documents.reduce((counts, document) => {
+    const title = String(document.title || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    if (title) counts[title] = (counts[title] || 0) + 1;
+    return counts;
+  }, {}), [documents]);
+
+  const activity = useMemo(() => {
+    const items = [
+      ...documents.map((document) => ({
+        id: `document-${document.id}`,
+        timestamp: document.updated_date || document.created_date,
+        title: document.title || 'مستند بلا عنوان',
+        detail: STATUS_LABELS[document.status] || 'تمت إضافة مستند',
+        status: document.status,
+        repeated: (repeatedTitles[String(document.title || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase()] || 0) > 1,
+        icon: FileText,
+        to: `/documents/${document.id}`
+      })),
+      ...entities.map((entity) => ({
+        id: `entity-${entity.id}`,
+        timestamp: entity.updated_date || entity.created_date,
+        title: entity.name || 'كيان جديد',
+        detail: 'إضافة كيان إلى قاعدة البيانات',
+        icon: Activity,
+        to: `/entities/${entity.id}`
+      })),
+      ...connections.map((connection) => ({
+        id: `connection-${connection.id}`,
+        timestamp: connection.updated_date || connection.created_date,
+        title: `${connection.source_entity_name || 'كيان'} · ${connection.target_entity_name || 'كيان'}`,
+        detail: String(connection.evidence || '').trim() ? 'تشارك مرصود مع دليل نصي مسجل' : 'تشارك مرصود، دون نص دليل مسجل',
+        icon: Workflow,
+        to: connection.document_id ? `/documents/${connection.document_id}` : `/entities/${connection.source_entity_id}`
+      })),
+      ...newAlerts.map((alert) => ({
+        id: `alert-${alert.id}`,
+        timestamp: alert.updated_date || alert.created_date || alert.triggered_at,
+        title: alert.title || 'تنبيه جديد',
+        detail: `تنبيه ${alert.severity === 'critical' ? 'حرج' : alert.severity === 'high' ? 'عالٍ' : alert.severity === 'medium' ? 'متوسط' : 'منخفض'}`,
+        icon: ShieldAlert,
+        to: '/alerts'
+      }))
+    ].filter((item) => {
+      const timestamp = new Date(item.timestamp).getTime();
+      return Number.isFinite(timestamp) && (!lastVisitAt || timestamp > lastVisitAt);
+    });
+    return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 8);
+  }, [documents, entities, connections, newAlerts, lastVisitAt, repeatedTitles]);
+
+  const queueItems = [
+    { label: 'مستندات فشلت معالجتها', value: failedDocuments.length, detail: 'راجع الخطأ أو أعد التحليل', to: '/documents?status=failed', icon: XCircle, color: 'text-red-600 bg-red-50' },
+    { label: 'اقتراحات تكرار معلّقة', value: duplicateReviews.length, detail: 'الدمج لا يتم تلقائياً', to: '/duplicates', icon: CopyCheck, color: 'text-amber-700 bg-amber-50' },
+    { label: 'تنبيهات جديدة', value: newAlerts.length, detail: 'افتح التنبيهات لمراجعتها', to: '/alerts', icon: AlertTriangle, color: 'text-orange-700 bg-orange-50' }
+  ];
+
+  const reviewItems = [
+    { label: 'مستندات معالجة بلا كيانات', value: processedWithoutEntities.length, detail: 'قد تحتاج مراجعة النص أو إعادة الاستخراج', to: '/documents?status=processed&no_entities=1', icon: FileQuestion },
+    { label: 'أشخاص بلا جنسية مسجلة', value: missingNationality.length, detail: 'فجوة بيانات، وليست جنسية غير معروفة', to: '/entities?type=person&missing_nationality=1', icon: Flag },
+    { label: 'روابط بلا نص دليل', value: connectionsWithoutEvidence.length, detail: 'تحقق من المستند المصدر قبل الاستنتاج', to: '/gaps', icon: Workflow }
+  ];
+
+  const aiLabel = ai.state === 'ready' ? 'التحليل المحلي جاهز'
+    : ai.state === 'loading' ? 'جارٍ تحميل النموذج'
+      : ai.state === 'starting' ? 'جارٍ تشغيل النموذج'
+        : ai.state === 'unavailable' ? 'التحليل المحلي غير متاح'
+          : 'حالة النموذج غير معروفة';
+  const aiDetail = [ai.error, ai.detail].filter(Boolean).join('\n');
 
   const handleRefresh = () => {
     setRefreshing(true);
     load();
   };
 
-  const years = useMemo(() => availableYears(allDocs), [allDocs]);
-
-  const yearDocIds = useMemo(() => yearDocIdSet(allDocs, year), [allDocs, year]);
-  const yearDocs = useMemo(() => docsInYear(allDocs, year), [allDocs, year]);
-  const yearConns = useMemo(() => connectionsForDocs(allConns, yearDocIds), [allConns, yearDocIds]);
-  const yearEntities = useMemo(() => entitiesForDocs(allEntities, yearDocIds), [allEntities, yearDocIds]);
-  const yearAlerts = useMemo(
-    () => (year ? allAlerts.filter((a) => a.triggered_at && String(a.triggered_at).slice(0, 4) === year) : allAlerts),
-    [allAlerts, year]
-  );
-
-  const stats = useMemo(() => ({
-    documents: yearDocs.length,
-    entities: yearEntities.length,
-    connections: yearConns.length,
-    processing: yearDocs.filter((d) => d.status === 'processing' || d.status === 'pending').length,
-    newAlerts: yearAlerts.length
-  }), [yearDocs, yearEntities, yearConns, yearAlerts]);
-
-  const recent = yearDocs.slice(0, 7);
-  const topEntities = [...yearEntities].sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0)).slice(0, 8);
-
-  const kpis = [
-    { label: 'المستندات', value: stats.documents, icon: FileText, to: year ? `/documents?year=${encodeURIComponent(year)}` : '/documents', tint: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
-    { label: 'الكيانات', value: stats.entities, icon: Users, to: year ? `/entities?year=${encodeURIComponent(year)}` : '/entities', tint: 'text-violet-600', bg: 'bg-violet-50', bar: 'bg-violet-500' },
-    { label: 'الروابط', value: stats.connections, icon: Share2, to: '/graph', tint: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
-    { label: 'قيد المعالجة', value: stats.processing, icon: AlertTriangle, to: `/documents?status=processing${year ? `&year=${encodeURIComponent(year)}` : ''}`, tint: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
-    { label: 'تنبيهات جديدة', value: stats.newAlerts, icon: Bell, to: `/alerts?status=new${year ? `&year=${encodeURIComponent(year)}` : ''}`, tint: 'text-red-600', bg: 'bg-red-50', bar: 'bg-red-500' }
-  ];
-
   return (
     <div className="min-h-full">
-      {/* رأسية العمليات */}
-      <div className="px-6 pt-5 pb-4 border-b border-border bg-card/40">
-        <div className="flex items-end justify-between gap-4">
+      <header className="px-6 pt-5 pb-4 border-b border-border bg-card/40">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Strategic Analytics</div>
-            <h1 className="font-heading text-2xl font-bold leading-tight">التحليلات الاستراتيجية</h1>
-            <p className="text-sm text-muted-foreground mt-1">استيعاب المستندات · استخراج الكيانات · كشف الروابط الخفية · التنبيهات اللحظية</p>
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Strategic Data Fusion</div>
+            <h1 className="font-heading text-2xl font-bold leading-tight">لوحة العمليات</h1>
+            <p className="text-sm text-muted-foreground mt-1">المهام المفتوحة، النشاط الأخير، وجودة البيانات</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative flex items-center">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 pointer-events-none" />
-              <select
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="appearance-none rounded-md border border-border bg-background pl-3 pr-8 py-1.5 text-xs hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
-              >
-                <option value="">كل السنوات</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
+            <Link to="/documents" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs hover:bg-primary/90 transition-colors">
+              <Upload className="w-3.5 h-3.5" /> إضافة مستند
+            </Link>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background text-xs hover:bg-accent transition-colors disabled:opacity-50"
+              aria-label="تحديث لوحة العمليات"
+              title="تحديث"
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-border bg-background hover:bg-accent transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              تحديث
             </button>
           </div>
         </div>
-        {year && (
-          <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary bg-primary/5 border border-primary/20 rounded-full px-2.5 py-0.5">
-            <Calendar className="w-3 h-3" />
-            عرض بيانات عام {year}
-          </div>
-        )}
-      </div>
+      </header>
 
-      <div className="p-6 space-y-5">
-        {/* مؤشرات الأداء */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {kpis.map((k) => {
-            const Icon = k.icon;
-            return (
-              <Link key={k.label} to={k.to} className="group relative rounded-lg border border-border bg-card p-3.5 hover:border-primary/40 hover:shadow-sm transition-all overflow-hidden">
-                <span className={`absolute top-0 right-0 left-0 h-0.5 ${k.bar} opacity-70 group-hover:opacity-100 transition-opacity`} />
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className={`w-8 h-8 rounded-md ${k.bg} ${k.tint} flex items-center justify-center`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <ChevronLeft className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                </div>
-                <div className="font-mono text-2xl font-bold tabular-nums leading-none">{k.value}</div>
-                <div className="text-[11px] text-muted-foreground mt-1.5">{k.label}</div>
+      <div className="p-6 space-y-6">
+        {loadError && <p role="alert" className="text-sm text-red-700 border-r-2 border-red-500 pr-3">{loadError}</p>}
+
+        <section aria-labelledby="action-queue-heading" className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 id="action-queue-heading" className="font-heading text-base font-semibold">يتطلب إجراء</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">المهام التي ما زالت بحاجة إلى مراجعة</p>
+            </div>
+            <span className="font-mono text-sm tabular-nums text-muted-foreground">{loading ? '—' : queueItems.reduce((sum, item) => sum + item.value, 0)}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {queueItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.label} to={item.to} className="group flex items-center gap-3 rounded-lg border border-border bg-card p-3.5 hover:border-primary/40 transition-colors">
+                  <span className={`flex items-center justify-center w-9 h-9 rounded-md shrink-0 ${item.color}`}><Icon className="w-4 h-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate">{item.label}</span>
+                      <span className="font-mono text-lg font-semibold tabular-nums">{loading ? '—' : item.value}</span>
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">{item.detail}</span>
+                  </span>
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.85fr)] gap-5">
+          <section aria-labelledby="activity-heading" className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+              <div>
+                <h2 id="activity-heading" className="font-heading text-sm font-semibold">{hasPreviousVisit ? 'منذ زيارتك الأخيرة' : 'أحدث النشاط'}</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">إضافات جديدة للمستندات والكيانات والروابط والتنبيهات</p>
+              </div>
+              <Link to="/documents" className="text-[11px] text-primary hover:underline shrink-0">المستندات</Link>
+            </div>
+            {loading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">جارٍ تحميل النشاط...</div>
+            ) : activity.length === 0 ? (
+              <div className="py-10 px-4 text-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">لا يوجد نشاط جديد منذ زيارتك الأخيرة.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/70">
+                {activity.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.id} to={item.to} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/40 transition-colors">
+                      <Icon className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-medium truncate max-w-full">{item.title}</span>
+                          {item.status && <span className={`text-[10px] px-1.5 py-0.5 rounded ${STATUS_STYLES[item.status] || 'bg-muted text-muted-foreground'}`}>{STATUS_LABELS[item.status] || item.status}</span>}
+                          {item.repeated && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">عنوان متكرر</span>}
+                        </span>
+                        <span className="block text-[11px] text-muted-foreground mt-1">{item.detail}</span>
+                      </span>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{relativeTime(item.timestamp)}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="readiness-heading" className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <h2 id="readiness-heading" className="font-heading text-sm font-semibold">جاهزية المعالجة المحلية</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5">حالة النموذج وطابور المستندات</p>
+            </div>
+            <div className="divide-y divide-border/70">
+              <div className="flex items-center gap-3 px-4 py-3" title={aiDetail || undefined}>
+                <Brain className={`w-4 h-4 shrink-0 ${ai.state === 'ready' ? 'text-emerald-600' : ai.state === 'unavailable' ? 'text-red-600' : 'text-amber-600'}`} />
+                <span className="min-w-0 flex-1 text-sm">الذكاء الاصطناعي المحلي</span>
+                <span className="text-xs text-muted-foreground">{loading ? 'جارٍ التحقق' : aiLabel}</span>
+              </div>
+              <Link to="/documents?status=processing" className="flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition-colors">
+                <Clock3 className={`w-4 h-4 shrink-0 ${processingDocuments.length ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                <span className="min-w-0 flex-1 text-sm">بانتظار المعالجة أو قيدها</span>
+                <span className="font-mono text-sm font-semibold tabular-nums">{loading ? '—' : processingDocuments.length}</span>
               </Link>
-            );
-          })}
+              <Link to="/documents" className="flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition-colors">
+                <Zap className="w-4 h-4 text-primary shrink-0" />
+                <span className="min-w-0 flex-1 text-sm">المعالجة تعمل محلياً</span>
+                <span className="text-[11px] text-muted-foreground">على هذا الجهاز</span>
+              </Link>
+            </div>
+          </section>
         </div>
 
-        {/* التركيبة السكانية والجغرافية */}
-        <DemographicsOverview year={year} />
-
-        {/* الصف الرئيسي */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* أحدث المستندات */}
-          <div className="lg:col-span-2 rounded-lg border border-border bg-card overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
-              <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                أحدث المستندات
-              </h3>
-              <Link to="/documents" className="text-[11px] text-primary hover:underline">عرض الكل</Link>
-            </div>
-            {loading ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">جارٍ التحميل...</div>
-            ) : recent.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">{year ? `لا توجد مستندات في عام ${year}.` : 'لا توجد مستندات بعد. ارفع أول مستند للبدء.'}</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-[11px] text-muted-foreground border-b border-border bg-muted/20">
-                      <th className="text-right font-medium px-4 py-2">العنوان</th>
-                      <th className="text-right font-medium px-3 py-2 hidden sm:table-cell">النوع</th>
-                      <th className="text-center font-medium px-3 py-2">كيانات</th>
-                      <th className="text-center font-medium px-3 py-2 hidden md:table-cell">روابط</th>
-                      <th className="text-center font-medium px-3 py-2">الحالة</th>
-                      <th className="text-right font-medium px-3 py-2 hidden lg:table-cell">الوقت</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recent.map((d) => (
-                      <tr key={d.id} className="border-b border-border/50 last:border-0 hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-2.5">
-                          <Link to={`/documents/${d.id}`} className="font-medium hover:text-primary line-clamp-1">{d.title}</Link>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">{TYPE_LABELS[d.document_type] || 'أخرى'}</td>
-                        <td className="px-3 py-2.5 text-center font-mono tabular-nums text-xs">{d.entity_count || 0}</td>
-                        <td className="px-3 py-2.5 text-center font-mono tabular-nums text-xs hidden md:table-cell">{d.connection_count || 0}</td>
-                        <td className="px-3 py-2.5 text-center">
-                          <span className={`inline-block text-[10px] px-2 py-0.5 rounded border ${STATUS_STYLE[d.status] || STATUS_STYLE.pending}`}>
-                            {STATUS_LABELS[d.status] || d.status}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">{timeAgo(d.created_date)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+        <section aria-labelledby="quality-heading" className="space-y-3">
+          <div>
+            <h2 id="quality-heading" className="font-heading text-base font-semibold">مراجعة الأدلة وجودة البيانات</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">إشارات للمراجعة، وليست استنتاجات مؤكدة</p>
           </div>
-
-          {/* أبرز الكيانات */}
-          <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
-              <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                أبرز الكيانات
-              </h3>
-              <Link to="/entities" className="text-[11px] text-primary hover:underline">الكل</Link>
-            </div>
-            {loading ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">جارٍ التحميل...</div>
-            ) : topEntities.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-12 text-center">{year ? `لا توجد كيانات في عام ${year}.` : 'لا توجد كيانات بعد.'}</div>
-            ) : (
-              <div className="divide-y divide-border/50">
-                {topEntities.map((e, i) => (
-                  <Link key={e.id} to={`/database?entity_id=${encodeURIComponent(e.id)}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50 transition-colors">
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground w-5">{String(i + 1).padStart(2, '0')}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium truncate flex items-center gap-1.5">
-                        {e.name}
-                        {e.watchlist && <Flag className="w-3 h-3 text-amber-500 shrink-0" />}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">{ENTITY_TYPE_LABELS[e.type] || 'أخرى'}</div>
-                    </div>
-                    <div className="text-left">
-                      <div className="font-mono text-xs font-semibold tabular-nums">{e.mention_count || 0}</div>
-                      <div className="text-[9px] text-muted-foreground">ذكر</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {reviewItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.label} to={item.to} className="group flex items-start gap-3 border-r-2 border-amber-400 bg-card px-3.5 py-3 hover:bg-accent/40 transition-colors">
+                  <Icon className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium">{item.label}</span>
+                      <span className="font-mono text-sm font-semibold tabular-nums">{loading ? '—' : item.value}</span>
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground mt-1">{item.detail}</span>
+                  </span>
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary mt-0.5 shrink-0" />
+                </Link>
+              );
+            })}
           </div>
-        </div>
-
-        {/* التحليلات */}
-        <DashboardAnalytics year={year} />
+        </section>
       </div>
     </div>
   );
