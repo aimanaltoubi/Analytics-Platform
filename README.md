@@ -4,11 +4,10 @@ Strategic Data Fusion is a fully local document and entity analysis application.
 
 ## Current download for an offline Windows PC
 
-**What is available now:** the published v1.1.0 release is a two-file package.
-Download both the installer and the `.gguf` model, keep them in the same folder,
-and run the installer from that folder to enable AI offline. The installer alone
-does not include the model. The planned single-file installer is not published,
-so do not expect the current download link to provide one EXE containing everything.
+**What is available now:** the published v1.2.0 release is a Windows x64 two-file package.
+Download the installer and the `.gguf` model, keep them in the same folder, and run
+the installer from that folder to enable AI offline. The installer alone does not
+include the model. The planned single-file installer is not published.
 
 Use an internet-connected Windows PC to download the installer and local AI model.
 The destination PC needs Windows 10/11 **x64**, at least **32 GB RAM** for the supplied
@@ -33,7 +32,7 @@ step in order. Each step has its own command; do not combine them.
 3. Download the installer:
 
    ```bat
-   curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.1.0-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.1.0/Strategic.Data.Fusion-Setup-1.1.0-x64.exe"
+   curl --fail --location --retry 5 --output "Strategic Data Fusion-Setup-1.2.0-x64.exe" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.2.0/Strategic.Data.Fusion-Setup-1.2.0-x64.exe"
    ```
 
 4. Download the AI model. This is approximately 9 GB and may take a while:
@@ -44,42 +43,36 @@ step in order. Each step has its own command; do not combine them.
 
    If this download is interrupted, run the same command again to resume it.
 
-5. Download the checksum file:
+5. Confirm both downloaded files are present and the model download is complete:
 
    ```bat
-   curl --fail --location --retry 5 --output "SHA256SUMS.txt" "https://github.com/aimanaltoubi/Analytics-Platform/releases/download/v1.1.0/SHA256SUMS.txt"
-   ```
-
-6. Confirm all three files are present and the model download is complete:
-
-   ```bat
-   dir "Strategic Data Fusion-Setup-1.1.0-x64.exe"
+   dir "Strategic Data Fusion-Setup-1.2.0-x64.exe"
    dir "Qwen2.5-14B-Instruct-Q4_K_M.gguf"
-   dir "SHA256SUMS.txt"
    ```
 
-7. Verify the installer and model checksums:
+6. Record the installer checksum and verify the model remains locally available:
 
    ```bat
-   certutil -hashfile "Strategic Data Fusion-Setup-1.1.0-x64.exe" SHA256
+   certutil -hashfile "Strategic Data Fusion-Setup-1.2.0-x64.exe" SHA256
    certutil -hashfile "Qwen2.5-14B-Instruct-Q4_K_M.gguf" SHA256
-   type SHA256SUMS.txt
    ```
 
-   Compare each `certutil` result with its matching entry in `SHA256SUMS.txt`.
-   If either hash differs, do not install; download and verify the files again.
+   The published installer SHA-256 is:
+   `122e7b1c c1eaf05d b259006f 3ad7b24e dbe75ae4 35a9b797 ed05c324 e6cc27ee`.
+   Download the model again if its checksum or file size differs from the trusted
+   release source. Do not install if the installer checksum does not match.
 
-8. Copy the entire folder to a USB drive formatted as **exFAT or NTFS**, not
+7. Copy the entire folder to a USB drive formatted as **exFAT or NTFS**, not
    FAT32 (the model exceeds FAT32's 4 GB file limit). Keep the installer and
    model together, with their exact filenames.
 
-9. On the offline PC, copy the folder onto its local disk. Open that folder and
-   double-click `Strategic Data Fusion-Setup-1.1.0-x64.exe`. The installer reads
+8. On the offline PC, copy the folder onto its local disk. Open that folder and
+   double-click `Strategic Data Fusion-Setup-1.2.0-x64.exe`. The installer reads
    the model beside itself and copies it into the application; it does not
    download the model. If setup warns that the model is missing, close setup,
    put the `.gguf` beside the installer, and run the installer again.
 
-10. Launch Strategic Data Fusion, register the first local administrator, and
+9. Launch Strategic Data Fusion, register the first local administrator, and
     save the recovery key securely. Test a document upload and AI analysis while
     the PC remains disconnected.
 
@@ -88,7 +81,8 @@ step in order. Each step has its own command; do not combine them.
 - **قاعدة البيانات:** browse, add, and edit people, companies, and organizations. Profiles support passport/identity, date of birth, registration, contact, and custom fields.
 - **مراجعة التكرارات:** scan exact normalized names and aliases. Suggestions never merge automatically; confirmed merges can be undone unless related records have changed.
 - **مساعد الأدلة:** ask questions about processed documents and entity profiles. Answers show verified quotes and open the cited record or extracted PDF page. Common Arabic/English count questions read directly from SQLite; document questions normalize common Arabic spelling variants. If evidence cannot be verified, the assistant abstains. Chat history stays in the current window.
-- **لوحة التحقيق (Investigation Blackboard):** in a workspace, select 2–10 entities and 1–10 processed documents, enter an investigation question, and start a local, reviewable investigation. Evidence, entity, relationship, review, and summary roles contribute findings to a shared board; accept or reject findings without changing entity or relationship records. Investigations and review history persist locally and are included in backups.
+- **Investigation Blackboard — the core investigative workspace:** create a reviewable investigation from 2–10 entities and 1–10 processed documents. Evidence, entity, relationship, contradiction, review, and summary roles produce explicit hypotheses, observations, supported claims, gaps, and contradictions. Findings remain tentative until an analyst accepts or rejects them; accepted findings can be filtered and exported to CSV. The Blackboard keeps source passages, claim type, confidence, review history, and existing database records separate. Investigations and review history persist locally and are included in backups.
+- **Workspace Data Health:** show how complete and reviewable a workspace is, including processing status, evidence coverage, missing location coordinates, recent processing, entity-source links, and unresolved issues.
 - **Drill-down:** dashboard and yearly-statistics cards, chart slices, and bar rows open the matching entity, document, relationship, or alert list. Entity links include a direct route to edit the local profile.
 - **Field provenance:** extracted profile values link to the exact supporting document page and quote; changed or manually entered values are marked as manual. Reprocessing preserves manually edited values.
 - **ترجمة المستندات:** translate processed documents locally into Arabic, English, Simplified Chinese, Russian, Spanish, French, German, Portuguese, Italian, or Japanese. Original pages remain intact; each saved translation links back to its source page. See [the translation model decision and evaluation limits](docs/LOCAL_TRANSLATION_MODEL_EVALUATION.md).
@@ -287,34 +281,48 @@ The desktop database and uploads remain in the current user's application-data d
 
 Backups contain local records and uploaded files. They do not contain passwords, sessions, recovery keys, or the AI model. Backup files can still contain sensitive application data and should be protected accordingly.
 
-## Investigation blackboard pilot
+## Investigation Blackboard
 
-Open a workspace, add the records to investigate, and choose **لوحة التحقيق**.
-Select the entities and processed documents explicitly, enter a question, and
-start the investigation. The board shows its progress, findings and source
-links; analysts can accept, reject, or reset each finding and inspect the review
-history. Cancelling preserves partial results. A single investigation runs at a
-time, with a ten-minute limit; runs interrupted by shutdown or backup restoration
-are marked accordingly.
+The Investigation Blackboard is the core evidence-review workflow of Strategic
+Data Fusion. Open a workspace, add the records to investigate, and choose
+**لوحة التحقيق**. Select 2–10 entities and 1–10 processed documents, enter a
+question, and start the local investigation.
 
-The pilot uses bounded, deterministic roles followed by at most one local-model
-summary request, not separate autonomous models. It looks for selected names or
-aliases together within overlapping document passages and shows existing
-relationships between selected entities from selected documents. It reads at most
-100 pages and 150,000 characters per document, retains at most eight passages
-and 20 relationships, and warns when results may be truncated. It may miss
-relevant evidence, indirect paths, aliases, and contradictions; review these
-manually. A shared mention is not proof of a relationship. Quotes are checked
-against the selected source text using normalized matching, but neither a
-matching quote nor analyst acceptance establishes that a claim is true. Source
-links open the current document, which may have changed since the saved finding.
-Document text and questions are treated as untrusted data, not instructions.
+The Blackboard separates each stage of reasoning:
 
-An available local model is required for summaries when matching passages are
-found; model failures are shown on the board with partial findings retained.
-When no matching passage is found, the board records an evidence gap without
-calling the model. The automated blackboard tests use mock model responses and
-exercise scoping, citation checks, cancellation, failure, review, and persistence;
-they do not measure real-model accuracy or certify investigation quality.
-Evaluate with representative, independently annotated documents and human review
+- a tentative hypothesis derived from the investigation question;
+- observations from passages where selected entities appear together;
+- duplicate or ambiguous entity review findings;
+- relationships extracted or imported from selected documents;
+- contradictions between different relationship types;
+- evidence gaps and truncation warnings;
+- verified claims summarized from the selected source text.
+
+Each finding carries a claim type, confidence state, source passage when
+available, review state, and timestamp. Analysts can filter findings, accept or
+reject them, and inspect the review history. Accepted findings can be exported
+as CSV for reporting or offline analyst handoff. Acceptance is a review action:
+it does not automatically alter entity or relationship records.
+
+The Blackboard runs bounded deterministic roles followed by at most one local-model
+summary request, not separate autonomous models. It scans selected names or
+aliases in overlapping document passages and checks existing relationships within
+the selected workspace scope. It reads at most 100 pages and 150,000 characters
+per document, retains at most eight passages and 20 relationships, and warns when
+results may be truncated. Source links open the current document, which may have
+changed since the finding was saved.
+
+A shared mention is not proof of a relationship. Quote matching checks a normalized
+quotation against source text, but neither matching text nor analyst acceptance
+establishes that a claim is true. Contradictory records are presented for manual
+review rather than silently merged. Document text and questions are treated as
+untrusted data, not instructions.
+
+An available local model is required for summaries only when matching passages
+are found. Model failures are shown on the board while partial findings remain.
+Without matching passage evidence, the board records an evidence gap without
+calling the model. The automated tests use mock model responses and exercise
+scoping, citation checks, hypothesis metadata, failure, cancellation, review,
+backup, and persistence. They do not measure real-model accuracy or certify
+investigation quality. Evaluate representative documents and require human review
 on the intended hardware before relying on the feature.
