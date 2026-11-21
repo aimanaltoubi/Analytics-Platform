@@ -22,8 +22,14 @@ const SUMMARY_SCHEMA = {
   required: ['claims']
 };
 
-function finding(worker, kind, text, source = null) {
-  return { id: randomUUID(), worker, kind, text, source, review: 'pending', created_at: new Date().toISOString() };
+function finding(worker, kind, text, source = null, metadata = {}) {
+  return {
+    id: randomUUID(), worker, kind, text, source,
+    claim_type: metadata.claim_type || 'observation',
+    confidence: metadata.confidence || 'tentative',
+    hypothesis: metadata.hypothesis || null,
+    review: 'pending', created_at: new Date().toISOString()
+  };
 }
 
 function addFindings(store, id, stage, additions) {
@@ -87,7 +93,8 @@ export async function runInvestigation(store, integrations, id, signal) {
     }
   }
   signal.throwIfAborted();
-  addFindings(store, id, 'entities', sources.map((source) => finding('evidence', 'passage', 'نص يذكر كيانين مختارين أو أكثر؛ الذكر المشترك لا يثبت وجود علاقة.', source)));
+  addFindings(store, id, 'evidence', [finding('summary', 'hypothesis', `فرضية مؤقتة قابلة للمراجعة: ${board.question}`, null, { claim_type: 'hypothesis', confidence: 'tentative', hypothesis: board.question })]);
+  addFindings(store, id, 'entities', sources.map((source) => finding('evidence', 'passage', 'نص يذكر كيانين مختارين أو أكثر؛ الذكر المشترك لا يثبت وجود علاقة.', source, { claim_type: 'observation', confidence: 'tentative' })));
 
   const duplicateFindings = [];
   for (let i = 0; i < entities.length; i++) {
@@ -116,6 +123,28 @@ export async function runInvestigation(store, integrations, id, signal) {
     return finding('relationship', 'relationship', `رابط مسجل للمراجعة: ${from.name} — ${connection.relationship_type} — ${to.name}.${source ? '' : ' لم يُتحقق من اقتباس داعم في المستند المحدد.'}`, source);
   });
   addFindings(store, id, 'review', relationshipFindings);
+
+  const contradictions = [];
+  const groupedConnections = new Map();
+  for (const connection of connections) {
+    const key = [connection.source_entity_id, connection.target_entity_id].sort().join('|');
+    if (!groupedConnections.has(key)) groupedConnections.set(key, []);
+    groupedConnections.get(key).push(connection);
+  }
+  for (const grouped of groupedConnections.values()) {
+    const relationshipTypes = [...new Set(grouped.map((connection) => connection.relationship_type).filter(Boolean))];
+    if (relationshipTypes.length > 1) {
+      const from = entities.find((entity) => entity.id === grouped[0].source_entity_id);
+      const to = entities.find((entity) => entity.id === grouped[0].target_entity_id);
+      contradictions.push(finding(
+        'review', 'contradiction',
+        `تناقض علاقات مسجلة بين ${from?.name || 'الكيان الأول'} و${to?.name || 'الكيان الثاني'}: ${relationshipTypes.join(' / ')}. لا تُدمج النتائج تلقائياً.`,
+        null,
+        { claim_type: 'contradiction', confidence: 'review_required' }
+      ));
+    }
+  }
+  if (contradictions.length) addFindings(store, id, 'review', contradictions);
   signal.throwIfAborted();
   const warnings = [];
   if (!sources.length) warnings.push(finding('review', 'gap', 'لم يُعثر على نص يذكر كيانين مختارين معاً؛ قد توجد أدلة أخرى لم يسترجعها البحث.'));
@@ -138,7 +167,7 @@ export async function runInvestigation(store, integrations, id, signal) {
     const summary = result.claims.flatMap((claim) => {
       const source = sources.find((item) => item.id === claim.source_id);
       if (!source || !citationMatches(source.text, claim.quote)) return [];
-      return [finding('summary', 'claim', claim.text, { ...source, text: claim.quote })];
+      return [finding('summary', 'claim', claim.text, { ...source, text: claim.quote }, { claim_type: 'claim', confidence: 'evidence_backed' })];
     });
     if (!summary.length) summary.push(finding('summary', 'gap', 'لم يقدم النموذج ملخصاً باقتباس يمكن التحقق منه.'));
     addFindings(store, id, 'completed', summary);

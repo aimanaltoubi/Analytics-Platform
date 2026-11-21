@@ -2,38 +2,48 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { localClient } from '@/api/localClient';
 
+/** @type {Record<string, string>} */
 const stages = {
   evidence: 'جمع الأدلة', entities: 'مراجعة الكيانات', relationships: 'مراجعة الروابط',
   review: 'مراجعة الثغرات', summary: 'تلخيص الأدلة', completed: 'اكتمل', stopped: 'توقف', interrupted: 'انقطع'
 };
+/** @type {Record<string, string>} */
 const statuses = { running: 'جارٍ التنفيذ', completed: 'مكتمل', failed: 'فشل', cancelled: 'ملغي', interrupted: 'انقطع' };
+/** @type {Record<string, string>} */
 const workers = { evidence: 'الأدلة', entity: 'الكيانات', relationship: 'الروابط', review: 'المراجعة', summary: 'الملخص' };
+/** @type {Record<string, string>} */
 const reviews = { pending: 'بانتظار المراجعة', accepted: 'مقبول', rejected: 'مرفوض' };
+/** @type {Record<string, string>} */
+const claimTypes = { hypothesis: 'فرضية', observation: 'ملاحظة', claim: 'ادعاء مدعوم', contradiction: 'تناقض', gap: 'ثغرة دليل' };
+/** @type {Record<string, string>} */
+const confidences = { tentative: 'مؤقت', evidence_backed: 'مدعوم بالدليل', review_required: 'يحتاج مراجعة' };
 
+/** @param {{ workspace: any }} props */
 export default function InvestigationBlackboard({ workspace }) {
-  const [entities, setEntities] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [entityIds, setEntityIds] = useState([]);
-  const [documentIds, setDocumentIds] = useState([]);
+  const [entities, setEntities] = useState(/** @type {any[]} */ ([]));
+  const [documents, setDocuments] = useState(/** @type {any[]} */ ([]));
+  const [entityIds, setEntityIds] = useState(/** @type {string[]} */ ([]));
+  const [documentIds, setDocumentIds] = useState(/** @type {string[]} */ ([]));
   const [question, setQuestion] = useState('');
-  const [boards, setBoards] = useState([]);
-  const [board, setBoard] = useState(null);
+  const [boards, setBoards] = useState(/** @type {any[]} */ ([]));
+  const [board, setBoard] = useState(/** @type {any} */ (null));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [findingFilter, setFindingFilter] = useState('all');
 
   useEffect(() => {
     let active = true;
     Promise.all([
-      Promise.all((workspace.entity_ids || []).map((id) => localClient.entities.Entity.get(id))),
-      Promise.all((workspace.document_ids || []).map((id) => localClient.entities.Document.get(id))),
+      Promise.all((workspace.entity_ids || []).map((/** @type {string} */ id) => localClient.entities.Entity.get(id))),
+      Promise.all((workspace.document_ids || []).map((/** @type {string} */ id) => localClient.entities.Document.get(id))),
       localClient.entities.Investigation.filter({ workspace_id: workspace.id }, '-created_date', 100)
     ]).then(([nextEntities, nextDocuments, nextBoards]) => {
       if (!active) return;
       setEntities(nextEntities);
       setDocuments(nextDocuments);
       setBoards(nextBoards);
-      setBoard((current) => current || nextBoards[0] || null);
-    }).catch((err) => { if (active) setError(err.message); });
+      setBoard((/** @type {any} */ current) => current || nextBoards[0] || null);
+    }).catch((err) => { if (active) setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع'); });
     return () => { active = false; };
   }, [workspace.id, workspace.entity_ids, workspace.document_ids]);
 
@@ -45,13 +55,15 @@ export default function InvestigationBlackboard({ workspace }) {
         const updated = await localClient.entities.Investigation.get(board.id);
         if (active) setBoard(updated);
       } catch (err) {
-        if (active) setError(err.message);
+        if (active) setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع');
       }
     }, 2000);
     return () => { active = false; clearInterval(timer); };
   }, [board?.id, board?.status]);
 
+  /** @param {string} id @param {(update: (current: string[]) => string[]) => void} setter */
   const toggle = (id, setter) => setter((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  /** @param {any} event */
   const start = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -60,17 +72,34 @@ export default function InvestigationBlackboard({ workspace }) {
       const created = await localClient.blackboard.start({ workspace_id: workspace.id, question, entity_ids: entityIds, document_ids: documentIds });
       setBoard(created);
       setBoards((current) => [created, ...current]);
-    } catch (err) { setError(err.message); } finally { setBusy(false); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع'); } finally { setBusy(false); }
   };
   const cancel = async () => {
     setBusy(true);
     try { setBoard(await localClient.blackboard.cancel(board.id)); setError(''); }
-    catch (err) { setError(err.message); } finally { setBusy(false); }
+    catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع'); } finally { setBusy(false); }
   };
+  /** @param {any} item @param {'accepted'|'rejected'|'pending'} decision */
   const review = async (item, decision) => {
     setBusy(true);
     try { setBoard(await localClient.blackboard.review(board.id, item.id, decision)); setError(''); }
-    catch (err) { setError(err.message); } finally { setBusy(false); }
+    catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع'); } finally { setBusy(false); }
+  };
+  const exportAccepted = () => {
+    const accepted = (board?.findings || []).filter((/** @type {any} */ item) => item.review === 'accepted');
+    /** @param {unknown} value */
+    const escapeCsv = (value) => `"${String(value || '').replaceAll('"', '""')}"`;
+    const rows = [
+      ['status', 'worker', 'kind', 'claim_type', 'confidence', 'text', 'document_id', 'page', 'quote'],
+      ...accepted.map((/** @type {any} */ item) => ['accepted', item.worker, item.kind, item.claim_type, item.confidence, item.text, item.source?.document_id, item.source?.page, item.source?.text])
+    ];
+    const blob = new Blob([rows.map((row) => row.map(escapeCsv).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `investigation-${board?.id || 'findings'}-accepted.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -99,7 +128,7 @@ export default function InvestigationBlackboard({ workspace }) {
       {error && <p role="alert" className="rounded-md border border-destructive/30 p-3 text-sm text-destructive">{error}</p>}
       {boards.length > 0 && <label className="block text-sm">التحقيقات السابقة
         <select value={board?.id || ''} onChange={async (event) => {
-          try { setBoard(await localClient.entities.Investigation.get(event.target.value)); setError(''); } catch (err) { setError(err.message); }
+          try { setBoard(await localClient.entities.Investigation.get(event.target.value)); setError(''); } catch (err) { setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع'); }
         }} className="mr-2 rounded-md border border-input bg-background p-2">
           {boards.map((item) => <option key={item.id} value={item.id}>{item.question} — {new Date(item.created_date).toLocaleString()}</option>)}
         </select>
@@ -111,19 +140,39 @@ export default function InvestigationBlackboard({ workspace }) {
         </div>
         {board.error && <p className="text-sm text-destructive">{board.error}</p>}
         <p className="text-xs text-muted-foreground">النتائج اقتراحات وليست حقائق مؤكدة. طابق الاقتباس مع السياق الحالي؛ قد يتغير المصدر بعد التحقيق. راجع التناقضات يدوياً.</p>
-        {board.findings.map((item) => <article key={item.id} className="space-y-2 rounded-md border border-border p-3">
-          <div className="text-xs text-muted-foreground">{workers[item.worker] || item.worker} · {reviews[item.review] || item.review}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-muted-foreground">عرض:
+            <select value={findingFilter} onChange={(event) => setFindingFilter(event.target.value)} className="mx-2 rounded-md border border-input bg-background p-1.5 text-xs">
+              <option value="all">جميع النتائج</option>
+              <option value="pending">بانتظار المراجعة</option>
+              <option value="accepted">المقبولة</option>
+              <option value="rejected">المرفوضة</option>
+              <option value="hypothesis">الفرضيات</option>
+              <option value="contradiction">التناقضات</option>
+              <option value="claim">الادعاءات المدعومة</option>
+              <option value="gap">ثغرات الأدلة</option>
+            </select>
+          </label>
+          <button type="button" disabled={!board.findings.some((/** @type {any} */ item) => item.review === 'accepted')} onClick={exportAccepted} className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50">تصدير المقبول CSV</button>
+        </div>
+        {board.findings.filter((/** @type {any} */ item) => {
+          if (findingFilter === 'all') return true;
+          if (['pending', 'accepted', 'rejected'].includes(findingFilter)) return item.review === findingFilter;
+          return item.claim_type === findingFilter;
+        }).map((/** @type {any} */ item) => <article key={item.id} className="space-y-2 rounded-md border border-border p-3">
+          <div className="text-xs text-muted-foreground">{workers[item.worker] || item.worker} · {claimTypes[item.claim_type] || claimTypes.observation} · {confidences[item.confidence] || item.confidence} · {reviews[item.review] || item.review}</div>
+          {item.hypothesis && <div className="text-xs rounded-md bg-violet-50 text-violet-700 px-2 py-1">الفرضية: {item.hypothesis}</div>}
           <p className="text-sm whitespace-pre-wrap">{item.text}</p>
           {item.source && <Link className="block border-r-2 border-emerald-500 bg-emerald-50/60 p-2 text-sm text-emerald-950" to={`/documents/${item.source.document_id}${item.source.page ? `#page-${item.source.page}` : '#document-source'}`}>
             {item.source.title}{item.source.page ? ` · صفحة ${item.source.page}` : ''}<span className="mt-1 block whitespace-pre-wrap">“{item.source.text}”</span>
           </Link>}
           <div className="flex gap-2">
-            {['accepted', 'rejected', 'pending'].map((decision) => <button key={decision} type="button" disabled={busy || item.review === decision} onClick={() => review(item, decision)} className="rounded border border-border px-2 py-1 text-xs disabled:opacity-50">{reviews[decision]}</button>)}
+            {/** @type {Array<'accepted'|'rejected'|'pending'>} */ (['accepted', 'rejected', 'pending']).map((/** @type {'accepted'|'rejected'|'pending'} */ decision) => <button key={decision} type="button" disabled={busy || item.review === decision} onClick={() => review(item, decision)} className="rounded border border-border px-2 py-1 text-xs disabled:opacity-50">{reviews[decision]}</button>)}
           </div>
         </article>)}
         {!board.findings.length && <p className="text-sm text-muted-foreground">لا توجد نتائج بعد.</p>}
         {board.review_history.length > 0 && <details><summary className="cursor-pointer text-sm">سجل المراجعة ({board.review_history.length})</summary>
-          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">{board.review_history.map((entry, index) => <li key={`${entry.finding_id}-${index}`}>{entry.actor} · {reviews[entry.decision]} · {new Date(entry.date).toLocaleString()} · {board.findings.find((item) => item.id === entry.finding_id)?.text}</li>)}</ul>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">{board.review_history.map((/** @type {any} */ entry, /** @type {number} */ index) => <li key={`${entry.finding_id}-${index}`}>{entry.actor} · {reviews[entry.decision]} · {new Date(entry.date).toLocaleString()} · {board.findings.find((/** @type {any} */ item) => item.id === entry.finding_id)?.text}</li>)}</ul>
         </details>}
       </section>}
     </div>

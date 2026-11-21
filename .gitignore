@@ -31,6 +31,7 @@ dist-ssr
 .vite
 release/
 .local-data/
+situational-room-main/
 resources/ai/*
 !resources/ai/.gitkeep
 !resources/ai/LICENSE-*

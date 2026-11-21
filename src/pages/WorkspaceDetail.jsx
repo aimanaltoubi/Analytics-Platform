@@ -14,17 +14,18 @@ import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import InvestigationReport from '@/components/InvestigationReport';
 import InvestigationBlackboard from '@/components/InvestigationBlackboard';
+import WorkspaceDataHealth from '@/components/WorkspaceDataHealth';
 
 const TYPE_LABELS = { person: 'فرد', company: 'شركة', organization: 'منظمة', phone: 'هاتف', email: 'بريد', location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى' };
 
 export default function WorkspaceDetail() {
   const { id } = useParams();
-  const [workspace, setWorkspace] = useState(null);
-  const [entities, setEntities] = useState([]);
-  const [allEntities, setAllEntities] = useState([]);
-  const [allDocuments, setAllDocuments] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [connections, setConnections] = useState([]);
+  const [workspace, setWorkspace] = useState(/** @type {any} */ (null));
+  const [entities, setEntities] = useState(/** @type {any[]} */ ([]));
+  const [allEntities, setAllEntities] = useState(/** @type {any[]} */ ([]));
+  const [allDocuments, setAllDocuments] = useState(/** @type {any[]} */ ([]));
+  const [documents, setDocuments] = useState(/** @type {any[]} */ ([]));
+  const [connections, setConnections] = useState(/** @type {any[]} */ ([]));
   const [search, setSearch] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ export default function WorkspaceDetail() {
         entIds.has(c.source_entity_id) || entIds.has(c.target_entity_id) || docIds.has(c.document_id)
       ));
     } catch (e) {
-      toast({ title: 'تعذّر تحميل مساحة العمل', description: e.message, variant: 'destructive' });
+      toast({ title: 'تعذّر تحميل مساحة العمل', description: e instanceof Error ? e.message : 'حدث خطأ غير متوقع', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -58,6 +59,7 @@ export default function WorkspaceDetail() {
 
   useEffect(() => { loadAll(); }, [id]);
 
+  /** @param {string} entityId */
   const addEntity = async (entityId) => {
     const current = workspace.entity_ids || [];
     if (current.includes(entityId)) return;
@@ -67,6 +69,7 @@ export default function WorkspaceDetail() {
     setEntities((prev) => [...prev, allEntities.find((e) => e.id === entityId)]);
   };
 
+  /** @param {string} entityId */
   const removeEntity = async (entityId) => {
     const updated = (workspace.entity_ids || []).filter((eid) => eid !== entityId);
     await localClient.entities.Workspace.update(id, { entity_ids: updated });
@@ -74,6 +77,7 @@ export default function WorkspaceDetail() {
     setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };
 
+  /** @param {any} manualGraph */
   const saveManualGraph = async (manualGraph) => {
     await localClient.entities.Workspace.update(id, { manual_graph: manualGraph });
     setWorkspace((current) => current ? { ...current, manual_graph: manualGraph } : current);
@@ -87,6 +91,7 @@ export default function WorkspaceDetail() {
   if (loading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
   if (!workspace) return <div className="p-6 text-sm text-muted-foreground">مساحة العمل غير موجودة.</div>;
 
+  /** @param {{ value: string, icon: any, label: string }} props */
   const Tab = ({ value, icon: Icon, label }) => (
     <TabsTrigger value={value} className="gap-1.5">
       <Icon className="w-3.5 h-3.5" /> {label}
@@ -161,6 +166,7 @@ export default function WorkspaceDetail() {
         <TabsList className="w-full justify-start flex-wrap h-auto">
           <Tab value="network" icon={NetworkIcon} label="شبكة التحليل" />
           <Tab value="timeline" icon={Clock} label="الجدول الزمني" />
+          <Tab value="health" icon={Table2} label="صحة البيانات" />
           <Tab value="selection" icon={Share2} label="تحليل التحديد" />
           <Tab value="blackboard" icon={Share2} label="لوحة التحقيق" />
           <Tab value="data" icon={Table2} label="البيانات والمستندات" />
@@ -183,6 +189,12 @@ export default function WorkspaceDetail() {
 
         <TabsContent value="timeline" className="mt-4">
           <WorkspaceTimelineExplorer entities={entities} allEntities={allEntities} connections={connections} documents={documents} />
+        </TabsContent>
+
+        <TabsContent value="health" className="mt-4">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <WorkspaceDataHealth entities={entities} documents={documents} connections={connections} />
+          </div>
         </TabsContent>
 
         <TabsContent value="selection" className="mt-4">

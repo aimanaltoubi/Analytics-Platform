@@ -809,6 +809,8 @@ test('blackboard scopes evidence, verifies quotations, records review and surviv
   assert.doesNotMatch(prompt, /SECRET-OUTSIDE/);
   assert.match(prompt, /untrusted data/);
   assert.equal(board.findings.filter((item) => item.worker === 'summary' && item.kind === 'claim').length, 1);
+  assert.equal(board.findings.find((item) => item.claim_type === 'hypothesis').confidence, 'tentative');
+  assert.equal(board.findings.find((item) => item.kind === 'claim').claim_type, 'claim');
   assert.equal(board.findings.find((item) => item.worker === 'relationship').source.page, 1);
   assert.ok(board.findings.every((item) => !item.source || item.source.document_id === document.id));
   const finding = board.findings.find((item) => item.worker === 'summary');

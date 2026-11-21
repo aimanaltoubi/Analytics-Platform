@@ -52,7 +52,7 @@ const CAPABILITY_SOURCE = {
   text: 'أستطيع البحث داخل المستندات المعالجة وصفحات PDF وسجلات الأفراد والشركات والمنظمات، وتقديم اقتباسات وروابط إلى المصدر. أستطيع أيضاً عدّ السجلات المعروفة. إذا لم أجد دليلاً محلياً كافياً فسأوضح ذلك بدلاً من التخمين.'
 };
 
-function normalize(value) {
+export function normalize(value) {
   return String(value || '')
     .toLowerCase()
     .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
@@ -132,7 +132,7 @@ function rankSources(question, sources) {
     .slice(0, 8);
 }
 
-function citationMatches(sourceText, quote) {
+export function citationMatches(sourceText, quote) {
   const normalizedQuote = normalize(quote);
   return normalizedQuote.length >= 5 && normalize(sourceText).includes(normalizedQuote);
 }

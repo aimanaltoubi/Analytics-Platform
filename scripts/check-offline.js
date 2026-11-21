@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const excludedDirectories = new Set(['.git', 'node_modules', 'dist', 'release']);
+const excludedDirectories = new Set(['.git', 'node_modules', 'dist', 'release', 'situational-room-main']);
 const retiredPlatform = ['base', '[\\s_-]*', '44'].join('');
 const forbidden = [
   ['prohibited platform reference', new RegExp(retiredPlatform, 'i')],
