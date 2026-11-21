@@ -17,6 +17,7 @@ export function createLocalClient({ store, user, integrations, invoke }) {
     const check = (write = false) => {
       assert(user, 401, 'Authentication required');
       if (name === 'User' && write) assert(user.role === 'admin', 403, 'Administrator required');
+      if (name === 'Investigation' && write) assert(false, 403, 'Investigations are managed through the blackboard API');
     };
     const list = (filter, sort, limit, skip) => {
       check();

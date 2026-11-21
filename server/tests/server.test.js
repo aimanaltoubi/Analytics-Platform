@@ -766,3 +766,92 @@ test('SQLite batch rollback leaves no partial mutations', () => {
     assert.equal(store.list('Entity').length, 0);
   } finally { store.close(); rmSync(dataDir, { recursive: true, force: true }); }
 });
+
+async function blackboardFixture(app, text = 'Alpha met Beta in 2024.') {
+  const alpha = await app.create('Entity', { name: 'Alpha', type: 'company' });
+  const beta = await app.create('Entity', { name: 'Beta', type: 'company' });
+  const document = await app.create('Document', { title: 'Selected report', status: 'processed', raw_text: text, pages: [text] });
+  const workspace = await app.create('Workspace', { name: 'Investigation', entity_ids: [alpha.id, beta.id], document_ids: [document.id] });
+  return { alpha, beta, document, workspace, body: { workspace_id: workspace.id, question: 'How are Alpha and Beta connected?', entity_ids: [alpha.id, beta.id], document_ids: [document.id] } };
+}
+
+async function waitForBoard(app, id, predicate = (board) => board.status !== 'running') {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const response = await app.request(`/api/entities/Investigation/${id}`, { token: app.token });
+    assert.equal(response.status, 200);
+    if (predicate(response.data)) return response.data;
+    await new Promise((done) => setTimeout(done, 20));
+  }
+  assert.fail('Investigation did not reach expected state');
+}
+
+test('blackboard scopes evidence, verifies quotations, records review and survives backup and restart', async (t) => {
+  let prompt;
+  const aiBaseUrl = await fakeAI(t, (_schema, request) => {
+    prompt = request.messages[0].content;
+    const sources = JSON.parse(prompt.split('Sources: ')[1]);
+    return { claims: [
+      { text: 'Alpha met Beta.', source_id: sources[0].id, quote: 'Alpha met Beta in 2024.' },
+      { text: 'Invented connection', source_id: sources[0].id, quote: 'This invented quotation is not in the document.' }
+    ] };
+  });
+  const app = await fixture(t, { aiBaseUrl });
+  const { alpha, beta, document, body } = await blackboardFixture(app);
+  const outside = await app.create('Document', { title: 'Outside', status: 'processed', raw_text: 'Alpha met Beta SECRET-OUTSIDE.' });
+  await app.create('Connection', { source_entity_id: alpha.id, target_entity_id: beta.id, relationship_type: 'met', document_id: document.id, evidence: 'Alpha met Beta in 2024.' });
+  await app.create('Connection', { source_entity_id: alpha.id, target_entity_id: beta.id, relationship_type: 'outside', document_id: outside.id });
+  assert.equal((await app.request('/api/blackboard', { method: 'POST', body })).status, 401);
+  assert.equal((await app.request('/api/blackboard', { method: 'POST', token: app.token, body: { ...body, document_ids: [outside.id] } })).status, 400);
+  const started = await app.request('/api/blackboard', { method: 'POST', token: app.token, body });
+  assert.equal(started.status, 202, JSON.stringify(started.data));
+  const board = await waitForBoard(app, started.data.id);
+  assert.equal(board.status, 'completed', board.error);
+  assert.doesNotMatch(prompt, /SECRET-OUTSIDE/);
+  assert.match(prompt, /untrusted data/);
+  assert.equal(board.findings.filter((item) => item.worker === 'summary' && item.kind === 'claim').length, 1);
+  assert.equal(board.findings.find((item) => item.worker === 'relationship').source.page, 1);
+  assert.ok(board.findings.every((item) => !item.source || item.source.document_id === document.id));
+  const finding = board.findings.find((item) => item.worker === 'summary');
+  const reviewed = await app.request(`/api/blackboard/${board.id}/findings/${finding.id}`, { method: 'POST', token: app.token, body: { decision: 'accepted' } });
+  assert.equal(reviewed.data.review_history[0].actor, 'admin@example.test');
+  assert.equal(reviewed.data.findings.find((item) => item.id === finding.id).review, 'accepted');
+  assert.equal((await app.request(`/api/entities/Investigation/${board.id}`, { method: 'PUT', token: app.token, body: { status: 'completed', findings: [] } })).status, 403);
+  const backup = await app.request('/api/backup', { token: app.token });
+  assert.equal(backup.data.records.Investigation[0].id, board.id);
+  assert.equal((await app.request('/api/backup', { method: 'POST', token: app.token, body: backup.data })).status, 200);
+  await app.restart();
+  const restored = await app.request(`/api/entities/Investigation/${board.id}`, { token: app.token });
+  assert.equal(restored.data.review_history[0].decision, 'accepted');
+  assert.equal((await app.request(`/api/entities/Entity/${alpha.id}`, { token: app.token })).data.name, 'Alpha');
+});
+
+test('blackboard reports missing evidence and model failures without inventing results', async (t) => {
+  const app = await fixture(t);
+  const { body } = await blackboardFixture(app, 'Alpha appears alone.');
+  const noEvidence = await app.request('/api/blackboard', { method: 'POST', token: app.token, body });
+  const completed = await waitForBoard(app, noEvidence.data.id);
+  assert.equal(completed.status, 'completed');
+  assert.ok(completed.findings.some((item) => item.kind === 'gap'));
+  assert.equal(completed.findings.some((item) => item.kind === 'claim'), false);
+  const second = await blackboardFixture(app);
+  const started = await app.request('/api/blackboard', { method: 'POST', token: app.token, body: second.body });
+  const failed = await waitForBoard(app, started.data.id);
+  assert.equal(failed.status, 'failed');
+  assert.match(failed.error, /Local AI unavailable/);
+  assert.ok(failed.findings.some((item) => item.worker === 'evidence'));
+});
+
+test('blackboard cancellation aborts the local model request and preserves partial results', async (t) => {
+  const aiBaseUrl = await fakeAI(t, () => ({ claims: [] }), { delayMs: 500 });
+  const app = await fixture(t, { aiBaseUrl });
+  const { body } = await blackboardFixture(app);
+  const started = await app.request('/api/blackboard', { method: 'POST', token: app.token, body });
+  const running = await waitForBoard(app, started.data.id, (board) => board.stage === 'summary');
+  assert.equal(running.status, 'running');
+  const cancelled = await app.request(`/api/blackboard/${running.id}/cancel`, { method: 'POST', token: app.token, body: {} });
+  assert.equal(cancelled.data.status, 'cancelled');
+  await new Promise((done) => setTimeout(done, 100));
+  const persisted = await waitForBoard(app, running.id);
+  assert.equal(persisted.status, 'cancelled');
+  assert.ok(persisted.findings.some((item) => item.worker === 'evidence'));
+});

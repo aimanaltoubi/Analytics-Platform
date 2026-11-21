@@ -1,0 +1,16 @@
+{
+  "name": "Investigation",
+  "type": "object",
+  "properties": {
+    "workspace_id": { "type": "string" },
+    "question": { "type": "string", "minLength": 1, "maxLength": 1500 },
+    "entity_ids": { "type": "array", "maxItems": 10, "items": { "type": "string" } },
+    "document_ids": { "type": "array", "maxItems": 10, "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["running", "completed", "failed", "cancelled", "interrupted"] },
+    "stage": { "type": "string" },
+    "error": { "type": "string" },
+    "findings": { "type": "array", "maxItems": 100, "items": { "type": "object" } },
+    "review_history": { "type": "array", "maxItems": 1000, "items": { "type": "object" } }
+  },
+  "required": ["workspace_id", "question", "entity_ids", "document_ids", "status", "stage", "findings", "review_history"]
+}

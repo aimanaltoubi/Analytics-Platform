@@ -9,6 +9,7 @@ import { createLocalClient, bindRequest } from './client.js';
 import { exportBackup, importBackup } from './backup.js';
 import { assert, HttpError } from './errors.js';
 import { object } from './validation.js';
+import { createInvestigation, interruptInvestigations, reviewFinding, runInvestigation } from './blackboard.js';
 
 const JSON_LIMIT = 2 * 1024 * 1024;
 const BACKUP_LIMIT = 128 * 1024 * 1024;
@@ -58,6 +59,7 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
   dataDir = resolve(dataDir);
   staticDir = staticDir ? realpathSync(resolve(staticDir)) : undefined;
   const store = new Store(dataDir);
+  interruptInvestigations(store);
   let integrations;
   try { integrations = new Integrations({ store, dataDir, aiBaseUrl, aiRequestTimeoutMs, aiRuntime }); } catch (error) { store.close(); throw error; }
   const auth = new Auth(store);
@@ -67,7 +69,7 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
     functions = Object.fromEntries(await Promise.all(functionNames.map(async (name) => [name, (await import(`./functions/${name}/entry.js`)).default])));
   } catch (error) { store.close(); throw error; }
   let baseUrl, closing = false, importing = false, activeMutations = 0, activeFunctions = 0;
-  const jobs = new Set(), workflowErrors = [];
+  const jobs = new Set(), workflowErrors = [], investigations = new Map();
 
   const invoke = async (name, body, user, depth = 0) => {
     assert(Object.hasOwn(functions, name), 404, 'Unknown function');
@@ -166,6 +168,42 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
         if (req.method === 'GET' && url.pathname === '/api/auth/me') return json(res, 200, user);
         if (req.method === 'GET' && url.pathname === '/api/status') return json(res, 200, { ...await integrations.status(), workflows: { pending: jobs.size, errors: workflowErrors } });
         const client = createLocalClient({ store, user, integrations: integrations.core(), invoke: async (name, body) => ({ data: await invoke(name, body, user) }) });
+        if (parts[1] === 'blackboard') {
+          if (parts.length === 2 && req.method === 'POST') {
+            const body = await jsonBody(req);
+            assert(investigations.size === 0, 409, 'Wait for the current investigation to finish');
+            const board = createInvestigation(store, user, body);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(new Error('Investigation exceeded the 10 minute limit')), 10 * 60 * 1000);
+            timeout.unref();
+            investigations.set(board.id, controller);
+            const job = runInvestigation(store, integrations, board.id, controller.signal).catch((error) => {
+              const current = store.get('Investigation', board.id);
+              if (current?.status === 'running') {
+                store.update('Investigation', board.id, {
+                  status: controller.signal.aborted && controller.signal.reason?.message === 'Investigation cancelled' ? 'cancelled' : 'failed',
+                  stage: 'stopped', error: (controller.signal.aborted ? controller.signal.reason?.message : error.message) || 'Investigation failed'
+                });
+              }
+              if (!controller.signal.aborted) console.error(`Investigation failed: ${error.message}`);
+            }).finally(() => { clearTimeout(timeout); investigations.delete(board.id); jobs.delete(job); });
+            jobs.add(job);
+            return json(res, 202, store.get('Investigation', board.id));
+          }
+          if (parts.length === 4 && parts[3] === 'cancel' && req.method === 'POST') {
+            const board = store.get('Investigation', parts[2]);
+            assert(board, 404, 'Investigation not found');
+            const controller = investigations.get(board.id);
+            assert(board.status === 'running' && controller, 409, 'Investigation is not running');
+            controller.abort(new Error('Investigation cancelled'));
+            return json(res, 200, store.update('Investigation', board.id, { status: 'cancelled', stage: 'stopped', error: 'Investigation cancelled' }));
+          }
+          if (parts.length === 5 && parts[3] === 'findings' && req.method === 'POST') {
+            const body = await jsonBody(req);
+            return json(res, 200, reviewFinding(store, user, parts[2], parts[4], body.decision));
+          }
+          throw new HttpError(404, 'Unknown blackboard route');
+        }
         if (parts[1] === 'entities') {
           assert(parts.length >= 3 && parts.length <= 4, 404, 'Not found');
           const name = parts[2], id = parts[3];
@@ -218,7 +256,9 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
             assert(jobs.size === 0 && activeFunctions === 0 && activeMutations === 1, 409, 'Wait for active mutations and workflows before importing a backup');
             importing = true;
             importingHere = true;
-            return json(res, 200, importBackup(await jsonBody(req, BACKUP_LIMIT), store, integrations, dataDir));
+            const result = importBackup(await jsonBody(req, BACKUP_LIMIT), store, integrations, dataDir);
+            interruptInvestigations(store);
+            return json(res, 200, result);
           }
         }
         throw new HttpError(404, 'Not found');
@@ -284,6 +324,7 @@ export async function startServer({ dataDir = '.local-data', staticDir, port = 0
   const close = () => closePromise ||= (async () => {
     closing = true;
     clearInterval(scheduled);
+    for (const controller of investigations.values()) controller.abort(new Error('Application is shutting down'));
     await new Promise((done, reject) => server.close((error) => error ? reject(error) : done()));
     await Promise.allSettled(jobs);
     store.close();

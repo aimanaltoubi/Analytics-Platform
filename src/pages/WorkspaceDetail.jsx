@@ -13,6 +13,7 @@ import WorkspaceTimelineExplorer from '@/components/WorkspaceTimelineExplorer';
 import WorkspaceEntitiesTable from '@/components/WorkspaceEntitiesTable';
 import { matchesEntityQuery } from '@/lib/entitySearch';
 import InvestigationReport from '@/components/InvestigationReport';
+import InvestigationBlackboard from '@/components/InvestigationBlackboard';
 
 const TYPE_LABELS = { person: 'فرد', company: 'شركة', organization: 'منظمة', phone: 'هاتف', email: 'بريد', location: 'موقع', account: 'حساب', date: 'تاريخ', event: 'حدث', other: 'أخرى' };
 
@@ -161,6 +162,7 @@ export default function WorkspaceDetail() {
           <Tab value="network" icon={NetworkIcon} label="شبكة التحليل" />
           <Tab value="timeline" icon={Clock} label="الجدول الزمني" />
           <Tab value="selection" icon={Share2} label="تحليل التحديد" />
+          <Tab value="blackboard" icon={Share2} label="لوحة التحقيق" />
           <Tab value="data" icon={Table2} label="البيانات والمستندات" />
           <Tab value="reports" icon={FileBarChart2} label="التقارير والتصدير" />
         </TabsList>
@@ -185,6 +187,10 @@ export default function WorkspaceDetail() {
 
         <TabsContent value="selection" className="mt-4">
           <WorkspaceSelectionAnalyzer entities={entities} documents={documents} connections={connections} />
+        </TabsContent>
+
+        <TabsContent value="blackboard" className="mt-4">
+          <InvestigationBlackboard workspace={workspace} />
         </TabsContent>
 
         <TabsContent value="data" className="mt-4 space-y-6">

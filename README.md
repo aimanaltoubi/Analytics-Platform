@@ -88,6 +88,7 @@ step in order. Each step has its own command; do not combine them.
 - **قاعدة البيانات:** browse, add, and edit people, companies, and organizations. Profiles support passport/identity, date of birth, registration, contact, and custom fields.
 - **مراجعة التكرارات:** scan exact normalized names and aliases. Suggestions never merge automatically; confirmed merges can be undone unless related records have changed.
 - **مساعد الأدلة:** ask questions about processed documents and entity profiles. Answers show verified quotes and open the cited record or extracted PDF page. Common Arabic/English count questions read directly from SQLite; document questions normalize common Arabic spelling variants. If evidence cannot be verified, the assistant abstains. Chat history stays in the current window.
+- **لوحة التحقيق (Investigation Blackboard):** in a workspace, select 2–10 entities and 1–10 processed documents, enter an investigation question, and start a local, reviewable investigation. Evidence, entity, relationship, review, and summary roles contribute findings to a shared board; accept or reject findings without changing entity or relationship records. Investigations and review history persist locally and are included in backups.
 - **Drill-down:** dashboard and yearly-statistics cards, chart slices, and bar rows open the matching entity, document, relationship, or alert list. Entity links include a direct route to edit the local profile.
 - **Field provenance:** extracted profile values link to the exact supporting document page and quote; changed or manually entered values are marked as manual. Reprocessing preserves manually edited values.
 - **ترجمة المستندات:** translate processed documents locally into Arabic, English, Simplified Chinese, Russian, Spanish, French, German, Portuguese, Italian, or Japanese. Original pages remain intact; each saved translation links back to its source page. See [the translation model decision and evaluation limits](docs/LOCAL_TRANSLATION_MODEL_EVALUATION.md).
@@ -285,3 +286,35 @@ The provided Qwen2.5 14B Q4_K_M model targets computers with at least 32 GB RAM.
 The desktop database and uploads remain in the current user's application-data directory and are not removed during a normal uninstall. Administrators can export and restore backups from **Settings**.
 
 Backups contain local records and uploaded files. They do not contain passwords, sessions, recovery keys, or the AI model. Backup files can still contain sensitive application data and should be protected accordingly.
+
+## Investigation blackboard pilot
+
+Open a workspace, add the records to investigate, and choose **لوحة التحقيق**.
+Select the entities and processed documents explicitly, enter a question, and
+start the investigation. The board shows its progress, findings and source
+links; analysts can accept, reject, or reset each finding and inspect the review
+history. Cancelling preserves partial results. A single investigation runs at a
+time, with a ten-minute limit; runs interrupted by shutdown or backup restoration
+are marked accordingly.
+
+The pilot uses bounded, deterministic roles followed by at most one local-model
+summary request, not separate autonomous models. It looks for selected names or
+aliases together within overlapping document passages and shows existing
+relationships between selected entities from selected documents. It reads at most
+100 pages and 150,000 characters per document, retains at most eight passages
+and 20 relationships, and warns when results may be truncated. It may miss
+relevant evidence, indirect paths, aliases, and contradictions; review these
+manually. A shared mention is not proof of a relationship. Quotes are checked
+against the selected source text using normalized matching, but neither a
+matching quote nor analyst acceptance establishes that a claim is true. Source
+links open the current document, which may have changed since the saved finding.
+Document text and questions are treated as untrusted data, not instructions.
+
+An available local model is required for summaries when matching passages are
+found; model failures are shown on the board with partial findings retained.
+When no matching passage is found, the board records an evidence gap without
+calling the model. The automated blackboard tests use mock model responses and
+exercise scoping, citation checks, cancellation, failure, review, and persistence;
+they do not measure real-model accuracy or certify investigation quality.
+Evaluate with representative, independently annotated documents and human review
+on the intended hardware before relying on the feature.

@@ -96,13 +96,18 @@ async function signIn(path, body) {
 
 export const localClient = {
   entities: Object.fromEntries([
-    'Alert', 'Connection', 'Document', 'DuplicateReview', 'Entity', 'Manifest', 'MergeHistory', 'Mention',
+    'Alert', 'Connection', 'Document', 'DuplicateReview', 'Entity', 'Investigation', 'Manifest', 'MergeHistory', 'Mention',
     'Notification', 'RiskProfile', 'Setting', 'Translation', 'User', 'Workspace'
   ].map((name) => [name, collection(name)])),
   functions: {
     invoke: async (name, body = {}) => ({
       data: await request(`/api/functions/${encodeURIComponent(name)}`, { method: 'POST', body })
     })
+  },
+  blackboard: {
+    start: (body) => request('/api/blackboard', { method: 'POST', body }),
+    cancel: (id) => request(`/api/blackboard/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: {} }),
+    review: (id, findingId, decision) => request(`/api/blackboard/${encodeURIComponent(id)}/findings/${encodeURIComponent(findingId)}`, { method: 'POST', body: { decision } })
   },
   integrations: { Core: { UploadFile: upload, UploadPublicFile: upload } },
   auth: {
